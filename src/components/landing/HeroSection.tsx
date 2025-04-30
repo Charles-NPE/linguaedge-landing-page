@@ -1,10 +1,7 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-
 const HeroSection = () => {
-  return (
-    <section className="relative py-20 md:py-32 overflow-hidden">
+  return <section className="relative py-20 md:py-32 overflow-hidden">
       {/* Background with gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 to-violet-500/90 -z-10"></div>
       <div className="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1488590528505-98d2b5aba04b')] bg-cover bg-center -z-20"></div>
@@ -31,11 +28,7 @@ const HeroSection = () => {
           <div className="md:w-1/2 md:pl-12 animate-fade-in">
             <div className="bg-white/10 backdrop-blur-sm p-2 rounded-2xl shadow-xl">
               <div className="bg-white rounded-xl overflow-hidden shadow-lg">
-                <img 
-                  src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158" 
-                  alt="Teacher dashboard" 
-                  className="w-full h-auto rounded-t-xl"
-                />
+                <img alt="Teacher dashboard" className="w-full h-auto rounded-t-xl" src="/lovable-uploads/33b90792-4f69-4828-972b-f4c20e5e2605.png" />
                 <div className="p-6 bg-white">
                   <div className="h-2 w-24 bg-indigo-200 rounded-full mb-4"></div>
                   <div className="grid grid-cols-3 gap-2 mb-3">
@@ -55,8 +48,6 @@ const HeroSection = () => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default HeroSection;
