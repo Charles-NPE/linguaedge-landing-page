@@ -17,7 +17,7 @@ const HeroSection = () => {
             </p>
             <div className="flex flex-wrap gap-4">
               <Button asChild size="lg" className="bg-white text-indigo-700 hover:bg-white/90">
-                <a href="/signup">Try it free</a>
+                
               </Button>
               <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
                 <a href="/demo">Book a demo</a>
@@ -28,7 +28,7 @@ const HeroSection = () => {
           <div className="md:w-1/2 md:pl-12 animate-fade-in">
             <div className="bg-white/10 backdrop-blur-sm p-2 rounded-2xl shadow-xl">
               <div className="bg-white rounded-xl overflow-hidden shadow-lg">
-                <img alt="Teacher dashboard" className="w-full h-auto rounded-t-xl" src="/lovable-uploads/33b90792-4f69-4828-972b-f4c20e5e2605.png" />
+                <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158" alt="Teacher dashboard" className="w-full h-auto rounded-t-xl" />
                 <div className="p-6 bg-white">
                   <div className="h-2 w-24 bg-indigo-200 rounded-full mb-4"></div>
                   <div className="grid grid-cols-3 gap-2 mb-3">
