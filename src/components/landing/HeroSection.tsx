@@ -17,7 +17,7 @@ const HeroSection = () => {
             </p>
             <div className="flex flex-wrap gap-4">
               <Button asChild size="lg" className="bg-white text-indigo-700 hover:bg-white/90">
-                <a href="/signup">Try it free</a>
+                <a href="/signup">Try it free!</a>
               </Button>
               <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
                 <a href="/demo">Book a demo</a>
