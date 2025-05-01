@@ -1,17 +1,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const plans = [
   {
     name: "Starter",
-    price: "$99",
-    period: "per month",
+    price: "$39",
+    period: "per academy / month",
     description: "Perfect for small language schools just starting out.",
     features: [
-      "Up to 50 students",
-      "10 teachers",
-      "100 essay corrections/month",
+      "Up to 100 students",
+      "15 teachers",
+      "200 essay corrections/month",
       "Basic analytics",
       "Email support"
     ],
@@ -20,40 +21,23 @@ const plans = [
     popular: false,
   },
   {
-    name: "Pro",
-    price: "$249",
-    period: "per month",
+    name: "Academy",
+    price: "$99",
+    period: "per academy / month",
     description: "For growing language academies with more needs.",
     features: [
-      "Up to 200 students",
-      "25 teachers",
-      "500 essay corrections/month",
+      "Unlimited students",
+      "Unlimited teachers",
+      "1000 essay corrections/month",
       "Advanced analytics & reporting",
       "Custom rubrics & templates",
-      "Priority email support"
+      "Priority support",
+      "API access"
     ],
     cta: "Get started",
     ctaLink: "/signup",
     popular: true,
-  },
-  {
-    name: "Academy",
-    price: "$499",
-    period: "per month",
-    description: "For large institutions with extensive requirements.",
-    features: [
-      "Unlimited students",
-      "Unlimited teachers",
-      "2000 essay corrections/month",
-      "Full analytics suite & API access",
-      "Custom integration",
-      "Dedicated account manager",
-      "24/7 support"
-    ],
-    cta: "Get started",
-    ctaLink: "/signup",
-    popular: false,
-  },
+  }
 ];
 
 const PricingSection = () => {
@@ -69,19 +53,17 @@ const PricingSection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {plans.map((plan, index) => (
             <div 
               key={index} 
-              className={`bg-white rounded-xl shadow-lg overflow-hidden card-hover ${
-                plan.popular ? 'ring-2 ring-indigo-500 relative' : ''
+              className={`bg-white rounded-xl shadow-lg overflow-hidden card-hover relative ${
+                plan.popular ? 'ring-2 ring-indigo-500' : ''
               }`}
             >
-              {plan.popular && (
-                <div className="bg-indigo-500 text-white text-sm font-semibold py-1 px-3 rounded-br-lg absolute top-0 left-0">
-                  Most Popular
-                </div>
-              )}
+              <div className="absolute top-4 right-4">
+                <Badge variant="default" className="bg-violet-500">1 month free</Badge>
+              </div>
               
               <div className="p-8">
                 <h3 className="text-xl font-bold mb-2 text-gray-900">{plan.name}</h3>

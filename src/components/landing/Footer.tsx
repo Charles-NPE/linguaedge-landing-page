@@ -1,5 +1,6 @@
 
 import { Facebook, Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
@@ -31,22 +32,20 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Product</h4>
+            <h4 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Company</h4>
             <ul className="space-y-3">
-              <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Features</a></li>
+              <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors">About</Link></li>
+              <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors">Contact</Link></li>
               <li><a href="#pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</a></li>
-              <li><a href="/demo" className="text-gray-400 hover:text-white transition-colors">Book a Demo</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Docs</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Company</h4>
+            <h4 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Legal</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">About</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Contact</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+              <li><Link to="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link to="/terms-of-service" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><a href="#" id="manage-cookies" className="text-gray-400 hover:text-white transition-colors">Manage Cookies</a></li>
             </ul>
           </div>
         </div>

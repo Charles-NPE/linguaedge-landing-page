@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 const HeroSection = () => {
@@ -19,7 +20,7 @@ const HeroSection = () => {
               <Button asChild size="lg" className="bg-white text-indigo-700 hover:bg-white/90">
                 <a href="/signup">Try it free!</a>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
+              <Button asChild variant="outline" size="lg" className="border-white text-indigo-700 bg-white hover:bg-white/90">
                 <a href="/demo">Book a demo</a>
               </Button>
             </div>

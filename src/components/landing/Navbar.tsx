@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -26,31 +27,23 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between">
-          <a href="/" className="flex items-center">
+          <Link to="/" className="flex items-center">
             <span className={`font-bold text-xl ${isScrolled ? "text-indigo-600" : "text-white"}`}>
               LinguaEdge.ai
             </span>
-          </a>
+          </Link>
 
           {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-8">
             <div className="flex space-x-6">
-              <a 
-                href="#features" 
+              <Link 
+                to="/about" 
                 className={`${
                   isScrolled ? "text-gray-600 hover:text-indigo-600" : "text-white/90 hover:text-white"
                 } transition-colors`}
               >
-                Features
-              </a>
-              <a 
-                href="#how-it-works" 
-                className={`${
-                  isScrolled ? "text-gray-600 hover:text-indigo-600" : "text-white/90 hover:text-white"
-                } transition-colors`}
-              >
-                How It Works
-              </a>
+                About
+              </Link>
               <a 
                 href="#pricing" 
                 className={`${
@@ -59,14 +52,22 @@ const Navbar = () => {
               >
                 Pricing
               </a>
+              <Link 
+                to="/demo" 
+                className={`${
+                  isScrolled ? "text-gray-600 hover:text-indigo-600" : "text-white/90 hover:text-white"
+                } transition-colors`}
+              >
+                Book a demo
+              </Link>
             </div>
             
             <div className="flex space-x-3">
               <Button asChild variant="ghost" className={isScrolled ? "" : "text-white hover:bg-white/10"}>
-                <a href="/login">Log in</a>
+                <Link to="/login">Log in</Link>
               </Button>
               <Button asChild variant={isScrolled ? "default" : "secondary"}>
-                <a href="/signup">Sign up free</a>
+                <Link to="/signup">Sign up free</Link>
               </Button>
             </div>
           </div>
@@ -89,20 +90,13 @@ const Navbar = () => {
       {mobileMenuOpen && (
         <div className="md:hidden bg-white shadow-lg p-6">
           <div className="flex flex-col space-y-4">
-            <a 
-              href="#features" 
+            <Link 
+              to="/about" 
               className="text-gray-600 hover:text-indigo-600"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Features
-            </a>
-            <a 
-              href="#how-it-works" 
-              className="text-gray-600 hover:text-indigo-600"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              How It Works
-            </a>
+              About
+            </Link>
             <a 
               href="#pricing" 
               className="text-gray-600 hover:text-indigo-600"
@@ -110,12 +104,19 @@ const Navbar = () => {
             >
               Pricing
             </a>
+            <Link 
+              to="/demo" 
+              className="text-gray-600 hover:text-indigo-600"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Book a demo
+            </Link>
             <div className="pt-4 flex flex-col space-y-3">
               <Button asChild variant="outline" size="sm">
-                <a href="/login" onClick={() => setMobileMenuOpen(false)}>Log in</a>
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
               </Button>
               <Button asChild size="sm">
-                <a href="/signup" onClick={() => setMobileMenuOpen(false)}>Sign up free</a>
+                <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>Sign up free</Link>
               </Button>
             </div>
           </div>
