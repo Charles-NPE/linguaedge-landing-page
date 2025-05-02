@@ -1,10 +1,7 @@
-
 import { Facebook, Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
 import { Link } from "react-router-dom";
-
 const Footer = () => {
-  return (
-    <footer className="bg-gray-900 text-gray-300" id="footer">
+  return <footer className="bg-gray-900 text-gray-300" id="footer">
       <div className="container mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
@@ -45,7 +42,7 @@ const Footer = () => {
             <ul className="space-y-3">
               <li><Link to="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
               <li><Link to="/terms-of-service" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
-              <li><a href="#" id="manage-cookies" className="text-gray-400 hover:text-white transition-colors">Manage Cookies</a></li>
+              
             </ul>
           </div>
         </div>
@@ -54,8 +51,6 @@ const Footer = () => {
           <p>&copy; {new Date().getFullYear()} LinguaEdge.ai. All rights reserved.</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
