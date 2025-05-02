@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { X } from 'lucide-react';
@@ -49,10 +48,6 @@ const CookieConsent = () => {
     setShowModal(false);
   };
 
-  const handleCustomPreferences = () => {
-    setShowModal(true);
-  };
-
   const handleCloseModal = () => {
     setShowModal(false);
   };
@@ -82,9 +77,6 @@ const CookieConsent = () => {
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={handleRejectNonEssential}>
                 Reject non-essential
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleCustomPreferences}>
-                Manage settings
               </Button>
               <Button size="sm" onClick={handleAcceptAll}>
                 Accept all

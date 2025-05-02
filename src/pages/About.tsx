@@ -14,12 +14,12 @@ const About = () => {
     {
       year: "2025",
       title: "Private Beta",
-      description: "Launched our private beta with select language academies across Europe and Asia."
+      description: "Launched our private beta with select language academies across Europe."
     },
     {
       year: "2026",
       title: "Public Launch",
-      description: "Official public launch with support for 15+ languages and custom rubrics."
+      description: "Expected public launch with support for 15+ languages."
     }
   ];
 

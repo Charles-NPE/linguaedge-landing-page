@@ -6,14 +6,13 @@ import { Badge } from "@/components/ui/badge";
 const plans = [
   {
     name: "Starter",
-    price: "$39",
+    price: "€20",
     period: "per academy / month",
     description: "Perfect for small language schools just starting out.",
     features: [
-      "Up to 100 students",
-      "15 teachers",
-      "200 essay corrections/month",
-      "Basic analytics",
+      "Up to 20 students",
+      "1 teacher",
+      "Analytics dashboard",
       "Email support"
     ],
     cta: "Get started",
@@ -22,17 +21,14 @@ const plans = [
   },
   {
     name: "Academy",
-    price: "$99",
+    price: "€50",
     period: "per academy / month",
     description: "For growing language academies with more needs.",
     features: [
-      "Unlimited students",
-      "Unlimited teachers",
-      "1000 essay corrections/month",
-      "Advanced analytics & reporting",
-      "Custom rubrics & templates",
-      "Priority support",
-      "API access"
+      "Up to 60 students",
+      "3 teachers",
+      "Analytics dashboard", 
+      "Email support"
     ],
     cta: "Get started",
     ctaLink: "/signup",
@@ -49,7 +45,7 @@ const PricingSection = () => {
             Straightforward Pricing
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Choose the plan that fits your academy's needs. All plans include a 14-day free trial.
+            Choose the plan that fits your academy's needs. All plans include a <strong>1-month</strong> free trial.
           </p>
         </div>
 
