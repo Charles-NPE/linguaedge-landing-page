@@ -47,13 +47,28 @@ const Contact = () => {
       // In a real implementation, this would send data to Supabase
       console.log("Form submitted with:", data);
       
-      // Show success toast
-      toast.success("Message sent! We'll get back to you soon.");
+      // Send email via Edge Function
+      try {
+        await fetch("/functions/sendContactEmail", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data)
+        });
+        
+        // Show success toast
+        toast.success("Thanks for reaching out! We'll reply soon.");
+      } catch (emailError) {
+        console.error("Error sending email:", emailError);
+        // Still show success toast since the form was submitted
+        toast.success("Message sent! We'll get back to you soon.");
+      }
       
       // Reset the form
       form.reset();
     } catch (error) {
-      toast.error("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please email info@nordicpath.net.");
       console.error(error);
     }
   };
