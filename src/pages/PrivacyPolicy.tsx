@@ -31,6 +31,7 @@ const PrivacyPolicy = () => {
                   <li><strong>Usage data:</strong> Information about how you use our website and services.</li>
                   <li><strong>Content data:</strong> Student essays and feedback that you upload to our platform.</li>
                   <li><strong>Communication data:</strong> Messages you send us through our contact forms.</li>
+                  <li><strong>Scheduling data:</strong> Information you provide when booking a demo through our scheduling system.</li>
                 </ul>
               </div>
               
@@ -67,6 +68,7 @@ const PrivacyPolicy = () => {
                 <ul className="list-disc pl-5 mt-2 space-y-2 text-gray-600">
                   <li><strong>Supabase:</strong> For secure database hosting and user authentication.</li>
                   <li><strong>OpenAI:</strong> For AI-powered essay grading and feedback.</li>
+                  <li><strong>Calendly:</strong> For scheduling demo appointments when you request a demo of our services.</li>
                 </ul>
                 <p className="text-gray-600 mt-2">
                   All our processors are compliant with applicable data protection laws, and we have appropriate data processing agreements in place.
