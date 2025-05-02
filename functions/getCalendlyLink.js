@@ -38,7 +38,16 @@ export default async function handler(req) {
     }
 
     const data = await response.json();
-    const scheduling_url = data.resource.scheduling_url;
+    
+    // Log the response for debugging
+    console.log("Calendly API response:", JSON.stringify(data));
+    
+    // The scheduling_url is nested inside the resource object
+    const scheduling_url = data.resource?.scheduling_url;
+    
+    if (!scheduling_url) {
+      throw new Error("No scheduling URL found in the API response");
+    }
 
     // Return only what's needed
     return new Response(
