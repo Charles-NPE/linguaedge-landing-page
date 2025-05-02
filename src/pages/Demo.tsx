@@ -1,64 +1,12 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/landing/Footer';
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ExternalLink } from "lucide-react";
 
 const Demo = () => {
-  const [schedulingUrl, setSchedulingUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    // Fetch the Calendly link from our edge function
-    fetch('/functions/getCalendlyLink')
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to load scheduling link');
-        return response.json();
-      })
-      .then(data => {
-        if (!data.scheduling_url) {
-          throw new Error('No scheduling URL found in response');
-        }
-        setSchedulingUrl(data.scheduling_url);
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching Calendly link:', err);
-        setError(true);
-        setIsLoading(false);
-        toast.error("Could not load scheduler. Please try again later.");
-      });
-  }, []);
-
-  // Add Calendly script
-  useEffect(() => {
-    if (!schedulingUrl) return;
-    
-    const script = document.createElement('script');
-    script.src = "https://assets.calendly.com/assets/external/widget.js";
-    script.async = true;
-    document.body.appendChild(script);
-    
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, [schedulingUrl]);
-
-  // Initialize Calendly when URL and script are ready
-  useEffect(() => {
-    if (!schedulingUrl || !window.Calendly) return;
-    
-    window.Calendly.initInlineWidget({
-      url: schedulingUrl,
-      parentElement: document.getElementById('calendly-container'),
-      prefill: {},
-      utm: {}
-    });
-  }, [schedulingUrl]);
+  const calendarLink = "https://calendly.com/nordicpath-info/30min";
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -70,33 +18,20 @@ const Demo = () => {
               Schedule a Live Demo
             </h1>
             
-            <div className="bg-white p-6 rounded-xl shadow-md mb-8 mx-auto w-full max-w-[600px]">
-              <div className="flex justify-center">
-                {isLoading && (
-                  <div id="spinner" className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
-                )}
-                
-                <div 
-                  id="calendly-container" 
-                  className={`w-full rounded-lg overflow-hidden ${isLoading ? 'hidden' : ''}`}
-                  style={{ minHeight: '600px' }}
-                ></div>
-                
-                {error && (
-                  <div className="text-center py-10">
-                    <Alert variant="destructive" className="mb-4">
-                      <AlertDescription>
-                        Unable to load booking calendar.
-                      </AlertDescription>
-                    </Alert>
-                    <Button asChild>
-                      <a href="mailto:sales@linguaedge.ai">
-                        Contact sales@linguaedge.ai
-                      </a>
-                    </Button>
-                  </div>
-                )}
-              </div>
+            <div className="bg-white p-8 rounded-xl shadow-md mb-8 mx-auto w-full max-w-[600px] flex flex-col items-center">
+              <p className="text-lg text-gray-700 mb-6">
+                Click below to schedule a time that works for you. Our team will walk you through our platform and answer any questions you may have.
+              </p>
+              
+              <Button 
+                size="lg" 
+                className="bg-indigo-600 hover:bg-indigo-700 text-xl py-6"
+                asChild
+              >
+                <a href={calendarLink} target="_blank" rel="noopener noreferrer">
+                  Book a Demo <ExternalLink className="ml-2" />
+                </a>
+              </Button>
             </div>
             
             <p className="text-lg text-gray-600">
@@ -109,19 +44,5 @@ const Demo = () => {
     </div>
   );
 };
-
-// Add TypeScript interface for Calendly
-declare global {
-  interface Window {
-    Calendly: {
-      initInlineWidget: (options: {
-        url: string;
-        parentElement: HTMLElement | null;
-        prefill?: Record<string, any>;
-        utm?: Record<string, any>;
-      }) => void;
-    };
-  }
-}
 
 export default Demo;
