@@ -58,7 +58,7 @@ export default async function handler(req) {
         details: error.message
       }),
       {
-        status: 500,
+        status: 502,
         headers: {
           "Content-Type": "application/json",
         },

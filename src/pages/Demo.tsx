@@ -4,6 +4,8 @@ import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/landing/Footer';
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Demo = () => {
   const [schedulingUrl, setSchedulingUrl] = useState<string | null>(null);
@@ -18,6 +20,9 @@ const Demo = () => {
         return response.json();
       })
       .then(data => {
+        if (!data.scheduling_url) {
+          throw new Error('No scheduling URL found in response');
+        }
         setSchedulingUrl(data.scheduling_url);
         setIsLoading(false);
       })
@@ -66,22 +71,24 @@ const Demo = () => {
             </h1>
             
             <div className="bg-white p-6 rounded-xl shadow-md mb-8 mx-auto w-full max-w-[600px]">
-              <div 
-                id="calendly-container" 
-                className="calendly-inline-widget w-full rounded-lg overflow-hidden" 
-                style={{ minHeight: isLoading ? '150px' : '600px' }}
-              >
+              <div className="flex justify-center">
                 {isLoading && (
-                  <div className="flex items-center justify-center h-40">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                  </div>
+                  <div id="spinner" className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
                 )}
+                
+                <div 
+                  id="calendly-container" 
+                  className={`w-full rounded-lg overflow-hidden ${isLoading ? 'hidden' : ''}`}
+                  style={{ minHeight: '600px' }}
+                ></div>
                 
                 {error && (
                   <div className="text-center py-10">
-                    <p className="text-lg mb-4 text-gray-600">
-                      Booking temporarily unavailable.
-                    </p>
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertDescription>
+                        Unable to load booking calendar.
+                      </AlertDescription>
+                    </Alert>
                     <Button asChild>
                       <a href="mailto:sales@linguaedge.ai">
                         Contact sales@linguaedge.ai
