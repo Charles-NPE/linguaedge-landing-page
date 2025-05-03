@@ -1,127 +1,132 @@
 
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Menu, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import UserDropdown from '../navigation/UserDropdown';
 
 const Navbar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <nav 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-white shadow-md py-3" : "bg-transparent py-6"
+    <nav
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+        isScrolled ? 'bg-white shadow-md py-2' : 'bg-transparent py-4'
       }`}
     >
-      <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center">
-            <span className={`font-bold text-xl ${isScrolled ? "text-indigo-600" : "text-white"}`}>
-              LinguaEdge.ai
-            </span>
+      <div className="container mx-auto px-4">
+        <div className="flex justify-between items-center">
+          {/* Logo */}
+          <Link to="/" className="text-xl font-bold text-primary">
+            LinguaEdgeAI
           </Link>
 
-          {/* Desktop menu */}
-          <div className="hidden md:flex items-center space-x-8">
-            <div className="flex space-x-6">
-              <Link 
-                to="/about" 
-                className={`${
-                  isScrolled ? "text-gray-600 hover:text-indigo-600" : "text-white/90 hover:text-white"
-                } transition-colors`}
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-6">
+            <Link to="/about" className="text-gray-700 hover:text-primary transition-colors">
+              About
+            </Link>
+            <Link to="/pricing" className="text-gray-700 hover:text-primary transition-colors">
+              Pricing
+            </Link>
+            <Link to="/contact" className="text-gray-700 hover:text-primary transition-colors">
+              Contact
+            </Link>
+            
+            {/* Auth actions */}
+            {!user ? (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" className="hover:text-primary">
+                    Log in
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button className="bg-primary hover:bg-primary/90 text-white">
+                    Sign up
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <UserDropdown />
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden text-gray-700"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden mt-4 py-4 bg-white rounded-lg shadow-lg">
+            <div className="flex flex-col space-y-3 px-4">
+              <Link
+                to="/about"
+                className="text-gray-700 hover:text-primary py-2 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
               >
                 About
               </Link>
-              <Link 
-                to="/pricing" 
-                className={`${
-                  isScrolled ? "text-gray-600 hover:text-indigo-600" : "text-white/90 hover:text-white"
-                } transition-colors`}
+              <Link
+                to="/pricing"
+                className="text-gray-700 hover:text-primary py-2 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
               >
                 Pricing
               </Link>
-              <Link 
-                to="/demo" 
-                className={`${
-                  isScrolled ? "text-gray-600 hover:text-indigo-600" : "text-white/90 hover:text-white"
-                } transition-colors`}
+              <Link
+                to="/contact"
+                className="text-gray-700 hover:text-primary py-2 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
               >
-                Book a demo
+                Contact
               </Link>
-            </div>
-            
-            <div className="flex space-x-3">
-              <Button asChild variant="ghost" className={isScrolled ? "" : "text-white hover:bg-white/10"}>
-                <Link to="/login">Log in</Link>
-              </Button>
-              <Button asChild variant={isScrolled ? "default" : "secondary"}>
-                <Link to="/signup">Sign up free</Link>
-              </Button>
+              
+              {/* Auth actions */}
+              {!user ? (
+                <>
+                  <Link
+                    to="/login"
+                    className="text-gray-700 hover:text-primary py-2 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Button className="w-full bg-primary hover:bg-primary/90 text-white">
+                      Sign up
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <div className="py-2">
+                  <UserDropdown />
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Mobile menu button */}
-          <button 
-            className="md:hidden focus:outline-none" 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className={`h-6 w-6 ${isScrolled ? "text-gray-900" : "text-white"}`} />
-            ) : (
-              <Menu className={`h-6 w-6 ${isScrolled ? "text-gray-900" : "text-white"}`} />
-            )}
-          </button>
-        </div>
+        )}
       </div>
-
-      {/* Mobile menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-white shadow-lg p-6">
-          <div className="flex flex-col space-y-4">
-            <Link 
-              to="/about" 
-              className="text-gray-600 hover:text-indigo-600"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              About
-            </Link>
-            <Link 
-              to="/pricing" 
-              className="text-gray-600 hover:text-indigo-600"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Pricing
-            </Link>
-            <Link 
-              to="/demo" 
-              className="text-gray-600 hover:text-indigo-600"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Book a demo
-            </Link>
-            <div className="pt-4 flex flex-col space-y-3">
-              <Button asChild variant="outline" size="sm">
-                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>Sign up free</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </nav>
   );
 };
