@@ -32,6 +32,8 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const N8N_WEBHOOK_URL = "https://n8n-railway-custom-production-c110.up.railway.app/webhook-test/525b4fa9-f0c9-454d-a0d1-492eabde498f";
+
 const Contact = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -57,10 +59,23 @@ const Contact = () => {
           body: JSON.stringify(data)
         });
         
+        // Send data to n8n webhook
+        await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            message: data.message
+          })
+        });
+        
         // Show success toast
         toast.success("Thanks for reaching out! We'll reply soon.");
       } catch (emailError) {
-        console.error("Error sending email:", emailError);
+        console.error("Error sending email or webhook:", emailError);
         // Still show success toast since the form was submitted
         toast.success("Message sent! We'll get back to you soon.");
       }
