@@ -32,7 +32,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const N8N_WEBHOOK_URL = "https://n8n-railway-custom-production-c110.up.railway.app/webhook-test/525b4fa9-f0c9-454d-a0d1-492eabde498f";
+const N8N_WEBHOOK_URL = "https://n8n-railway-custom-production-c110.up.railway.app/webhook/525b4fa9-f0c9-454d-a0d1-492eabde498f";
 
 const Contact = () => {
   const form = useForm<FormValues>({
