@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 
 const plans = [
   {
@@ -83,11 +84,17 @@ const PricingSection = () => {
                   className={`w-full ${plan.popular ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
                   variant={plan.popular ? "default" : "outline"}
                 >
-                  <a href={plan.ctaLink}>{plan.cta}</a>
+                  <Link to={plan.ctaLink}>{plan.cta}</Link>
                 </Button>
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="text-center mt-12">
+          <Link to="/pricing">
+            <Button variant="outline">View all pricing details</Button>
+          </Link>
         </div>
       </div>
     </section>

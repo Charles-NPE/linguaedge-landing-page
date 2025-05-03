@@ -45,7 +45,7 @@ const Navbar = () => {
                 About
               </Link>
               <Link 
-                to="/#pricing" 
+                to="/pricing" 
                 className={`${
                   isScrolled ? "text-gray-600 hover:text-indigo-600" : "text-white/90 hover:text-white"
                 } transition-colors`}
@@ -98,7 +98,7 @@ const Navbar = () => {
               About
             </Link>
             <Link 
-              to="/#pricing" 
+              to="/pricing" 
               className="text-gray-600 hover:text-indigo-600"
               onClick={() => setMobileMenuOpen(false)}
             >

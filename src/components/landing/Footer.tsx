@@ -1,6 +1,7 @@
 
 import { Facebook, Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
 import { Link } from "react-router-dom";
+
 const Footer = () => {
   return <footer className="bg-gray-900 text-gray-300" id="footer">
       <div className="container mx-auto px-6 py-12">
@@ -34,7 +35,7 @@ const Footer = () => {
             <ul className="space-y-3">
               <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors">About</Link></li>
               <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors">Contact</Link></li>
-              <li><Link to="/#pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link></li>
+              <li><Link to="/pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link></li>
             </ul>
           </div>
 
