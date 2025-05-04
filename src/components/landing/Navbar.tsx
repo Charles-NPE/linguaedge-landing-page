@@ -2,14 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import UserDropdown from '../navigation/UserDropdown';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user } = useAuth();
+  const { user, isStudent, isTeacher } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,6 +18,9 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Determine dashboard link based on user role
+  const dashboardLink = isStudent ? '/student' : isTeacher ? '/teacher' : '/';
 
   return (
     <nav
@@ -43,6 +46,16 @@ const Navbar = () => {
             <Link to="/contact" className="text-gray-700 hover:text-primary transition-colors">
               Contact
             </Link>
+            
+            {/* Dashboard Button - Only visible for authenticated users */}
+            {user && (
+              <Link to={dashboardLink}>
+                <Button variant="ghost" className="hover:text-primary flex items-center gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard
+                </Button>
+              </Link>
+            )}
             
             {/* Auth actions */}
             {!user ? (
@@ -98,6 +111,18 @@ const Navbar = () => {
               >
                 Contact
               </Link>
+              
+              {/* Dashboard Link - Only visible for authenticated users */}
+              {user && (
+                <Link
+                  to={dashboardLink}
+                  className="text-gray-700 hover:text-primary py-2 transition-colors flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard
+                </Link>
+              )}
               
               {/* Auth actions */}
               {!user ? (
