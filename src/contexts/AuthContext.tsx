@@ -32,7 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         setSession(newSession);
-        setUser(newSession?.user ?? null);
+        // Fixed typing issue by casting the User as AuthUser
+        setUser(newSession?.user ? { ...newSession.user } as AuthUser : null);
 
         // Defer Supabase calls with setTimeout
         if (newSession?.user) {
@@ -48,7 +49,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+      // Fixed typing issue by casting the User as AuthUser
+      setUser(currentSession?.user ? { ...currentSession.user } as AuthUser : null);
       
       if (currentSession?.user) {
         fetchUserProfile(currentSession.user.id);
@@ -106,17 +108,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("User ID not returned from signUp");
       }
 
-      // Always insert a new profile with the user's ID and role
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({ 
-          id: userId, 
-          role,
-          email
-        });
+      // set/ensure teacher role if the user signed up via /signup/teacher
+      if (role === 'teacher') {
+        const { error: updErr, data: updData } =
+          await supabase.from('profiles')
+            .update({ role: 'teacher' })
+            .eq('id', data.user?.id);
 
-      if (insertError) {
-        throw insertError;
+        if (updErr || (updData?.length ?? 0) === 0) {
+          // row didn't exist – insert instead
+          await supabase.from('profiles')
+            .insert({ id: data.user?.id, email: data.user?.email, role: 'teacher' });
+        }
       }
 
       toast({
