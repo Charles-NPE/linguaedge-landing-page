@@ -28,10 +28,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("Setting up auth state listener");
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log("Auth state changed:", event);
+        console.log("Auth state changed:", event, newSession?.user?.id);
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
@@ -48,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      console.log("Got existing session:", currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
@@ -61,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchAndSetUserProfile = async (userId: string) => {
+    console.log("Fetching profile for user:", userId);
     const profileData = await fetchUserProfile(userId);
     console.log("Fetched profile data:", profileData);
     
@@ -68,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(profileData as UserProfile);
       setUser(prev => prev ? { ...prev, profile: profileData as UserProfile } : null);
     } else {
-      console.warn("Profile data is null or undefined");
+      console.warn("Profile data is null or undefined for user:", userId);
     }
   };
 
@@ -84,19 +88,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Wait for a moment to ensure the profile is created
         // This helps prevent race conditions
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Fetch the profile to confirm role is set correctly
         if (data?.user?.id) {
           const profile = await fetchUserProfile(data.user.id);
           console.log("Fetched profile after signup:", profile);
           
-          // Use the role from the profile if available, or fallback to the intended role
-          const effectiveRole = profile?.role || role;
-          console.log("Redirecting to:", getRedirectPathForRole(effectiveRole));
-          
-          // Redirect based on effective role
-          navigate(getRedirectPathForRole(effectiveRole));
+          if (profile) {
+            // Use the role from the profile
+            const effectiveRole = profile.role;
+            console.log("Redirecting to:", getRedirectPathForRole(effectiveRole));
+            navigate(getRedirectPathForRole(effectiveRole));
+          } else {
+            // Fallback to the intended role if profile is not yet available
+            console.log("Profile not found, using provided role:", role);
+            console.log("Redirecting to:", getRedirectPathForRole(role));
+            navigate(getRedirectPathForRole(role));
+          }
         }
       } else {
         console.error("Sign up failed");

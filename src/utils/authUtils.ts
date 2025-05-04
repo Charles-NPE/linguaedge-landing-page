@@ -1,3 +1,4 @@
+
 import { UserRole } from "@/types/auth.types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -34,6 +35,8 @@ export const signUpUser = async (
   role: UserRole
 ) => {
   try {
+    console.log(`Attempting to sign up user with email: ${email} and role: ${role}`);
+    
     // 1) Create the user in Auth with role in metadata
     const { data: authData, error: authErr } = await supabase.auth.signUp({
       email,
@@ -55,29 +58,18 @@ export const signUpUser = async (
 
     const userId = authData.user?.id;
     if (!userId) throw new Error("User ID not returned from signUp");
-
-    // 2) Insert the profile with the role
-    // The trigger will handle this now, but we keep this as a fallback
-    // Cast the role to UserRole to ensure type safety
-    const now = new Date().toISOString();
-    const { error: insertErr } = await supabase
-      .from("profiles")
-      .insert({
-        id: userId, 
-        role: role as UserRole, // explicitly cast to UserRole type
-        created_at: now, 
-        updated_at: now 
-      });
-      
-    if (insertErr) {
-      console.error("Error inserting profile row:", insertErr);
-      // no abortamos el flujo porque el usuario ya está creado
-    }
-
+    
+    // We rely on the database trigger to create the profile now
+    // The trigger now correctly uses raw_user_meta_data->>'role'
+    console.log(`User created successfully with ID: ${userId}, role: ${role}`);
+    
     toast({
       title: "Registration successful",
       description: "Welcome to LinguaEdgeAI!",
     });
+
+    // Wait a moment to ensure the database trigger completes
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     return { success: true, error: null, data: authData };
   } catch (err: any) {
