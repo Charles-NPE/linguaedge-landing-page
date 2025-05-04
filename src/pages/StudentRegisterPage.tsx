@@ -1,25 +1,38 @@
 import React, { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { UserRole } from "@/types/auth.types";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
-const registerSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+const registerSchema = z
+  .object({
+    email: z.string().email({ message: "Please enter a valid email address." }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+    confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
@@ -27,68 +40,23 @@ const StudentRegisterPage: React.FC = () => {
   const { signUp, user, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
+  // Si ya está loggeado, lo mandamos al dashboard
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate("/student");
     }
   }, [user, navigate]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: { email: "", password: "", confirmPassword: "" },
   });
 
-  async function onSubmit(values: RegisterFormValues) {
-    try {
-      // Sign up the user with the student role
-      const { data, error } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: { role: 'student' }
-        }
-      });
-      
-      if (error) throw error;
-      
-      // If signup successful, create profile record
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: data.user.id,
-          role: 'student'
-        });
-        
-        if (profileError) {
-          console.error("Error creating profile:", profileError);
-          toast({
-            title: "Profile Creation Error",
-            description: "Your account was created but there was an issue setting up your profile.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Registration Successful",
-            description: "Your student account has been created.",
-          });
-        }
-      }
-      
-      // Navigate to student dashboard
-      navigate('/student');
-    } catch (error) {
-      console.error("Registration error:", error);
-      toast({
-        title: "Registration Failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
-  }
+  const onSubmit = form.handleSubmit(async (values) => {
+    // Aquí usamos tu helper signUp que ya hace todo: auth.signUp + trigger + fallback
+    await signUp(values.email, values.password, "student");
+    // la navegación y los toasts los gestiona tu context
+  });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 p-4">
@@ -103,7 +71,7 @@ const StudentRegisterPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={onSubmit} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -111,11 +79,11 @@ const StudentRegisterPage: React.FC = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="email@example.com" 
-                        type="email" 
-                        disabled={isLoading} 
-                        {...field} 
+                      <Input
+                        placeholder="email@example.com"
+                        type="email"
+                        disabled={isLoading}
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -129,11 +97,11 @@ const StudentRegisterPage: React.FC = () => {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="••••••••" 
-                        type="password" 
-                        disabled={isLoading} 
-                        {...field} 
+                      <Input
+                        placeholder="••••••••"
+                        type="password"
+                        disabled={isLoading}
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -147,20 +115,20 @@ const StudentRegisterPage: React.FC = () => {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="••••••••" 
-                        type="password" 
-                        disabled={isLoading} 
-                        {...field} 
+                      <Input
+                        placeholder="••••••••"
+                        type="password"
+                        disabled={isLoading}
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button 
-                type="submit" 
-                className="w-full bg-accent hover:bg-accent/90 text-white" 
+              <Button
+                type="submit"
+                className="w-full bg-accent hover:bg-accent/90 text-white"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -189,3 +157,4 @@ const StudentRegisterPage: React.FC = () => {
 };
 
 export default StudentRegisterPage;
+
