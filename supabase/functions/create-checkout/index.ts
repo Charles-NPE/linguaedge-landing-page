@@ -21,71 +21,76 @@ serve(async (req) => {
 
   try {
     logStep("Function started");
-    
+
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      throw new Error("STRIPE_SECRET_KEY is not set");
-    }
-    
-    // Create Supabase client
+    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    logStep("Stripe key verified");
+
+    // Create a Supabase client with the service role key for admin operations
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false }
     });
 
-    // Get request data
-    const requestData = await req.json();
-    const { priceId, userRole, returnUrl = "/" } = requestData;
-    
-    logStep("Request data", { priceId, userRole, returnUrl });
-
-    // Validate auth token
+    // Get authorization
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Missing authorization header");
-    }
-    
+    if (!authHeader) throw new Error("Missing authorization header");
+    logStep("Authorization header found");
+
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    logStep("Authenticating user with token");
     
-    if (userError || !userData.user) {
-      throw new Error("Invalid authentication token");
-    }
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError) throw new Error(`Authentication error: ${userError.message}`);
     
     const user = userData.user;
+    if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
+
+    // Get request body
+    const requestData = await req.json();
+    const { priceId, userRole, returnUrl = "/" } = requestData;
+    if (!priceId) throw new Error("Missing price ID");
+    logStep("Request data parsed", { priceId, userRole, returnUrl });
 
     // Initialize Stripe
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
     
-    // Check if customer already exists
-    const customers = await stripe.customers.list({
-      email: user.email,
-      limit: 1,
-    });
-    
-    let customerId: string;
+    // Check if customer exists and create if needed
+    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    let customerId;
     
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
       logStep("Existing customer found", { customerId });
+      
+      // Update customer with latest metadata
+      await stripe.customers.update(customerId, {
+        metadata: {
+          userId: user.id,
+          userRole
+        }
+      });
+      logStep("Customer metadata updated");
     } else {
-      // Create customer if not exists
+      // Create new customer
       const newCustomer = await stripe.customers.create({
         email: user.email,
         metadata: {
           userId: user.id,
-          userRole,
-        },
+          userRole
+        }
       });
       customerId = newCustomer.id;
-      logStep("New customer created", { customerId });
+      logStep("Created new customer", { customerId });
     }
-
-    // Create checkout session
+    
+    // Create a checkout session
+    const origin = req.headers.get("origin") || "http://localhost:8080";
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
+      mode: "subscription",
       payment_method_types: ["card"],
       line_items: [
         {
@@ -93,20 +98,22 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
-      mode: "subscription",
+      success_url: `${origin}${returnUrl}?checkout=success`,
+      cancel_url: `${origin}${returnUrl}?checkout=canceled`,
       subscription_data: {
         metadata: {
           userId: user.id,
-          userRole,
-        },
+          userRole
+        }
       },
-      success_url: `${req.headers.get("origin")}${returnUrl}?checkout=success`,
-      cancel_url: `${req.headers.get("origin")}${returnUrl}?checkout=canceled`,
     });
-
+    
+    if (!session || !session.url) {
+      throw new Error("Failed to create checkout session");
+    }
+    
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
-
-    // Return session URL
+    
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
