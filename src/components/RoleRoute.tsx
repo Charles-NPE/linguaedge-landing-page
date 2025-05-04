@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Navigate, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types/auth.types";
 
@@ -16,7 +16,6 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
   children 
 }) => {
   const { user, isLoading, profile } = useAuth();
-  const navigate = useNavigate();
 
   if (isLoading) {
     // Show loading state
@@ -42,17 +41,6 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
       return <Navigate to="/teacher" replace />;
     } else {
       return <Navigate to="/student" replace />;
-    }
-  }
-
-  // For teachers, check subscription status
-  if (userRole === 'teacher') {
-    const hasValidSubscription = 
-      profile?.stripe_status === 'active' || 
-      profile?.stripe_status === 'trialing';
-    
-    if (!hasValidSubscription) {
-      return <Navigate to="/pricing?error=subscription" replace />;
     }
   }
 

@@ -32,8 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         setSession(newSession);
-        // Fixed typing issue by casting the User as AuthUser
-        setUser(newSession?.user ? { ...newSession.user } as AuthUser : null);
+        setUser(newSession?.user ?? null);
 
         // Defer Supabase calls with setTimeout
         if (newSession?.user) {
@@ -49,8 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
-      // Fixed typing issue by casting the User as AuthUser
-      setUser(currentSession?.user ? { ...currentSession.user } as AuthUser : null);
+      setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
         fetchUserProfile(currentSession.user.id);
@@ -108,19 +106,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("User ID not returned from signUp");
       }
 
-      // set/ensure teacher role if the user signed up via /signup/teacher
-      if (role === 'teacher') {
-        const { error: updErr, data: updData } =
-          await supabase.from('profiles')
-            .update({ role: 'teacher' })
-            .eq('id', data.user?.id);
+      // Always insert a new profile with the user's ID and role
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({ id: userId, role });
 
-        // Fix for TS error: Check if updData exists and has length before checking its value
-        if (updErr || !updData || updData.length === 0) {
-          // row didn't exist – insert instead
-          await supabase.from('profiles')
-            .insert({ id: data.user?.id, email: data.user?.email, role: 'teacher' });
-        }
+      if (insertError) {
+        throw insertError;
       }
 
       toast({
@@ -129,11 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Redirect based on role
-      if (role === 'student') {
-        // Students go directly to student dashboard
-        redirectBasedOnRole(role);
-      }
-      // Teachers will be handled by the TeacherRegisterPage component
+      redirectBasedOnRole(role);
     } catch (error: any) {
       toast({
         title: "Registration failed",

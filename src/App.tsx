@@ -14,7 +14,6 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookieConsent from "./components/CookieConsent";
 import { AuthProvider } from "./contexts/AuthContext";
-import { SubscriptionProvider } from "./contexts/SubscriptionContext";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import TeacherRegisterPage from "./pages/TeacherRegisterPage";
@@ -82,12 +81,10 @@ const App = () => (
     <TooltipProvider>
       <BrowserRouter>
         <AuthProvider>
-          <SubscriptionProvider>
-            <Toaster />
-            <Sonner />
-            <AppRoutes />
-            <CookieConsent />
-          </SubscriptionProvider>
+          <Toaster />
+          <Sonner />
+          <AppRoutes />
+          <CookieConsent />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
