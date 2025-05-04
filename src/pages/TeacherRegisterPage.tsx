@@ -10,6 +10,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { UserRole } from "@/types/auth.types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const registerSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -43,8 +45,50 @@ const TeacherRegisterPage: React.FC = () => {
   });
 
   async function onSubmit(values: RegisterFormValues) {
-    // Hard-code the role to 'teacher'
-    await signUp(values.email, values.password, 'teacher' as UserRole);
+    try {
+      // Sign up the user with the teacher role
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: { role: 'teacher' }
+        }
+      });
+      
+      if (error) throw error;
+      
+      // If signup successful, create profile record
+      if (data.user) {
+        const { error: profileError } = await supabase.from('profiles').insert({
+          id: data.user.id,
+          role: 'teacher'
+        });
+        
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          toast({
+            title: "Profile Creation Error",
+            description: "Your account was created but there was an issue setting up your profile.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Registration Successful",
+            description: "Your teacher account has been created.",
+          });
+        }
+      }
+      
+      // Navigate to teacher dashboard
+      navigate('/teacher');
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Registration Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
   }
 
   return (

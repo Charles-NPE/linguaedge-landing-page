@@ -1,10 +1,13 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserCheck, GraduationCap } from "lucide-react";
+
 const SignupPage: React.FC = () => {
-  return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 p-4">
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
@@ -37,6 +40,8 @@ const SignupPage: React.FC = () => {
           </p>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 };
+
 export default SignupPage;
