@@ -45,7 +45,7 @@ const plans = [
 ];
 
 const Pricing = () => {
-  const { user, profile, isTeacher, isStudent, isSubscriptionActive, checkSubscription } = useAuth();
+  const { user, profile, isTeacher, isStudent, isSubscriptionActive, checkSubscription, session } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
@@ -182,18 +182,17 @@ const Pricing = () => {
                     className={`w-full ${plan.popular ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    {isLoading[plan.priceId] ? 'Processing...' : plan.cta}
+                    {isLoading[plan.priceId] ? 'Processing...' : (
+                      !session 
+                        ? 'Sign up & Pay'
+                        : isTeacher && !profile?.stripe_status?.match(/active|trialing/)
+                          ? 'Choose & Pay'
+                          : 'Go to Dashboard'
+                    )}
                   </Button>
                 </div>
               </div>
             ))}
-          </div>
-          
-          <div className="text-center mt-16">
-            <p className="text-lg text-gray-600 mb-4">Ready to start?</p>
-            <Button asChild size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-              <a href="/signup">Sign up free</a>
-            </Button>
           </div>
         </div>
       </section>
@@ -203,3 +202,4 @@ const Pricing = () => {
 };
 
 export default Pricing;
+
