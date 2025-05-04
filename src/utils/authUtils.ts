@@ -58,12 +58,13 @@ export const signUpUser = async (
 
     // 2) Insert the profile with the role
     // The trigger will handle this now, but we keep this as a fallback
+    // Cast the role to UserRole to ensure type safety
     const now = new Date().toISOString();
     const { error: insertErr } = await supabase
       .from("profiles")
       .insert({
         id: userId, 
-        role, 
+        role: role as UserRole, // explicitly cast to UserRole type
         created_at: now, 
         updated_at: now 
       });

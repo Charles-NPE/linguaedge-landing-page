@@ -30,14 +30,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
+      async (event, newSession) => {
+        console.log("Auth state changed:", event);
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
         // Defer Supabase calls with setTimeout
         if (newSession?.user) {
-          setTimeout(() => {
-            fetchAndSetUserProfile(newSession.user.id);
+          setTimeout(async () => {
+            await fetchAndSetUserProfile(newSession.user.id);
           }, 0);
         } else {
           setProfile(null);
@@ -46,12 +47,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
-        fetchAndSetUserProfile(currentSession.user.id);
+        await fetchAndSetUserProfile(currentSession.user.id);
       }
       setIsLoading(false);
     });
@@ -61,20 +62,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchAndSetUserProfile = async (userId: string) => {
     const profileData = await fetchUserProfile(userId);
+    console.log("Fetched profile data:", profileData);
+    
     if (profileData) {
       setProfile(profileData as UserProfile);
       setUser(prev => prev ? { ...prev, profile: profileData as UserProfile } : null);
+    } else {
+      console.warn("Profile data is null or undefined");
     }
   };
 
   const signUp = async (email: string, password: string, role: UserRole) => {
     try {
       setIsLoading(true);
+      console.log(`Registering new ${role} with email: ${email}`);
+      
       const { success, data } = await signUpUser(email, password, role);
       
       if (success) {
-        // Redirect based on role
-        navigate(getRedirectPathForRole(role));
+        console.log("Sign up successful, user data:", data);
+        
+        // Wait for a moment to ensure the profile is created
+        // This helps prevent race conditions
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Fetch the profile to confirm role is set correctly
+        if (data?.user?.id) {
+          const profile = await fetchUserProfile(data.user.id);
+          console.log("Fetched profile after signup:", profile);
+          
+          // Use the role from the profile if available, or fallback to the intended role
+          const effectiveRole = profile?.role || role;
+          console.log("Redirecting to:", getRedirectPathForRole(effectiveRole));
+          
+          // Redirect based on effective role
+          navigate(getRedirectPathForRole(effectiveRole));
+        }
+      } else {
+        console.error("Sign up failed");
       }
     } finally {
       setIsLoading(false);
