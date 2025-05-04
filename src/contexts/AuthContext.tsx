@@ -84,6 +84,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, role: UserRole) => {
     try {
       setIsLoading(true);
+      
+      // Sign up the user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -98,12 +100,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Role will be set by the trigger function, we'll update the profile if needed
-      if (role !== 'student') {
-        await supabase
-          .from('profiles')
-          .update({ role })
-          .eq('id', data.user?.id);
+      // Verify we have a user ID
+      const userId = data.user?.id;
+      if (!userId) {
+        throw new Error("User ID not returned from signUp");
+      }
+
+      // Always insert a new profile with the user's ID and role
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({ id: userId, role });
+
+      if (insertError) {
+        throw insertError;
       }
 
       toast({
