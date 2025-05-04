@@ -1,8 +1,9 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Demo from "./pages/Demo";
@@ -14,7 +15,9 @@ import TermsOfService from "./pages/TermsOfService";
 import CookieConsent from "./components/CookieConsent";
 import { AuthProvider } from "./contexts/AuthContext";
 import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
+import SignupPage from "./pages/SignupPage";
+import TeacherRegisterPage from "./pages/TeacherRegisterPage";
+import StudentRegisterPage from "./pages/StudentRegisterPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 import RoleRoute from "./components/RoleRoute";
@@ -25,7 +28,14 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Index />} />
     <Route path="/login" element={<LoginPage />} />
-    <Route path="/register" element={<RegisterPage />} />
+    
+    {/* New signup flow routes */}
+    <Route path="/signup" element={<SignupPage />} />
+    <Route path="/signup/teacher" element={<TeacherRegisterPage />} />
+    <Route path="/signup/student" element={<StudentRegisterPage />} />
+    
+    {/* Redirect old register route to new signup flow */}
+    <Route path="/register" element={<Navigate to="/signup" replace />} />
     
     {/* Protected Teacher Routes */}
     <Route 

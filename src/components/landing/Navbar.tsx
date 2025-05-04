@@ -52,9 +52,9 @@ const Navbar = () => {
                     Log in
                   </Button>
                 </Link>
-                <Link to="/register">
+                <Link to="/signup">
                   <Button className="bg-primary hover:bg-primary/90 text-white">
-                    Sign up
+                    Sign up free
                   </Button>
                 </Link>
               </>
@@ -110,11 +110,11 @@ const Navbar = () => {
                     Log in
                   </Link>
                   <Link
-                    to="/register"
+                    to="/signup"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <Button className="w-full bg-primary hover:bg-primary/90 text-white">
-                      Sign up
+                      Sign up free
                     </Button>
                   </Link>
                 </>
