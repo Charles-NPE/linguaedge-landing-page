@@ -115,7 +115,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .update({ role: 'teacher' })
             .eq('id', data.user?.id);
 
-        if (updErr || (updData?.length ?? 0) === 0) {
+        // Fix for TS error: Check if updData exists and has length before checking its value
+        if (updErr || !updData || updData.length === 0) {
           // row didn't exist – insert instead
           await supabase.from('profiles')
             .insert({ id: data.user?.id, email: data.user?.email, role: 'teacher' });
