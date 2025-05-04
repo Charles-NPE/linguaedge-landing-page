@@ -28,7 +28,7 @@ const teacherPlans: PricingPlan[] = [
     price: "€50",
     period: "per month",
     description: "For growing language academies with more needs.",
-    priceId: "price_academy", // Replace with actual price ID
+    priceId: import.meta.env.VITE_ACADEMY_PRICE_ID || "",
     features: [
       "Up to 60 students",
       "3 teacher accounts",

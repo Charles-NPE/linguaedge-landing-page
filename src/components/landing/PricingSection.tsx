@@ -19,6 +19,7 @@ const plans = [
     cta: "Get started",
     ctaLink: "/signup",
     popular: false,
+    priceId: import.meta.env.VITE_STARTER_PRICE_ID || "",
   },
   {
     name: "Academy",
@@ -34,6 +35,7 @@ const plans = [
     cta: "Get started",
     ctaLink: "/signup",
     popular: true,
+    priceId: import.meta.env.VITE_ACADEMY_PRICE_ID || "",
   }
 ];
 
