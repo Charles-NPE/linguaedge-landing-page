@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -114,7 +113,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('id', data.user?.id);
 
         // Fix TypeScript error by correctly checking the update result
-        if (updErr || !updData || updData.length === undefined) {
+        // updData is likely an object that doesn't have length property
+        if (updErr || !updData) {
           // row didn't exist – insert instead
           await supabase.from('profiles')
             .insert({ id: data.user?.id, role: 'teacher' });
