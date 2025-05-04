@@ -106,13 +106,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("User ID not returned from signUp");
       }
 
-      // Always insert a new profile with the user's ID and role
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({ id: userId, role });
+      // set/ensure teacher role if the user signed up as a teacher
+      if (role === 'teacher') {
+        const { error: updErr, data: updData } =
+          await supabase.from('profiles')
+            .update({ role: 'teacher' })
+            .eq('id', data.user?.id);
 
-      if (insertError) {
-        throw insertError;
+        // Fix TypeScript error by properly checking if updData exists and has entries
+        if (updErr || !updData || updData.length === 0) {
+          // row didn't exist – insert instead
+          await supabase.from('profiles')
+            .insert({ id: data.user?.id, role: 'teacher' });
+        }
       }
 
       toast({
