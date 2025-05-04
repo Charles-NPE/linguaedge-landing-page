@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
@@ -40,7 +41,7 @@ const StudentRegisterPage: React.FC = () => {
   const { signUp, user, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Si ya está loggeado, lo mandamos al dashboard
+  // If already logged in, redirect to dashboard
   useEffect(() => {
     if (user) {
       navigate("/student");
@@ -52,10 +53,9 @@ const StudentRegisterPage: React.FC = () => {
     defaultValues: { email: "", password: "", confirmPassword: "" },
   });
 
-  const onSubmit = form.handleSubmit(async (values) => {
-    // Aquí usamos tu helper signUp que ya hace todo: auth.signUp + trigger + fallback
-    await signUp(values.email, values.password, "student");
-    // la navegación y los toasts los gestiona tu context
+  const onSubmit = form.handleSubmit(async ({ email, password }) => {
+    await signUp(email, password, "student");
+    // No manual navigation - signUp function handles routing
   });
 
   return (
@@ -157,4 +157,3 @@ const StudentRegisterPage: React.FC = () => {
 };
 
 export default StudentRegisterPage;
-

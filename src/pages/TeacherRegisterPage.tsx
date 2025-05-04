@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
@@ -51,9 +52,9 @@ const TeacherRegisterPage: React.FC = () => {
     defaultValues: { email: "", password: "", confirmPassword: "" },
   });
 
-  const onSubmit = form.handleSubmit(async (values) => {
-    // Usamos el mismo helper pero con rol "teacher"
-    await signUp(values.email, values.password, "teacher");
+  const onSubmit = form.handleSubmit(async ({ email, password }) => {
+    await signUp(email, password, "teacher");
+    // No manual navigation - signUp function handles routing
   });
 
   return (
@@ -155,4 +156,3 @@ const TeacherRegisterPage: React.FC = () => {
 };
 
 export default TeacherRegisterPage;
-

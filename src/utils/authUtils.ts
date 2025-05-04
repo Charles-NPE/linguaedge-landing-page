@@ -1,3 +1,4 @@
+
 import { UserRole } from "@/types/auth.types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -34,7 +35,7 @@ export const signUpUser = async (
   role: UserRole
 ) => {
   try {
-    // 1) Crear el usuario en Auth
+    // 1) Create the user in Auth
     const { data: authData, error: authErr } = await supabase.auth.signUp({
       email,
       password,
@@ -51,7 +52,7 @@ export const signUpUser = async (
     const userId = authData.user?.id;
     if (!userId) throw new Error("User ID not returned from signUp");
 
-    // 2) Siempre insertar (o ignorar si ya existe) el profile
+    // 2) Insert the profile with the role
     const now = new Date().toISOString();
     const { error: insertErr } = await supabase
       .from("profiles")
@@ -102,7 +103,7 @@ export const signInUser = async (email: string, password: string) => {
       description: "Welcome back!",
     });
 
-    // 2) Recuperar el profile
+    // 2) Retrieve the profile
     const { data: profileData, error: profileErr } = await supabase
       .from("profiles")
       .select("*")
