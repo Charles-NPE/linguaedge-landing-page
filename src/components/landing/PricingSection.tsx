@@ -42,35 +42,51 @@ const plans = [
 ];
 
 const PricingSection = () => {
-  const { user } = useAuth();
+  const { user, isTeacher, isStudent, isSubscriptionActive, checkSubscription } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
 
-  const handleCheckout = async (priceId: string, planName: string) => {
+  const handleGetStarted = async (priceId: string, planName: string) => {
     try {
-      // If user is not logged in, redirect to signup
+      // If user is not logged in, redirect to signup with plan parameter
       if (!user) {
-        navigate('/signup');
+        const planParam = priceId === "STARTER_PRICE_ID" ? "starter" : "academy";
+        navigate(`/signup/teacher?plan=${planParam}`);
         return;
       }
 
-      // Set loading state for this specific button
-      setIsLoading(prev => ({ ...prev, [priceId]: true }));
-
-      // Call the create-checkout Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { priceId },
-      });
-
-      if (error) {
-        throw error;
+      // For students, always redirect to student dashboard
+      if (isStudent) {
+        navigate('/student');
+        return;
       }
 
-      if (data?.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL returned');
+      // For teachers with active subscriptions, go directly to dashboard
+      if (isTeacher && isSubscriptionActive) {
+        navigate('/teacher');
+        return;
+      }
+
+      // For teachers without active subscriptions, start checkout
+      if (isTeacher && !isSubscriptionActive) {
+        // Set loading state for this specific button
+        setIsLoading(prev => ({ ...prev, [priceId]: true }));
+
+        // Call the create-checkout Supabase Edge Function
+        const { data, error } = await supabase.functions.invoke('create-checkout', {
+          body: { priceId },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data?.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = data.url;
+        } else {
+          throw new Error('No checkout URL returned');
+        }
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -84,6 +100,19 @@ const PricingSection = () => {
       setIsLoading(prev => ({ ...prev, [priceId]: false }));
     }
   };
+
+  // Check subscription when the component mounts (only for teachers)
+  if (user && isTeacher && !isLoading['checkSubscription']) {
+    setIsLoading(prev => ({ ...prev, checkSubscription: true }));
+    checkSubscription().finally(() => {
+      setIsLoading(prev => ({ ...prev, checkSubscription: false }));
+    });
+  }
+
+  // Hide the pricing cards for students
+  if (isStudent) {
+    return null;
+  }
 
   return (
     <section className="py-20 bg-gray-50" id="pricing">
@@ -127,7 +156,7 @@ const PricingSection = () => {
                 </ul>
                 
                 <Button 
-                  onClick={() => handleCheckout(plan.priceId, plan.name)}
+                  onClick={() => handleGetStarted(plan.priceId, plan.name)}
                   disabled={isLoading[plan.priceId]}
                   className={`w-full ${plan.popular ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
                   variant={plan.popular ? "default" : "outline"}

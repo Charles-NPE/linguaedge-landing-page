@@ -43,11 +43,11 @@ const AppRoutes = () => (
     {/* Redirect old register route to new signup flow */}
     <Route path="/register" element={<Navigate to="/signup" replace />} />
     
-    {/* Protected Teacher Routes */}
+    {/* Protected Teacher Routes - now requires active subscription */}
     <Route 
       path="/teacher" 
       element={
-        <RoleRoute allowed={['teacher']}>
+        <RoleRoute allowed={['teacher']} requireSubscription={true}>
           <TeacherDashboard />
         </RoleRoute>
       } 

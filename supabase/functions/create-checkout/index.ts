@@ -70,7 +70,7 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${req.headers.get("origin")}/teacher?checkout=success`,
       cancel_url: `${req.headers.get("origin")}/pricing`,
       subscription_data: {
         trial_period_days: 30,

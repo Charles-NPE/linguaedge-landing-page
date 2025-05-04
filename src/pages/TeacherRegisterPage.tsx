@@ -1,76 +1,89 @@
 
-import React, { useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserCheck, ArrowLeft, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
 
-const registerSchema = z
-  .object({
-    email: z.string().email({ message: "Please enter a valid email address." }),
-    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-    confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+const formSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+});
 
-type RegisterFormValues = z.infer<typeof registerSchema>;
+type FormData = z.infer<typeof formSchema>;
 
 const TeacherRegisterPage: React.FC = () => {
-  const { signUp, user, isLoading } = useAuth();
+  const { signUp, isLoading } = useAuth();
   const navigate = useNavigate();
-
+  const location = useLocation();
+  const [plan, setPlan] = useState<string | null>(null);
+  
+  // Extract plan from URL query params
   useEffect(() => {
-    if (user) {
-      navigate("/teacher");
+    const params = new URLSearchParams(location.search);
+    const planParam = params.get('plan');
+    if (planParam) {
+      setPlan(planParam);
     }
-  }, [user, navigate]);
+  }, [location]);
 
-  const form = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { email: "", password: "", confirmPassword: "" },
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
 
-  const onSubmit = form.handleSubmit(async ({ email, password }) => {
-    await signUp(email, password, "teacher");
-    // No manual navigation - signUp function handles routing
-  });
+  const onSubmit = async (data: FormData) => {
+    try {
+      await signUp(data.email, data.password, "teacher");
+
+      toast({
+        title: "Account created",
+        description: "Your teacher account has been created successfully.",
+      });
+
+      // If there's a plan parameter and the signup was successful,
+      // we'll leverage the AuthContext redirection
+    } catch (error) {
+      console.error("Sign up error:", error);
+      toast({
+        title: "Registration failed",
+        description: error instanceof Error ? error.message : "An error occurred during registration.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">
-            Create a Teacher Account
+          <CardTitle className="text-2xl font-bold flex items-center gap-2">
+            <UserCheck className="h-6 w-6" />
+            Register as Teacher
+            {plan && (
+              <Badge variant="outline" className="ml-2">
+                {plan === 'starter' ? 'Starter' : 'Academy'} Plan
+              </Badge>
+            )}
           </CardTitle>
-          <CardDescription className="text-center">
-            Join LinguaEdgeAI as a teacher to help students improve their language skills
+          <CardDescription>
+            Create a teacher account and start managing your language academy.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={onSubmit} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -78,12 +91,7 @@ const TeacherRegisterPage: React.FC = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="email@example.com"
-                        type="email"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      <Input placeholder="teacher@example.com" autoComplete="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -96,59 +104,40 @@ const TeacherRegisterPage: React.FC = () => {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="••••••••"
-                        type="password"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      <Input type="password" autoComplete="new-password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="••••••••"
-                        type="password"
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-white"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
-                  <span className="flex items-center">
-                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating account...
-                  </span>
+                  </>
                 ) : (
-                  "Register"
+                  "Create Teacher Account"
                 )}
               </Button>
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="flex flex-col">
-          <p className="mt-2 text-sm text-center text-gray-600">
+        <CardFooter className="flex flex-col space-y-4">
+          <div className="text-sm text-center text-gray-600">
             Already have an account?{" "}
             <Link to="/login" className="text-primary hover:underline">
               Log in
             </Link>
-          </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-gray-500"
+            onClick={() => navigate('/signup')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to signup options
+          </Button>
         </CardFooter>
       </Card>
     </div>

@@ -7,16 +7,25 @@ import { UserRole } from "@/types/auth.types";
 interface RoleRouteProps {
   allowed: UserRole[];
   redirectTo?: string;
+  requireSubscription?: boolean;
   children?: React.ReactNode;
 }
 
 const RoleRoute: React.FC<RoleRouteProps> = ({ 
   allowed, 
   redirectTo = "/login", 
+  requireSubscription = false,
   children 
 }) => {
-  const { user, isLoading, profile } = useAuth();
+  const { user, isLoading, profile, isSubscriptionActive, checkSubscription } = useAuth();
   const navigate = useNavigate();
+
+  // Check subscription status when component mounts if access requires subscription
+  useEffect(() => {
+    if (user && profile?.role === 'teacher' && requireSubscription) {
+      checkSubscription();
+    }
+  }, [user, profile, requireSubscription, checkSubscription]);
 
   // Add debugging to help diagnose issues
   useEffect(() => {
@@ -24,9 +33,11 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
       isLoading,
       user: user?.id,
       profile: profile?.role,
-      allowed
+      allowed,
+      requireSubscription,
+      isSubscriptionActive
     });
-  }, [isLoading, user, profile, allowed]);
+  }, [isLoading, user, profile, allowed, requireSubscription, isSubscriptionActive]);
 
   if (isLoading) {
     // Show loading state
@@ -54,6 +65,12 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
     const redirectPath = userRole === 'teacher' ? "/teacher" : "/student";
     console.log("Role not allowed, redirecting to:", redirectPath);
     return <Navigate to={redirectPath} replace />;
+  }
+
+  // Check subscription if required (only for teachers)
+  if (requireSubscription && userRole === 'teacher' && !isSubscriptionActive) {
+    console.log("Subscription required but not active, redirecting to pricing");
+    return <Navigate to="/pricing?subscription=inactive" replace />;
   }
 
   console.log("Role is allowed, rendering component/outlet");

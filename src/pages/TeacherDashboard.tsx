@@ -1,11 +1,63 @@
-import React from "react";
+
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import FeatureCard from "@/components/dashboards/FeatureCard";
-import { BookOpen, BarChart, Users } from "lucide-react";
+import { BookOpen, BarChart, Users, CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "@/hooks/use-toast";
 
 const TeacherDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile, isSubscriptionActive, checkSubscription } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check subscription when the dashboard loads
+    const checkSubscriptionStatus = async () => {
+      try {
+        await checkSubscription();
+      } catch (error) {
+        console.error("Error checking subscription:", error);
+      }
+    };
+    
+    checkSubscriptionStatus();
+    
+    // Check for successful checkout in URL params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success') {
+      toast({
+        title: "Subscription Active",
+        description: "Your subscription has been activated successfully.",
+      });
+      
+      // Clean the URL
+      navigate('/teacher', { replace: true });
+    }
+  }, [checkSubscription, navigate]);
+  
+  // Route guard: redirect to pricing if no active subscription
+  useEffect(() => {
+    if (profile && profile.role === 'teacher' && 
+        profile.stripe_status !== undefined && 
+        !isSubscriptionActive && 
+        !['active', 'trialing'].includes(profile.stripe_status || '')) {
+      navigate('/pricing?subscription=inactive');
+    }
+  }, [profile, isSubscriptionActive, navigate]);
+
+  // Show a loading state until we determine subscription status
+  if (profile?.role === 'teacher' && profile.stripe_status === undefined) {
+    return (
+      <DashboardLayout title="Teacher Dashboard">
+        <div className="flex justify-center items-center h-64">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Teacher Dashboard">
@@ -13,6 +65,29 @@ const TeacherDashboard: React.FC = () => {
         <h2 className="text-lg text-gray-600">
           Welcome back, {user?.email?.split('@')[0] || 'Teacher'}
         </h2>
+        
+        {/* Show subscription status */}
+        {profile?.stripe_status && (
+          <div className="mt-4">
+            <Alert className={`${
+              isSubscriptionActive ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <AlertDescription className="flex justify-between items-center">
+                <span>
+                  Subscription status: <strong>{profile.stripe_status}</strong>
+                  {profile.subscription_end && (
+                    <span className="ml-2">
+                      (until {new Date(profile.subscription_end).toLocaleDateString()})
+                    </span>
+                  )}
+                </span>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <CreditCard className="h-4 w-4" /> Manage Subscription
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

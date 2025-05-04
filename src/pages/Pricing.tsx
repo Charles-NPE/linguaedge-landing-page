@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/landing/Footer';
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const plans = [
   {
@@ -44,35 +45,66 @@ const plans = [
 ];
 
 const Pricing = () => {
-  const { user } = useAuth();
+  const { user, profile, isTeacher, isStudent, isSubscriptionActive, checkSubscription } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
+  const [showInactiveAlert, setShowInactiveAlert] = useState(false);
 
-  const handleCheckout = async (priceId: string, planName: string) => {
+  // Check if there's a subscription inactive flag in the URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('subscription') === 'inactive') {
+      setShowInactiveAlert(true);
+    }
+
+    // Check subscription status when the component mounts
+    if (user && isTeacher) {
+      checkSubscription();
+    }
+  }, [location, user, isTeacher, checkSubscription]);
+
+  const handleGetStarted = async (priceId: string, planName: string) => {
     try {
-      // If user is not logged in, redirect to signup
+      // If user is not logged in, redirect to signup with plan parameter
       if (!user) {
-        navigate('/signup');
+        const planParam = priceId === "STARTER_PRICE_ID" ? "starter" : "academy";
+        navigate(`/signup/teacher?plan=${planParam}`);
         return;
       }
 
-      // Set loading state for this specific button
-      setIsLoading(prev => ({ ...prev, [priceId]: true }));
-
-      // Call the create-checkout Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { priceId },
-      });
-
-      if (error) {
-        throw error;
+      // For students, always redirect to student dashboard
+      if (isStudent) {
+        navigate('/student');
+        return;
       }
 
-      if (data?.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL returned');
+      // For teachers with active subscriptions, go directly to dashboard
+      if (isTeacher && isSubscriptionActive) {
+        navigate('/teacher');
+        return;
+      }
+
+      // For teachers without active subscriptions, start checkout
+      if (isTeacher && !isSubscriptionActive) {
+        // Set loading state for this specific button
+        setIsLoading(prev => ({ ...prev, [priceId]: true }));
+
+        // Call the create-checkout Supabase Edge Function
+        const { data, error } = await supabase.functions.invoke('create-checkout', {
+          body: { priceId },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data?.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = data.url;
+        } else {
+          throw new Error('No checkout URL returned');
+        }
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -87,11 +119,25 @@ const Pricing = () => {
     }
   };
 
+  // Hide the pricing details for students
+  if (isStudent) {
+    navigate('/student');
+    return null;
+  }
+
   return (
     <div className="min-h-screen">
       <Navbar />
       <section className="py-20 pt-32 bg-gray-50">
         <div className="container mx-auto px-6">
+          {showInactiveAlert && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>
+                Your subscription is inactive. Please update your payment to regain access.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="text-center mb-16">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">
               Plans & Pricing
@@ -131,7 +177,7 @@ const Pricing = () => {
                   </ul>
                   
                   <Button 
-                    onClick={() => handleCheckout(plan.priceId, plan.name)}
+                    onClick={() => handleGetStarted(plan.priceId, plan.name)}
                     disabled={isLoading[plan.priceId]}
                     className={`w-full ${plan.popular ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
                     variant={plan.popular ? "default" : "outline"}

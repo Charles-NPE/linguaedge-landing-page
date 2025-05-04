@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AuthUser, UserProfile, UserRole } from "@/types/auth.types";
 import { useNavigate } from "react-router-dom";
 import { fetchUserProfile, signUpUser, signInUser, signOutUser, getRedirectPathForRole } from "@/utils/authUtils";
+import { toast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   session: Session | null;
@@ -16,6 +17,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   isTeacher: boolean;
   isStudent: boolean;
+  checkSubscription: () => Promise<void>;
+  isSubscriptionActive: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +28,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
+  const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }, 100);
         } else {
           setProfile(null);
+          setIsSubscriptionActive(false);
         }
       }
     );
@@ -74,6 +80,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (profileData) {
         setProfile(profileData as UserProfile);
         setUser(prev => prev ? { ...prev, profile: profileData as UserProfile } : null);
+        
+        // If teacher, check subscription status
+        if (profileData.role === 'teacher') {
+          await checkSubscription();
+        }
         return;
       } else {
         console.warn(`Profile data not found on attempt ${attempt} for user:`, userId);
@@ -87,6 +98,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     console.error("Failed to fetch profile after multiple attempts for user:", userId);
+  };
+
+  const checkSubscription = async () => {
+    if (!user || !profile || profile.role !== 'teacher' || isCheckingSubscription) {
+      return;
+    }
+
+    try {
+      setIsCheckingSubscription(true);
+      console.log("Checking subscription status...");
+      
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      
+      if (error) {
+        console.error("Error checking subscription:", error);
+        return;
+      }
+
+      console.log("Subscription check result:", data);
+      
+      // Update subscription status (active or trialing are considered active)
+      const active = data.subscribed || 
+                    (data.stripe_status && ['active', 'trialing'].includes(data.stripe_status));
+      
+      setIsSubscriptionActive(active);
+      
+      // Update profile with subscription data
+      setProfile(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          stripe_status: data.stripe_status,
+          subscription_end: data.subscription_end
+        };
+      });
+
+    } catch (error) {
+      console.error("Error checking subscription:", error);
+    } finally {
+      setIsCheckingSubscription(false);
+    }
   };
 
   const signUp = async (email: string, password: string, role: UserRole) => {
@@ -164,7 +216,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signIn,
         signOut,
         isTeacher,
-        isStudent
+        isStudent,
+        checkSubscription,
+        isSubscriptionActive
       }}
     >
       {children}

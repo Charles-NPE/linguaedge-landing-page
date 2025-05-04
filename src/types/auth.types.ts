@@ -8,6 +8,9 @@ export interface UserProfile {
   role: UserRole;
   created_at?: string;
   updated_at?: string;
+  stripe_customer_id?: string | null;
+  stripe_status?: string | null;
+  subscription_end?: string | null;
 }
 
 export interface AuthUser extends User {
