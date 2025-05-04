@@ -1,111 +1,164 @@
 
-import React from 'react';
-import Navbar from '@/components/landing/Navbar';
-import Footer from '@/components/landing/Footer';
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { PricingCard, PricingPlan } from "@/components/pricing/PricingCard";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 
-const plans = [
+const teacherPlans: PricingPlan[] = [
   {
     name: "Starter",
     price: "€20",
-    period: "per academy / month",
+    period: "per month",
     description: "Perfect for small language schools just starting out.",
+    priceId: import.meta.env.VITE_STARTER_PRICE_ID || "",
     features: [
       "Up to 20 students",
-      "1 teacher",
-      "Analytics dashboard",
+      "1 teacher account",
+      "Basic analytics dashboard",
       "Email support"
     ],
-    cta: "Get started",
-    ctaLink: "/signup",
-    popular: false,
+    userRole: "teacher",
   },
   {
     name: "Academy",
     price: "€50",
-    period: "per academy / month",
+    period: "per month",
     description: "For growing language academies with more needs.",
+    priceId: "price_academy", // Replace with actual price ID
     features: [
       "Up to 60 students",
-      "3 teachers",
-      "Analytics dashboard", 
-      "Email support"
+      "3 teacher accounts",
+      "Enhanced analytics dashboard", 
+      "Priority email support",
+      "Student performance insights"
     ],
-    cta: "Get started",
-    ctaLink: "/signup",
     popular: true,
+    userRole: "teacher",
+  },
+  {
+    name: "Enterprise",
+    price: "€99",
+    period: "per month",
+    description: "For large language schools with advanced requirements.",
+    priceId: "price_enterprise", // Replace with actual price ID
+    features: [
+      "Unlimited students",
+      "Unlimited teacher accounts",
+      "Advanced analytics dashboard", 
+      "Dedicated support",
+      "Custom essay prompts",
+      "White-label option"
+    ],
+    userRole: "teacher",
   }
 ];
 
-const Pricing = () => {
-  return (
-    <div className="min-h-screen">
-      <Navbar />
-      <section className="py-20 pt-32 bg-gray-50">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">
-              Plans & Pricing
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Transparent pricing for language academies. All plans include a <strong>1-month</strong> free trial.
-            </p>
-          </div>
+const studentPlans: PricingPlan[] = [
+  {
+    name: "Basic",
+    price: "Free",
+    period: "forever",
+    description: "Get started with basic language learning.",
+    priceId: "price_free",
+    features: [
+      "5 essay checks per month",
+      "Basic feedback",
+      "Grammar correction",
+      "Community forum access"
+    ],
+    userRole: "student",
+  },
+  {
+    name: "Advanced",
+    price: "€8",
+    period: "per month",
+    description: "Enhance your language learning journey.",
+    priceId: "price_student_advanced", // Replace with actual price ID
+    features: [
+      "Unlimited essay checks",
+      "Detailed feedback",
+      "Grammar and style correction",
+      "Vocabulary suggestions",
+      "Progress tracking"
+    ],
+    popular: true,
+    userRole: "student",
+  }
+];
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {plans.map((plan, index) => (
-              <div 
-                key={index} 
-                className={`bg-white rounded-xl shadow-lg overflow-hidden card-hover relative ${
-                  plan.popular ? 'ring-2 ring-indigo-500' : ''
-                }`}
-              >
-                <div className="absolute top-4 right-4">
-                  <Badge variant="default" className="bg-violet-500">1 month free</Badge>
-                </div>
-                
-                <div className="p-8">
-                  <h3 className="text-xl font-bold mb-2 text-gray-900">{plan.name}</h3>
-                  <div className="flex items-end mb-4">
-                    <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                    <span className="text-gray-600 ml-1">{plan.period}</span>
-                  </div>
-                  <p className="text-gray-600 mb-6">{plan.description}</p>
-                  
-                  <ul className="mb-8 space-y-3">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start">
-                        <Check className="h-5 w-5 text-indigo-500 mr-2 shrink-0 mt-0.5" />
-                        <span className="text-gray-600">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  <Button 
-                    asChild
-                    className={`w-full ${plan.popular ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
-                    variant={plan.popular ? "default" : "outline"}
-                  >
-                    <a href={plan.ctaLink}>{plan.cta}</a>
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center mt-16">
-            <p className="text-lg text-gray-600 mb-4">Ready to start?</p>
-            <Button asChild size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-              <a href="/signup">Sign up free</a>
+const PricingPage: React.FC = () => {
+  const { user, profile } = useAuth();
+  const { subscribed, subscriptionTier, isLoading, checkSubscription } = useSubscription();
+  const [activeTab, setActiveTab] = useState<string>("teacher");
+  
+  // Set initial tab based on user role
+  useEffect(() => {
+    if (profile?.role) {
+      setActiveTab(profile.role);
+    }
+  }, [profile?.role]);
+  
+  // Check subscription status when component mounts
+  useEffect(() => {
+    if (user) {
+      checkSubscription();
+    }
+  }, [user]);
+  
+  // Determine plans to show based on active tab
+  const plans = activeTab === "teacher" ? teacherPlans : studentPlans;
+  
+  // Find current plan
+  const currentPlan = plans.find(plan => plan.name === subscriptionTier);
+  
+  return (
+    <div className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mx-auto mb-16 max-w-3xl text-center">
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+          Straightforward Pricing
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          Choose the plan that fits your needs. All plans include a 14-day free trial.
+        </p>
+        
+        {!user && (
+          <div className="mt-6">
+            <Button asChild>
+              <Link to="/login">Sign in to get started</Link>
             </Button>
           </div>
-        </div>
-      </section>
-      <Footer />
+        )}
+      </div>
+      
+      {user && (
+        <Tabs
+          defaultValue={activeTab}
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="mx-auto mb-8 w-fit"
+        >
+          <TabsList>
+            <TabsTrigger value="teacher">For Teachers</TabsTrigger>
+            <TabsTrigger value="student">For Students</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+      
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+        {plans.map((plan) => (
+          <PricingCard
+            key={plan.name}
+            plan={plan}
+            isCurrentPlan={subscribed && plan.name === subscriptionTier}
+          />
+        ))}
+      </div>
     </div>
   );
 };
 
-export default Pricing;
+export default PricingPage;
