@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,17 +108,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // set/ensure teacher role if the user signed up as a teacher
       if (role === 'teacher') {
-        const { error: updErr, data: updData } =
-          await supabase.from('profiles')
+        const { data: updData, error: updErr } =
+          await supabase
+            .from('profiles')
             .update({ role: 'teacher' })
-            .eq('id', data.user?.id);
+            .eq('id', data.user!.id)
+            .select();               // <-- guarantees array
 
-        // Fix TypeScript error by correctly checking the update result
-        // updData is likely an object that doesn't have length property
-        if (updErr || !updData) {
-          // row didn't exist – insert instead
-          await supabase.from('profiles')
-            .insert({ id: data.user?.id, role: 'teacher' });
+        if (updErr || (updData?.length ?? 0) === 0) {
+          await supabase
+            .from('profiles')
+            .insert({ id: data.user!.id, role: 'teacher' });
         }
       }
 
