@@ -19,8 +19,8 @@ export const fetchUserProfile = async (userId: string) => {
     }
 
     return data ?? null;
-  } catch (error) {
-    console.error("Error fetching user profile:", error);
+  } catch (err) {
+    console.error("Error fetching user profile:", err);
     return null;
   }
 };
@@ -34,30 +34,34 @@ export const signUpUser = async (
   role: UserRole
 ) => {
   try {
-    // 1) Create the user in Supabase Auth
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) {
+    // 1) Crear el usuario en Auth
+    const { data: authData, error: authErr } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (authErr) {
       toast({
         title: "Registration failed",
-        description: error.message,
+        description: authErr.message,
         variant: "destructive",
       });
-      return { success: false, error, data: null };
+      return { success: false, error: authErr, data: null };
     }
 
-    const userId = data.user?.id;
+    const userId = authData.user?.id;
     if (!userId) throw new Error("User ID not returned from signUp");
 
-    // 2) Attempt to set teacher role silently (trigger will handle the rest)
-    if (role === "teacher") {
-      try {
-        await supabase
-          .from("profiles")
-          .update({ role: "teacher", updated_at: new Date() })
-          .eq("id", userId);
-      } catch {
-        // ignore any error here, trigger will have created the profile row
-      }
+    // 2) Siempre insertar (o ignorar si ya existe) el profile
+    const now = new Date().toISOString();
+    const { error: insertErr } = await supabase
+      .from("profiles")
+      .insert(
+        { id: userId, role, created_at: now, updated_at: now },
+        { ignoreDuplicates: true }
+      );
+    if (insertErr) {
+      console.error("Error inserting profile row:", insertErr);
+      // no abortamos el flujo porque el usuario ya está creado
     }
 
     toast({
@@ -65,14 +69,14 @@ export const signUpUser = async (
       description: "Welcome to LinguaEdgeAI!",
     });
 
-    return { success: true, error: null, data };
-  } catch (error: any) {
+    return { success: true, error: null, data: authData };
+  } catch (err: any) {
     toast({
       title: "Registration failed",
-      description: error.message,
+      description: err.message,
       variant: "destructive",
     });
-    return { success: false, error, data: null };
+    return { success: false, error: err, data: null };
   }
 };
 
@@ -81,18 +85,16 @@ export const signUpUser = async (
  */
 export const signInUser = async (email: string, password: string) => {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data: authData, error: authErr } =
+      await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
+    if (authErr) {
       toast({
         title: "Login failed",
-        description: error.message,
+        description: authErr.message,
         variant: "destructive",
       });
-      return { success: false, error, data: null, profile: null };
+      return { success: false, error: authErr, data: null, profile: null };
     }
 
     toast({
@@ -100,21 +102,30 @@ export const signInUser = async (email: string, password: string) => {
       description: "Welcome back!",
     });
 
-    // Fetch profile to get role
-    const { data: profileData } = await supabase
+    // 2) Recuperar el profile
+    const { data: profileData, error: profileErr } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", data.user?.id)
+      .eq("id", authData.user?.id)
       .single();
 
-    return { success: true, error: null, data, profile: profileData };
-  } catch (error: any) {
+    if (profileErr) {
+      console.error("Error fetching profile after login:", profileErr);
+    }
+
+    return {
+      success: true,
+      error: null,
+      data: authData,
+      profile: profileData ?? null,
+    };
+  } catch (err: any) {
     toast({
       title: "Login failed",
-      description: error.message,
+      description: err.message,
       variant: "destructive",
     });
-    return { success: false, error, data: null, profile: null };
+    return { success: false, error: err, data: null, profile: null };
   }
 };
 
@@ -124,7 +135,6 @@ export const signInUser = async (email: string, password: string) => {
 export const signOutUser = async () => {
   try {
     const { error } = await supabase.auth.signOut();
-
     if (error) {
       toast({
         title: "Logout failed",
@@ -138,15 +148,14 @@ export const signOutUser = async () => {
       title: "Logged out",
       description: "You have been logged out successfully.",
     });
-
     return { success: true, error: null };
-  } catch (error: any) {
+  } catch (err: any) {
     toast({
       title: "Logout failed",
-      description: error.message,
+      description: err.message,
       variant: "destructive",
     });
-    return { success: false, error };
+    return { success: false, error: err };
   }
 };
 
@@ -154,9 +163,5 @@ export const signOutUser = async () => {
  * Redirect user based on role
  */
 export const getRedirectPathForRole = (role: UserRole) => {
-  if (role === "teacher") {
-    return "/teacher";
-  } else {
-    return "/student";
-  }
+  return role === "teacher" ? "/teacher" : "/student";
 };
