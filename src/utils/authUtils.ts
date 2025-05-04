@@ -1,4 +1,3 @@
-
 import { UserRole } from "@/types/auth.types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -35,10 +34,15 @@ export const signUpUser = async (
   role: UserRole
 ) => {
   try {
-    // 1) Create the user in Auth
+    // 1) Create the user in Auth with role in metadata
     const { data: authData, error: authErr } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          role // Store role in user metadata
+        }
+      }
     });
     if (authErr) {
       toast({
@@ -53,6 +57,7 @@ export const signUpUser = async (
     if (!userId) throw new Error("User ID not returned from signUp");
 
     // 2) Insert the profile with the role
+    // The trigger will handle this now, but we keep this as a fallback
     const now = new Date().toISOString();
     const { error: insertErr } = await supabase
       .from("profiles")
