@@ -21,6 +21,8 @@ import StudentRegisterPage from "./pages/StudentRegisterPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 import RoleRoute from "./components/RoleRoute";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,10 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Index />} />
     <Route path="/login" element={<LoginPage />} />
+    
+    {/* Password Reset Routes */}
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
     
     {/* New signup flow routes */}
     <Route path="/signup" element={<SignupPage />} />
