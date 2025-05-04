@@ -89,6 +89,8 @@ const Pricing = () => {
       if (isTeacher && !isSubscriptionActive) {
         // Set loading state for this specific button
         setIsLoading(prev => ({ ...prev, [priceId]: true }));
+        
+        console.log("Starting checkout with price ID:", priceId);
 
         // Call the create-checkout Supabase Edge Function
         const { data, error } = await supabase.functions.invoke('create-checkout', {
@@ -96,13 +98,17 @@ const Pricing = () => {
         });
 
         if (error) {
+          console.error("Supabase function error:", error);
           throw error;
         }
+
+        console.log("Checkout response:", data);
 
         if (data?.url) {
           // Redirect to Stripe Checkout
           window.location.href = data.url;
         } else {
+          console.error("No checkout URL returned:", data);
           throw new Error('No checkout URL returned');
         }
       }
@@ -202,4 +208,3 @@ const Pricing = () => {
 };
 
 export default Pricing;
-
