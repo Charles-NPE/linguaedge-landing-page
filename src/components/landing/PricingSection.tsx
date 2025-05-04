@@ -2,7 +2,11 @@
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
 
 const plans = [
   {
@@ -17,7 +21,7 @@ const plans = [
       "Email support"
     ],
     cta: "Get started",
-    ctaLink: "/signup",
+    priceId: "STARTER_PRICE_ID",
     popular: false,
   },
   {
@@ -32,12 +36,55 @@ const plans = [
       "Email support"
     ],
     cta: "Get started",
-    ctaLink: "/signup",
+    priceId: "ACADEMY_PRICE_ID",
     popular: true,
   }
 ];
 
 const PricingSection = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
+
+  const handleCheckout = async (priceId: string, planName: string) => {
+    try {
+      // If user is not logged in, redirect to signup
+      if (!user) {
+        navigate('/signup');
+        return;
+      }
+
+      // Set loading state for this specific button
+      setIsLoading(prev => ({ ...prev, [priceId]: true }));
+
+      // Call the create-checkout Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast({
+        title: 'Checkout Error',
+        description: 'There was a problem starting the checkout process. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      // Reset loading state
+      setIsLoading(prev => ({ ...prev, [priceId]: false }));
+    }
+  };
+
   return (
     <section className="py-20 bg-gray-50" id="pricing">
       <div className="container mx-auto px-6">
@@ -46,7 +93,7 @@ const PricingSection = () => {
             Straightforward Pricing
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Choose the plan that fits your academy's needs. All plans include a <strong>1-month</strong> free trial.
+            Choose the plan that fits your academy's needs. All plans include a <strong>30-day</strong> free trial.
           </p>
         </div>
 
@@ -59,7 +106,7 @@ const PricingSection = () => {
               }`}
             >
               <div className="absolute top-4 right-4">
-                <Badge variant="default" className="bg-violet-500">1 month free</Badge>
+                <Badge variant="default" className="bg-violet-500">30 days free</Badge>
               </div>
               
               <div className="p-8">
@@ -80,11 +127,12 @@ const PricingSection = () => {
                 </ul>
                 
                 <Button 
-                  asChild
+                  onClick={() => handleCheckout(plan.priceId, plan.name)}
+                  disabled={isLoading[plan.priceId]}
                   className={`w-full ${plan.popular ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
                   variant={plan.popular ? "default" : "outline"}
                 >
-                  <Link to={plan.ctaLink}>{plan.cta}</Link>
+                  {isLoading[plan.priceId] ? 'Processing...' : plan.cta}
                 </Button>
               </div>
             </div>
