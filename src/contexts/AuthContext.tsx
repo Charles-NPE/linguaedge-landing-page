@@ -113,8 +113,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .update({ role: 'teacher' })
             .eq('id', data.user?.id);
 
-        // Fix TypeScript error by properly checking if updData exists and has entries
-        if (updErr || !updData || updData.length === 0) {
+        // Fix TypeScript error by correctly checking the update result
+        if (updErr || !updData || updData.length === undefined) {
           // row didn't exist – insert instead
           await supabase.from('profiles')
             .insert({ id: data.user?.id, role: 'teacher' });
