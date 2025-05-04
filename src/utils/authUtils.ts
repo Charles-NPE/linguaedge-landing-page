@@ -17,7 +17,8 @@ export const fetchUserProfile = async (userId: string) => {
       console.error("Error fetching user profile:", error);
       return null;
     }
-    return data;
+
+    return data ?? null;
   } catch (error) {
     console.error("Error fetching user profile:", error);
     return null;
@@ -33,7 +34,7 @@ export const signUpUser = async (
   role: UserRole
 ) => {
   try {
-    // 1) Creamos el user en Auth
+    // 1) Create the user in Supabase Auth
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) {
       toast({
@@ -47,25 +48,16 @@ export const signUpUser = async (
     const userId = data.user?.id;
     if (!userId) throw new Error("User ID not returned from signUp");
 
-    // 2) Upsert del perfil (student o teacher) para garantizar fila en profiles
-    const { error: upsertErr } = await supabase
-      .from("profiles")
-      .upsert(
-        {
-          id: userId,
-          role,               // 'student' o 'teacher'
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-        { onConflict: "id" }
-      );
-    if (upsertErr) {
-      toast({
-        title: "Profile Creation Error",
-        description:
-          "Your account was created but there was an issue setting up your profile.",
-        variant: "destructive",
-      });
+    // 2) Attempt to set teacher role silently (trigger will handle the rest)
+    if (role === "teacher") {
+      try {
+        await supabase
+          .from("profiles")
+          .update({ role: "teacher", updated_at: new Date() })
+          .eq("id", userId);
+      } catch {
+        // ignore any error here, trigger will have created the profile row
+      }
     }
 
     toast({
@@ -93,6 +85,7 @@ export const signInUser = async (email: string, password: string) => {
       email,
       password,
     });
+
     if (error) {
       toast({
         title: "Login failed",
@@ -107,15 +100,12 @@ export const signInUser = async (email: string, password: string) => {
       description: "Welcome back!",
     });
 
-    // Traer el perfil para conocer el rol
-    const { data: profileData, error: pfErr } = await supabase
+    // Fetch profile to get role
+    const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", data.user?.id)
       .single();
-    if (pfErr) {
-      console.error("Error fetching profile on signIn:", pfErr);
-    }
 
     return { success: true, error: null, data, profile: profileData };
   } catch (error: any) {
@@ -134,6 +124,7 @@ export const signInUser = async (email: string, password: string) => {
 export const signOutUser = async () => {
   try {
     const { error } = await supabase.auth.signOut();
+
     if (error) {
       toast({
         title: "Logout failed",
@@ -142,10 +133,12 @@ export const signOutUser = async () => {
       });
       return { success: false, error };
     }
+
     toast({
       title: "Logged out",
       description: "You have been logged out successfully.",
     });
+
     return { success: true, error: null };
   } catch (error: any) {
     toast({
@@ -161,5 +154,9 @@ export const signOutUser = async () => {
  * Redirect user based on role
  */
 export const getRedirectPathForRole = (role: UserRole) => {
-  return role === "teacher" ? "/teacher" : "/student";
+  if (role === "teacher") {
+    return "/teacher";
+  } else {
+    return "/student";
+  }
 };
