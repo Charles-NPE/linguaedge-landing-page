@@ -3,43 +3,46 @@ import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-
-const plans = [
-  {
-    name: "Starter",
-    price: "€20",
-    period: "per academy / month",
-    description: "Perfect for small language schools just starting out.",
-    features: [
-      "Up to 20 students",
-      "1 teacher",
-      "Analytics dashboard",
-      "Email support"
-    ],
-    cta: "Get started",
-    ctaLink: "/signup",
-    popular: false,
-    priceId: import.meta.env.VITE_STARTER_PRICE_ID || "",
-  },
-  {
-    name: "Academy",
-    price: "€50",
-    period: "per academy / month",
-    description: "For growing language academies with more needs.",
-    features: [
-      "Up to 60 students",
-      "3 teachers",
-      "Analytics dashboard", 
-      "Email support"
-    ],
-    cta: "Get started",
-    ctaLink: "/signup",
-    popular: true,
-    priceId: import.meta.env.VITE_ACADEMY_PRICE_ID || "",
-  }
-];
+import { getStripeConfig } from "@/integrations/stripe/config";
 
 const PricingSection = () => {
+  const { starterPriceId, academyPriceId } = getStripeConfig();
+  
+  const plans = [
+    {
+      name: "Starter",
+      price: "€20",
+      period: "per academy / month",
+      description: "Perfect for small language schools just starting out.",
+      features: [
+        "Up to 20 students",
+        "1 teacher",
+        "Analytics dashboard",
+        "Email support"
+      ],
+      cta: "Get started",
+      ctaLink: "/signup/teacher?plan=starter",
+      popular: false,
+      priceId: starterPriceId,
+    },
+    {
+      name: "Academy",
+      price: "€50",
+      period: "per academy / month",
+      description: "For growing language academies with more needs.",
+      features: [
+        "Up to 60 students",
+        "3 teachers",
+        "Analytics dashboard", 
+        "Email support"
+      ],
+      cta: "Get started",
+      ctaLink: "/signup/teacher?plan=academy",
+      popular: true,
+      priceId: academyPriceId,
+    }
+  ];
+
   return (
     <section className="py-20 bg-gray-50" id="pricing">
       <div className="container mx-auto px-6">

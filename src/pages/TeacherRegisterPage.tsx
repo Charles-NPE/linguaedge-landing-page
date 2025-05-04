@@ -1,7 +1,7 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { UserRole } from "@/types/auth.types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { getStripeConfig } from "@/integrations/stripe/config";
 
 const registerSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -26,14 +28,39 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const TeacherRegisterPage: React.FC = () => {
   const { signUp, user, isLoading } = useAuth();
+  const { startCheckout } = useSubscription();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [registrationComplete, setRegistrationComplete] = useState(false);
+  const planParam = searchParams.get('plan');
+  
+  // Determine the price ID based on the plan parameter
+  const getPriceIdForPlan = (plan: string | null): string => {
+    const { starterPriceId, academyPriceId } = getStripeConfig();
+    
+    switch (plan?.toLowerCase()) {
+      case 'academy':
+        return academyPriceId;
+      case 'starter':
+      default:
+        return starterPriceId;
+    }
+  };
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (user && !registrationComplete) {
+      navigate('/teacher');
     }
-  }, [user, navigate]);
+  }, [user, navigate, registrationComplete]);
+
+  // Handle redirect to checkout after successful registration
+  useEffect(() => {
+    if (registrationComplete && user && planParam) {
+      const priceId = getPriceIdForPlan(planParam);
+      startCheckout(priceId, 'teacher', '/teacher');
+    }
+  }, [registrationComplete, user, planParam, startCheckout]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -61,7 +88,8 @@ const TeacherRegisterPage: React.FC = () => {
       if (data.user) {
         const { error: profileError } = await supabase.from('profiles').insert({
           id: data.user.id,
-          role: 'teacher'
+          role: 'teacher',
+          email: values.email
         });
         
         if (profileError) {
@@ -76,11 +104,11 @@ const TeacherRegisterPage: React.FC = () => {
             title: "Registration Successful",
             description: "Your teacher account has been created.",
           });
+          
+          // Set registration complete flag to trigger checkout redirection
+          setRegistrationComplete(true);
         }
       }
-      
-      // Navigate to teacher dashboard
-      navigate('/teacher');
     } catch (error) {
       console.error("Registration error:", error);
       toast({
@@ -100,6 +128,12 @@ const TeacherRegisterPage: React.FC = () => {
           </CardTitle>
           <CardDescription className="text-center">
             Join LinguaEdgeAI as a teacher to help students improve their language skills
+            {planParam && (
+              <>
+                <br />
+                <span className="font-medium text-primary">Selected plan: {planParam.charAt(0).toUpperCase() + planParam.slice(1)}</span>
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>

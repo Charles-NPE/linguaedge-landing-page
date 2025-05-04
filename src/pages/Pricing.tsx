@@ -6,65 +6,64 @@ import { PricingCard, PricingPlan } from "@/components/pricing/PricingCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link } from "react-router-dom";
-
-const teacherPlans: PricingPlan[] = [
-  {
-    name: "Starter",
-    price: "€20",
-    period: "per month",
-    description: "Perfect for small language schools just starting out.",
-    priceId: import.meta.env.VITE_STARTER_PRICE_ID || "",
-    features: ["Up to 20 students", "1 teacher account", "Basic analytics dashboard", "Email support"],
-    userRole: "teacher"
-  }, 
-  {
-    name: "Academy",
-    price: "€50",
-    period: "per month",
-    description: "For growing language academies with more needs.",
-    priceId: import.meta.env.VITE_ACADEMY_PRICE_ID || "",
-    features: ["Up to 60 students", "3 teacher accounts", "Enhanced analytics dashboard", "Priority email support", "Student performance insights"],
-    popular: true,
-    userRole: "teacher"
-  }
-];
-
-const studentPlans: PricingPlan[] = [
-  {
-    name: "Basic",
-    price: "Free",
-    period: "forever",
-    description: "Get started with basic language learning.",
-    priceId: "price_free",
-    features: ["5 essay checks per month", "Basic feedback", "Grammar correction", "Community forum access"],
-    userRole: "student"
-  }, 
-  {
-    name: "Advanced",
-    price: "€8",
-    period: "per month",
-    description: "Enhance your language learning journey.",
-    priceId: "price_student_advanced",
-    // Replace with actual price ID
-    features: ["Unlimited essay checks", "Detailed feedback", "Grammar and style correction", "Vocabulary suggestions", "Progress tracking"],
-    popular: true,
-    userRole: "student"
-  }
-];
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { getStripeConfig } from "@/integrations/stripe/config";
 
 const PricingPage: React.FC = () => {
-  const {
-    user,
-    profile
-  } = useAuth();
-  const {
-    subscribed,
-    subscriptionTier,
-    isLoading,
-    checkSubscription
-  } = useSubscription();
+  const { user, profile } = useAuth();
+  const { subscribed, isLoading, checkSubscription } = useSubscription();
   const [activeTab, setActiveTab] = useState<string>("teacher");
+  const [searchParams] = useSearchParams();
+  const subscriptionError = searchParams.get('error') === 'subscription';
+  const { starterPriceId, academyPriceId } = getStripeConfig();
+
+  // Teacher pricing plans
+  const teacherPlans: PricingPlan[] = [
+    {
+      name: "Starter",
+      price: "€20",
+      period: "per month",
+      description: "Perfect for small language schools just starting out.",
+      priceId: starterPriceId,
+      features: ["Up to 20 students", "1 teacher account", "Basic analytics dashboard", "Email support"],
+      userRole: "teacher"
+    }, 
+    {
+      name: "Academy",
+      price: "€50",
+      period: "per month",
+      description: "For growing language academies with more needs.",
+      priceId: academyPriceId,
+      features: ["Up to 60 students", "3 teacher accounts", "Enhanced analytics dashboard", "Priority email support", "Student performance insights"],
+      popular: true,
+      userRole: "teacher"
+    }
+  ];
+
+  // Student pricing plans
+  const studentPlans: PricingPlan[] = [
+    {
+      name: "Basic",
+      price: "Free",
+      period: "forever",
+      description: "Get started with basic language learning.",
+      priceId: "price_free",
+      features: ["5 essay checks per month", "Basic feedback", "Grammar correction", "Community forum access"],
+      userRole: "student"
+    }, 
+    {
+      name: "Advanced",
+      price: "€8",
+      period: "per month",
+      description: "Enhance your language learning journey.",
+      priceId: "price_student_advanced",
+      features: ["Unlimited essay checks", "Detailed feedback", "Grammar and style correction", "Vocabulary suggestions", "Progress tracking"],
+      popular: true,
+      userRole: "student"
+    }
+  ];
 
   // Set initial tab based on user role
   useEffect(() => {
@@ -78,16 +77,31 @@ const PricingPage: React.FC = () => {
     if (user) {
       checkSubscription();
     }
-  }, [user]);
+  }, [user, checkSubscription]);
 
   // Determine plans to show based on active tab
   const plans = activeTab === "teacher" ? teacherPlans : studentPlans;
 
   // Find current plan
-  const currentPlan = plans.find(plan => plan.name === subscriptionTier);
+  const currentPlan = profile?.stripe_plan 
+    ? plans.find(plan => plan.name.toLowerCase() === profile.stripe_plan?.toLowerCase())
+    : null;
+  
+  // Determine if subscription is active
+  const hasActiveSubscription = profile?.stripe_status === 'active' || profile?.stripe_status === 'trialing';
   
   return (
     <div className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+      {subscriptionError && (
+        <Alert variant="destructive" className="mb-8">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Subscription Required</AlertTitle>
+          <AlertDescription>
+            Your subscription is inactive. Please update your payment to regain access.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="mx-auto mb-16 max-w-3xl text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
           Straightforward Pricing
@@ -97,7 +111,7 @@ const PricingPage: React.FC = () => {
         {!user && (
           <div className="mt-6">
             <Button asChild>
-              <Link to="/login">Sign in to get started</Link>
+              <Link to="/signup">Sign up to get started</Link>
             </Button>
           </div>
         )}
@@ -122,7 +136,7 @@ const PricingPage: React.FC = () => {
           <PricingCard 
             key={plan.name} 
             plan={plan} 
-            isCurrentPlan={subscribed && plan.name === subscriptionTier} 
+            isCurrentPlan={hasActiveSubscription && plan.name.toLowerCase() === profile?.stripe_plan?.toLowerCase()} 
           />
         ))}
       </div>

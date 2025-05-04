@@ -73,6 +73,13 @@ serve(async (req) => {
         }
       });
       logStep("Customer metadata updated");
+      
+      // Update profile with stripe_customer_id if not already set
+      await supabase
+        .from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id)
+        .is('stripe_customer_id', null);
     } else {
       // Create new customer
       const newCustomer = await stripe.customers.create({
@@ -84,9 +91,15 @@ serve(async (req) => {
       });
       customerId = newCustomer.id;
       logStep("Created new customer", { customerId });
+      
+      // Update profile with stripe_customer_id
+      await supabase
+        .from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id);
     }
     
-    // Create a checkout session
+    // Create a checkout session with trial period
     const origin = req.headers.get("origin") || "http://localhost:8080";
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -99,8 +112,9 @@ serve(async (req) => {
         },
       ],
       success_url: `${origin}${returnUrl}?checkout=success`,
-      cancel_url: `${origin}${returnUrl}?checkout=canceled`,
+      cancel_url: `${origin}/pricing?checkout=canceled`,
       subscription_data: {
+        trial_period_days: 30, // 30-day free trial
         metadata: {
           userId: user.id,
           userRole

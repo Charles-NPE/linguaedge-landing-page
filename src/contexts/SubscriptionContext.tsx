@@ -24,7 +24,7 @@ const SubscriptionContext = createContext<SubscriptionContextType | undefined>(u
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { user, session } = useAuth();
+  const { user, session, profile } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
@@ -43,6 +43,18 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsLoading(false);
     }
   }, [user]);
+
+  // Update subscription status when profile changes
+  useEffect(() => {
+    if (profile) {
+      const hasActiveSubscription = 
+        profile.stripe_status === 'active' || 
+        profile.stripe_status === 'trialing';
+      
+      setSubscribed(hasActiveSubscription);
+      setSubscriptionTier(profile.stripe_plan);
+    }
+  }, [profile]);
 
   // Check URL params for checkout status
   useEffect(() => {
@@ -77,17 +89,15 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       setIsCheckingSubscription(true);
       
-      const { data, error } = await supabase.functions.invoke("check-subscription", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      
-      if (error) throw error;
-      
-      setSubscribed(data.subscribed || false);
-      setSubscriptionTier(data.subscription_tier);
-      setSubscriptionEnd(data.subscription_end);
+      // Instead of calling an edge function, check the profile directly
+      if (profile) {
+        const hasActiveSubscription = 
+          profile.stripe_status === 'active' || 
+          profile.stripe_status === 'trialing';
+        
+        setSubscribed(hasActiveSubscription);
+        setSubscriptionTier(profile.stripe_plan);
+      }
     } catch (error) {
       console.error("Error checking subscription:", error);
       toast({

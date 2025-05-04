@@ -109,7 +109,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Always insert a new profile with the user's ID and role
       const { error: insertError } = await supabase
         .from('profiles')
-        .insert({ id: userId, role });
+        .insert({ 
+          id: userId, 
+          role,
+          email
+        });
 
       if (insertError) {
         throw insertError;
@@ -121,7 +125,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Redirect based on role
-      redirectBasedOnRole(role);
+      if (role === 'student') {
+        // Students go directly to student dashboard
+        redirectBasedOnRole(role);
+      }
+      // Teachers will be handled by the TeacherRegisterPage component
     } catch (error: any) {
       toast({
         title: "Registration failed",

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 export interface PricingPlan {
   name: string;
@@ -24,15 +25,40 @@ interface PricingCardProps {
 }
 
 export function PricingCard({ plan, isCurrentPlan = false }: PricingCardProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { startCheckout, openCustomerPortal } = useSubscription();
+  const navigate = useNavigate();
   
-  const handleSubscribe = () => {
-    startCheckout(plan.priceId, plan.userRole);
+  const handleAction = () => {
+    // If user is not logged in, redirect to signup with plan parameter
+    if (!user) {
+      const planParam = plan.name.toLowerCase();
+      navigate(`/signup/${plan.userRole}?plan=${planParam}`);
+      return;
+    }
+    
+    // For logged in users that don't have an active subscription, start checkout
+    if (user && (!profile?.stripe_status || 
+        (profile.stripe_status !== 'active' && profile.stripe_status !== 'trialing'))) {
+      startCheckout(plan.priceId, plan.userRole);
+      return;
+    }
+    
+    // For users with active subscriptions, open customer portal
+    if (isCurrentPlan) {
+      openCustomerPortal();
+    }
   };
   
-  const handleManageSubscription = () => {
-    openCustomerPortal();
+  // Hide CTA buttons for teachers with active/trialing subscriptions
+  const hideButtons = profile?.role === 'teacher' && 
+    (profile?.stripe_status === 'active' || profile?.stripe_status === 'trialing');
+  
+  // Determine button text based on user state
+  const buttonText = () => {
+    if (!user) return "Get started";
+    if (isCurrentPlan) return "Manage Subscription";
+    return "Subscribe";
   };
   
   return (
@@ -70,24 +96,15 @@ export function PricingCard({ plan, isCurrentPlan = false }: PricingCardProps) {
         </ul>
       </CardContent>
       <CardFooter className="pt-4">
-        {isCurrentPlan ? (
+        {!hideButtons && (
           <Button 
-            onClick={handleManageSubscription}
-            className="w-full"
-            variant="outline"
-          >
-            Manage Subscription
-          </Button>
-        ) : (
-          <Button 
-            onClick={handleSubscribe}
+            onClick={handleAction}
             className={cn(
               "w-full",
               plan.popular && "bg-primary hover:bg-primary/90"
             )}
-            disabled={!user}
           >
-            {user ? "Subscribe" : "Log in to subscribe"}
+            {buttonText()}
           </Button>
         )}
       </CardFooter>
