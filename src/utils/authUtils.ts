@@ -47,6 +47,7 @@ export const signUpUser = async (
         }
       }
     });
+    
     if (authErr) {
       toast({
         title: "Registration failed",
@@ -59,8 +60,6 @@ export const signUpUser = async (
     const userId = authData.user?.id;
     if (!userId) throw new Error("User ID not returned from signUp");
     
-    // We rely on the database trigger to create the profile now
-    // The trigger now correctly uses raw_user_meta_data->>'role'
     console.log(`User created successfully with ID: ${userId}, role: ${role}`);
     
     toast({
@@ -69,7 +68,7 @@ export const signUpUser = async (
     });
 
     // Wait a moment to ensure the database trigger completes
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     return { success: true, error: null, data: authData };
   } catch (err: any) {

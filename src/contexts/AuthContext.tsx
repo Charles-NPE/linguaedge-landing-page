@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (newSession?.user) {
           setTimeout(async () => {
             await fetchAndSetUserProfile(newSession.user.id);
-          }, 0);
+          }, 100);
         } else {
           setProfile(null);
         }
@@ -65,15 +65,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchAndSetUserProfile = async (userId: string) => {
     console.log("Fetching profile for user:", userId);
-    const profileData = await fetchUserProfile(userId);
-    console.log("Fetched profile data:", profileData);
     
-    if (profileData) {
-      setProfile(profileData as UserProfile);
-      setUser(prev => prev ? { ...prev, profile: profileData as UserProfile } : null);
-    } else {
-      console.warn("Profile data is null or undefined for user:", userId);
+    // Try up to 3 times with increasing delays
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const profileData = await fetchUserProfile(userId);
+      console.log(`Attempt ${attempt}: Fetched profile data:`, profileData);
+      
+      if (profileData) {
+        setProfile(profileData as UserProfile);
+        setUser(prev => prev ? { ...prev, profile: profileData as UserProfile } : null);
+        return;
+      } else {
+        console.warn(`Profile data not found on attempt ${attempt} for user:`, userId);
+        if (attempt < 3) {
+          // Wait longer between each retry
+          const delay = attempt * 500;
+          console.log(`Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
+    
+    console.error("Failed to fetch profile after multiple attempts for user:", userId);
   };
 
   const signUp = async (email: string, password: string, role: UserRole) => {
@@ -86,23 +99,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (success) {
         console.log("Sign up successful, user data:", data);
         
-        // Wait for a moment to ensure the profile is created
+        // Wait longer to ensure the profile is created
         // This helps prevent race conditions
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         // Fetch the profile to confirm role is set correctly
         if (data?.user?.id) {
+          console.log("Attempting to fetch profile after signup for ID:", data.user.id);
           const profile = await fetchUserProfile(data.user.id);
           console.log("Fetched profile after signup:", profile);
           
           if (profile) {
             // Use the role from the profile
             const effectiveRole = profile.role;
+            console.log("Profile found! Role from profile:", effectiveRole);
             console.log("Redirecting to:", getRedirectPathForRole(effectiveRole));
             navigate(getRedirectPathForRole(effectiveRole));
           } else {
             // Fallback to the intended role if profile is not yet available
-            console.log("Profile not found, using provided role:", role);
+            console.log("Profile not found after waiting, using provided role:", role);
             console.log("Redirecting to:", getRedirectPathForRole(role));
             navigate(getRedirectPathForRole(role));
           }
