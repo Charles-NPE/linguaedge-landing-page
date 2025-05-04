@@ -1,10 +1,10 @@
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { Session, User } from "@supabase/supabase-js";
+import React, { createContext, useEffect, useState } from "react";
+import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthUser, UserProfile, UserRole } from "@/types/auth.types";
-import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { fetchUserProfile, signUpUser, signInUser, signOutUser, getRedirectPathForRole } from "@/utils/authUtils";
 
 interface AuthContextType {
   session: Session | null;
@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Defer Supabase calls with setTimeout
         if (newSession?.user) {
           setTimeout(() => {
-            fetchUserProfile(newSession.user.id);
+            fetchAndSetUserProfile(newSession.user.id);
           }, 0);
         } else {
           setProfile(null);
@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
-        fetchUserProfile(currentSession.user.id);
+        fetchAndSetUserProfile(currentSession.user.id);
       }
       setIsLoading(false);
     });
@@ -59,82 +59,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return;
-      }
-
-      if (data) {
-        setProfile(data as UserProfile);
-        setUser(prev => prev ? { ...prev, profile: data as UserProfile } : null);
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
+  const fetchAndSetUserProfile = async (userId: string) => {
+    const profileData = await fetchUserProfile(userId);
+    if (profileData) {
+      setProfile(profileData as UserProfile);
+      setUser(prev => prev ? { ...prev, profile: profileData as UserProfile } : null);
     }
   };
 
   const signUp = async (email: string, password: string, role: UserRole) => {
     try {
       setIsLoading(true);
+      const { success, data } = await signUpUser(email, password, role);
       
-      // Sign up the user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        toast({
-          title: "Registration failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
+      if (success) {
+        // Redirect based on role
+        navigate(getRedirectPathForRole(role));
       }
-
-      // Verify we have a user ID
-      const userId = data.user?.id;
-      if (!userId) {
-        throw new Error("User ID not returned from signUp");
-      }
-
-      // set/ensure teacher role if the user signed up as a teacher
-      if (role === 'teacher') {
-        const { data: updData, error: updErr } =
-          await supabase
-            .from('profiles')
-            .update({ role: 'teacher' })
-            .eq('id', data.user!.id)
-            .select();               // <-- guarantees array
-
-        if (updErr || (updData?.length ?? 0) === 0) {
-          await supabase
-            .from('profiles')
-            .insert({ id: data.user!.id, role: 'teacher' });
-        }
-      }
-
-      toast({
-        title: "Registration successful",
-        description: "Welcome to LinguaEdgeAI!",
-      });
-      
-      // Redirect based on role
-      redirectBasedOnRole(role);
-    } catch (error: any) {
-      toast({
-        title: "Registration failed",
-        description: error.message,
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -143,68 +84,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
+      const { success, profile } = await signInUser(email, password);
+      
+      if (success && profile) {
+        navigate(getRedirectPathForRole(profile.role));
       }
-
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-
-      // Fetch profile to get role
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data.user?.id)
-        .single();
-
-      if (profileData) {
-        redirectBasedOnRole(profileData.role);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      toast({
-        title: "Logged out",
-        description: "You have been logged out successfully.",
-      });
+    const { success } = await signOutUser();
+    if (success) {
       navigate('/');
-    } catch (error: any) {
-      toast({
-        title: "Logout failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const redirectBasedOnRole = (role: UserRole) => {
-    if (role === 'teacher') {
-      navigate('/teacher');
-    } else {
-      navigate('/student');
     }
   };
 
@@ -230,10 +123,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+export default AuthContext;
