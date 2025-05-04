@@ -56,10 +56,13 @@ export const signUpUser = async (
     const now = new Date().toISOString();
     const { error: insertErr } = await supabase
       .from("profiles")
-      .insert(
-        { id: userId, role, created_at: now, updated_at: now },
-        { ignoreDuplicates: true }
-      );
+      .insert({
+        id: userId, 
+        role, 
+        created_at: now, 
+        updated_at: now 
+      });
+      
     if (insertErr) {
       console.error("Error inserting profile row:", insertErr);
       // no abortamos el flujo porque el usuario ya está creado
