@@ -67,9 +67,10 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
     return <Navigate to={redirectPath} replace />;
   }
 
-  // Check subscription if required (only for teachers)
-  if (requireSubscription && userRole === 'teacher' && !isSubscriptionActive) {
-    console.log("Subscription required but not active, redirecting to pricing");
+  // Always enforce subscription check for teachers
+  // Even if the route doesn't explicitly require subscription
+  if (userRole === 'teacher' && !isSubscriptionActive) {
+    console.log("Teacher without active subscription, redirecting to pricing");
     return <Navigate to="/pricing?subscription=inactive" replace />;
   }
 

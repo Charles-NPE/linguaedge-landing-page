@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { UserCheck, ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -25,6 +26,7 @@ const TeacherRegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [plan, setPlan] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   // Extract plan from URL query params
   useEffect(() => {
@@ -45,17 +47,39 @@ const TeacherRegisterPage: React.FC = () => {
 
   const onSubmit = async (data: FormData) => {
     try {
+      setIsRedirecting(true);
+      
+      // Sign up user
       await signUp(data.email, data.password, "teacher");
-
+      
       toast({
         title: "Account created",
         description: "Your teacher account has been created successfully.",
       });
 
-      // If there's a plan parameter and the signup was successful,
-      // we'll leverage the AuthContext redirection
+      // Determine price ID based on plan
+      const priceId = plan === 'starter' ? "STARTER_PRICE_ID" : "ACADEMY_PRICE_ID";
+      
+      console.log("Creating checkout with price ID:", priceId);
+      
+      // Call create-checkout edge function
+      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId },
+      });
+      
+      if (checkoutError || !checkoutData?.url) {
+        console.error("Checkout error:", checkoutError || "No checkout URL returned");
+        throw checkoutError || new Error("No checkout URL returned");
+      }
+      
+      console.log("Redirecting to Stripe Checkout:", checkoutData.url);
+      
+      // Redirect to Stripe Checkout
+      window.location.href = checkoutData.url;
+      
     } catch (error) {
-      console.error("Sign up error:", error);
+      setIsRedirecting(false);
+      console.error("Sign up or checkout error:", error);
       toast({
         title: "Registration failed",
         description: error instanceof Error ? error.message : "An error occurred during registration.",
@@ -110,11 +134,11 @@ const TeacherRegisterPage: React.FC = () => {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" className="w-full" disabled={isLoading || isRedirecting}>
+                {isLoading || isRedirecting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
+                    {isLoading ? "Creating account..." : "Redirecting to payment..."}
                   </>
                 ) : (
                   "Create Teacher Account"
