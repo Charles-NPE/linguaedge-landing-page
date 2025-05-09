@@ -18,7 +18,22 @@ const formSchema = z.object({
   adminName: z.string().min(2, "Admin name is required"),
   contactEmail: z.string().email().optional(),
   phone: z.string().optional(),
-  website: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal('')),
+  website: z
+    .string()
+    .optional()
+    .transform(val => {
+      if (!val) return "";                 // keep empty
+      if (!/^https?:\/\//i.test(val)) {    // add scheme when missing
+        return `https://${val}`;
+      }
+      return val;
+    })
+    .refine(
+      val =>
+        val === "" ||
+        /^https?:\/\/[^\s$.?#].[^\s]*$/i.test(val),
+      { message: "Please enter a valid URL" }
+    ),
   country: z.string().min(1, "Country is required"),
   timezone: z.string().min(1, "Timezone is required"),
   defaultLanguage: z.string().min(1, "Language is required")
@@ -35,6 +50,7 @@ const ProfilePage = () => {
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [profileId, setProfileId] = useState<string | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
@@ -83,19 +99,25 @@ const ProfilePage = () => {
             defaultLanguage: data.default_language || "en"
           });
           
+          setProfileId(data.id);
           setUploadedLogo(data.logo_url);
           setCreatedAt(data.created_at);
           setUpdatedAt(data.updated_at);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
+        toast({
+          title: "Error loading profile",
+          description: error instanceof Error ? error.message : "Unknown error occurred",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProfileData();
-  }, [user, form]);
+  }, [user, form, toast]);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -154,30 +176,42 @@ const ProfilePage = () => {
       if (logoFile) {
         logoUrl = await uploadLogo();
       }
-
-      // Sanitize website URL if empty
-      const websiteValue = values.website === '' ? null : values.website;
       
+      // Prepare data for upsert
+      const upsertData = {
+        id: profileId || user.id, // Use existing ID or user ID for new profiles
+        user_id: user.id,
+        academy_name: values.academyName,
+        admin_name: values.adminName,
+        phone: values.phone || null,
+        website: values.website || null,
+        country: values.country,
+        timezone: values.timezone,
+        default_language: values.defaultLanguage,
+        logo_url: logoUrl,
+        updated_at: new Date().toISOString()
+      };
+
+      // Perform upsert operation
       const { error } = await supabase
         .from('academy_profiles')
-        .upsert({
-          user_id: user.id,
-          academy_name: values.academyName,
-          admin_name: values.adminName,
-          phone: values.phone || null,
-          website: websiteValue,
-          country: values.country,
-          timezone: values.timezone,
-          default_language: values.defaultLanguage,
-          logo_url: logoUrl,
-          updated_at: new Date().toISOString()
+        .upsert(upsertData, {
+          onConflict: 'id'
         });
 
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: "Update failed",
+          description: `Error: ${error.message}`,
+          variant: "destructive"
+        });
+        console.error("Supabase error:", error);
+        return;
+      }
       
       toast({
         title: "Profile updated",
-        description: "Your profile has been updated successfully."
+        description: "Your academy profile has been updated successfully."
       });
 
       // Refresh updated_at timestamp
@@ -186,7 +220,7 @@ const ProfilePage = () => {
       console.error("Error saving profile:", error);
       toast({
         title: "Update failed",
-        description: "Could not update profile. Please try again.",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive"
       });
     } finally {
@@ -264,9 +298,9 @@ const ProfilePage = () => {
             }) => <FormItem>
                     <FormLabel>Website (optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://your-academy-website.com" {...field} />
+                      <Input placeholder="example.com or https://example.com" {...field} />
                     </FormControl>
-                    <FormDescription>Leave blank if you don't have a website</FormDescription>
+                    <FormDescription>Enter domain name or full URL</FormDescription>
                     <FormMessage />
                   </FormItem>} />
               
@@ -383,8 +417,8 @@ const ProfilePage = () => {
               <Button type="button" variant="outline" onClick={() => form.reset()}>
                 Reset
               </Button>
-              <Button type="submit" disabled={isLoading || isUploading}>
-                {(isLoading || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={isLoading || isUploading || form.formState.isSubmitting}>
+                {(isLoading || isUploading || form.formState.isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Changes
               </Button>
             </CardFooter>
