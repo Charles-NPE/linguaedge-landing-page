@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +22,9 @@ import StudentDashboard from "./pages/StudentDashboard";
 import RoleRoute from "./components/RoleRoute";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import ProfilePage from "./pages/ProfilePage";
+import SettingsPage from "./pages/SettingsPage";
+import BillingPage from "./pages/BillingPage";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +61,32 @@ const AppRoutes = () => (
       element={
         <RoleRoute allowed={['student']}>
           <StudentDashboard />
+        </RoleRoute>
+      } 
+    />
+    
+    {/* User Account Routes */}
+    <Route 
+      path="/profile" 
+      element={
+        <RoleRoute allowed={['teacher', 'student']}>
+          <ProfilePage />
+        </RoleRoute>
+      } 
+    />
+    <Route 
+      path="/settings" 
+      element={
+        <RoleRoute allowed={['teacher', 'student']}>
+          <SettingsPage />
+        </RoleRoute>
+      } 
+    />
+    <Route 
+      path="/billing" 
+      element={
+        <RoleRoute allowed={['teacher', 'student']}>
+          <BillingPage />
         </RoleRoute>
       } 
     />
