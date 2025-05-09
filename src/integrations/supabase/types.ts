@@ -9,6 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      academy_profiles: {
+        Row: {
+          academy_name: string
+          admin_name: string
+          country: string | null
+          created_at: string
+          default_language: string | null
+          id: string
+          logo_url: string | null
+          phone: string | null
+          timezone: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          academy_name: string
+          admin_name: string
+          country?: string | null
+          created_at?: string
+          default_language?: string | null
+          id: string
+          logo_url?: string | null
+          phone?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          academy_name?: string
+          admin_name?: string
+          country?: string | null
+          created_at?: string
+          default_language?: string | null
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

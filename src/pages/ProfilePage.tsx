@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,30 +12,30 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Upload } from "lucide-react";
+
 const formSchema = z.object({
   academyName: z.string().min(2, "Academy name is required"),
   adminName: z.string().min(2, "Admin name is required"),
   contactEmail: z.string().email().optional(),
   phone: z.string().optional(),
-  website: z.string().url("Please enter a valid URL").optional().or(z.string().length(0)),
+  website: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal('')),
   country: z.string().min(1, "Country is required"),
   timezone: z.string().min(1, "Timezone is required"),
   defaultLanguage: z.string().min(1, "Language is required")
 });
+
 type ProfileFormValues = z.infer<typeof formSchema>;
+
 const ProfilePage = () => {
-  const {
-    toast
-  } = useToast();
-  const {
-    user
-  } = useAuth();
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedLogo, setUploadedLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,12 +61,16 @@ const ProfilePage = () => {
     const fetchProfileData = async () => {
       if (!user?.id) return;
       setIsLoading(true);
+      
       try {
-        const {
-          data,
-          error
-        } = await supabase.from("academy_profiles").select("*").eq("user_id", user.id).single();
+        const { data, error } = await supabase
+          .from('academy_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
         if (error) throw error;
+        
         if (data) {
           form.reset({
             academyName: data.academy_name || "",
@@ -77,6 +82,7 @@ const ProfilePage = () => {
             timezone: data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
             defaultLanguage: data.default_language || "en"
           });
+          
           setUploadedLogo(data.logo_url);
           setCreatedAt(data.created_at);
           setUpdatedAt(data.updated_at);
@@ -87,8 +93,10 @@ const ProfilePage = () => {
         setIsLoading(false);
       }
     };
+
     fetchProfileData();
   }, [user, form]);
+
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -103,6 +111,7 @@ const ProfilePage = () => {
     setLogoFile(file);
     setUploadedLogo(URL.createObjectURL(file));
   };
+
   const uploadLogo = async () => {
     if (!logoFile || !user?.id) return null;
     setIsUploading(true);
@@ -110,36 +119,19 @@ const ProfilePage = () => {
       const fileExt = logoFile.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
 
-      // Check if buckets exist, create if not
-      const {
-        data: bucketData,
-        error: bucketError
-      } = await supabase.storage.listBuckets();
-      if (bucketError) {
-        throw bucketError;
-      }
-      const logosBucketExists = bucketData.some(bucket => bucket.name === "logos");
-      if (!logosBucketExists) {
-        // Create bucket if it doesn't exist
-        const {
-          error: createBucketError
-        } = await supabase.storage.createBucket("logos", {
-          public: true
-        });
-        if (createBucketError) {
-          throw createBucketError;
-        }
-      }
-      const {
-        error: uploadError
-      } = await supabase.storage.from("logos").upload(fileName, logoFile);
+      const { error: uploadError, data } = await supabase.storage
+        .from("logos")
+        .upload(fileName, logoFile);
+        
       if (uploadError) {
         throw uploadError;
       }
-      const {
-        data
-      } = supabase.storage.from("logos").getPublicUrl(fileName);
-      return data.publicUrl;
+      
+      const { data: publicUrlData } = supabase.storage
+        .from("logos")
+        .getPublicUrl(fileName);
+        
+      return publicUrlData.publicUrl;
     } catch (error) {
       console.error("Error uploading logo:", error);
       toast({
@@ -152,6 +144,7 @@ const ProfilePage = () => {
       setIsUploading(false);
     }
   };
+
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user?.id) return;
     setIsLoading(true);
@@ -161,21 +154,27 @@ const ProfilePage = () => {
       if (logoFile) {
         logoUrl = await uploadLogo();
       }
-      const {
-        error
-      } = await supabase.from("academy_profiles").upsert({
-        user_id: user.id,
-        academy_name: values.academyName,
-        admin_name: values.adminName,
-        phone: values.phone || null,
-        website: values.website || null,
-        country: values.country,
-        timezone: values.timezone,
-        default_language: values.defaultLanguage,
-        logo_url: logoUrl,
-        updated_at: new Date().toISOString()
-      });
+
+      // Sanitize website URL if empty
+      const websiteValue = values.website === '' ? null : values.website;
+      
+      const { error } = await supabase
+        .from('academy_profiles')
+        .upsert({
+          user_id: user.id,
+          academy_name: values.academyName,
+          admin_name: values.adminName,
+          phone: values.phone || null,
+          website: websiteValue,
+          country: values.country,
+          timezone: values.timezone,
+          default_language: values.defaultLanguage,
+          logo_url: logoUrl,
+          updated_at: new Date().toISOString()
+        });
+
       if (error) throw error;
+      
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully."
@@ -194,7 +193,9 @@ const ProfilePage = () => {
       setIsLoading(false);
     }
   };
-  return <div className="container max-w-4xl py-10">
+
+  return (
+    <div className="container max-w-4xl py-10">
       <h1 className="text-3xl font-bold mb-6">Academy Profile</h1>
       
       <Form {...form}>
@@ -265,6 +266,7 @@ const ProfilePage = () => {
                     <FormControl>
                       <Input placeholder="https://your-academy-website.com" {...field} />
                     </FormControl>
+                    <FormDescription>Leave blank if you don't have a website</FormDescription>
                     <FormMessage />
                   </FormItem>} />
               
@@ -389,6 +391,8 @@ const ProfilePage = () => {
           </Card>
         </form>
       </Form>
-    </div>;
+    </div>
+  );
 };
+
 export default ProfilePage;
