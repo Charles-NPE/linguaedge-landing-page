@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -82,6 +83,7 @@ const ProfilePage = () => {
       setIsLoading(true);
       
       try {
+        // Fix: Select all columns from academy_profiles table instead of just a subset
         const { data, error } = await supabase
           .from('academy_profiles')
           .select('*')
@@ -91,6 +93,7 @@ const ProfilePage = () => {
         if (error) throw error;
         
         if (data) {
+          // Populate the form with ALL retrieved data
           form.reset({
             academyName: data.academy_name || "",
             adminName: data.admin_name || "",
