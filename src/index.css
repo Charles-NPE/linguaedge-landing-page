@@ -102,4 +102,12 @@
   .card-hover {
     @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
   }
+  
+  .card {
+    @apply rounded-xl shadow-sm p-6 bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100;
+  }
+  
+  .alert-success {
+    @apply rounded-md p-4 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100;
+  }
 }

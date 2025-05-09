@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -10,27 +11,33 @@ const StudentDashboard: React.FC = () => {
   return (
     <DashboardLayout title="Student Dashboard">
       <div className="mb-8">
-        <h2 className="text-lg text-gray-600">
+        <h2 className="text-lg text-slate-900 dark:text-white">
           Welcome back, {user?.email?.split('@')[0] || 'Student'}
         </h2>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <FeatureCard
-          title="Submit Essay"
-          description="Write and submit a new essay for AI and teacher feedback."
-          icon={PenTool}
-        />
-        <FeatureCard
-          title="My Corrections"
-          description="Review feedback and corrections on your submitted essays."
-          icon={FileCheck}
-        />
-        <FeatureCard
-          title="Progress"
-          description="Track your improvement over time and identify areas to focus on."
-          icon={LineChart}
-        />
+        <div className="card">
+          <FeatureCard
+            title="Submit Essay"
+            description="Write and submit a new essay for AI and teacher feedback."
+            icon={PenTool}
+          />
+        </div>
+        <div className="card">
+          <FeatureCard
+            title="My Corrections"
+            description="Review feedback and corrections on your submitted essays."
+            icon={FileCheck}
+          />
+        </div>
+        <div className="card">
+          <FeatureCard
+            title="Progress"
+            description="Track your improvement over time and identify areas to focus on."
+            icon={LineChart}
+          />
+        </div>
       </div>
     </DashboardLayout>
   );

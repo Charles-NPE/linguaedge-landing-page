@@ -62,17 +62,17 @@ const TeacherDashboard: React.FC = () => {
   return (
     <DashboardLayout title="Teacher Dashboard">
       <div className="mb-8">
-        <h2 className="text-lg text-gray-600">
+        <h2 className="text-lg text-slate-900 dark:text-slate-100">
           Welcome back, {user?.email?.split('@')[0] || 'Teacher'}
         </h2>
         
         {/* Show subscription status */}
         {profile?.stripe_status && (
           <div className="mt-4">
-            <Alert className={`${
-              isSubscriptionActive ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+            <Alert className={`alert-success flex justify-between items-center ${
+              isSubscriptionActive ? '' : ''
             }`}>
-              <AlertDescription className="flex justify-between items-center">
+              <AlertDescription className="flex justify-between items-center w-full">
                 <span>
                   Subscription status: <strong>{profile.stripe_status}</strong>
                   {profile.subscription_end && (
@@ -91,21 +91,27 @@ const TeacherDashboard: React.FC = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <FeatureCard
-          title="Manage Classes"
-          description="Create and organize classes, add students, and track progress."
-          icon={Users}
-        />
-        <FeatureCard
-          title="Assign Essays"
-          description="Create new writing assignments for your students."
-          icon={BookOpen}
-        />
-        <FeatureCard
-          title="View Analytics"
-          description="Track student progress and identify areas for improvement."
-          icon={BarChart}
-        />
+        <div className="card">
+          <FeatureCard
+            title="Manage Classes"
+            description="Create and organize classes, add students, and track progress."
+            icon={Users}
+          />
+        </div>
+        <div className="card">
+          <FeatureCard
+            title="Assign Essays"
+            description="Create new writing assignments for your students."
+            icon={BookOpen}
+          />
+        </div>
+        <div className="card">
+          <FeatureCard
+            title="View Analytics"
+            description="Track student progress and identify areas for improvement."
+            icon={BarChart}
+          />
+        </div>
       </div>
     </DashboardLayout>
   );

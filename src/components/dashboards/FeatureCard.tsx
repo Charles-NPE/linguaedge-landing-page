@@ -18,17 +18,17 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
 }) => {
   return (
     <Card 
-      className={`border border-border shadow-md transition-all hover:shadow-lg ${onClick ? 'cursor-pointer' : ''}`}
+      className={`border border-border shadow-md transition-all hover:shadow-lg dark:border-slate-700 ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       <CardHeader className="pb-2">
-        <div className="mb-2 h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+        <div className="mb-2 h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center dark:from-indigo-600 dark:to-violet-500">
           <Icon className="h-5 w-5 text-white" />
         </div>
-        <CardTitle className="text-xl">{title}</CardTitle>
+        <CardTitle className="text-xl text-slate-900 dark:text-white">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <CardDescription>{description}</CardDescription>
+        <CardDescription className="dark:text-slate-300">{description}</CardDescription>
       </CardContent>
     </Card>
   );

@@ -65,6 +65,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				surface: {
+					light: '#ffffff',
+					dark: '#1e293b' // slate-800
+				},
+				textBase: {
+					light: '#0f172a', // slate-900
+					dark: '#f1f5f9' // slate-100
 				}
 			},
 			borderRadius: {

@@ -30,18 +30,18 @@ const SettingsPage = () => {
         </div>
         
         {/* Theme Settings */}
-        <Card className="mb-6">
+        <Card className="bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 mb-6">
           <CardHeader>
-            <CardTitle>Theme Settings</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-slate-900 dark:text-white">Theme Settings</CardTitle>
+            <CardDescription className="dark:text-slate-300">
               Customize the appearance of the application
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Dark Mode</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-slate-900 dark:text-white">Dark Mode</p>
+                <p className="text-sm text-muted-foreground dark:text-slate-300">
                   Switch between light and dark theme
                 </p>
               </div>
@@ -54,15 +54,15 @@ const SettingsPage = () => {
         </Card>
         
         {/* Account Settings */}
-        <Card>
+        <Card className="bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100">
           <CardHeader>
-            <CardTitle>Account Settings</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-slate-900 dark:text-white">Account Settings</CardTitle>
+            <CardDescription className="dark:text-slate-300">
               Manage your account preferences
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Additional account settings will be added here.</p>
+            <p className="dark:text-slate-300">Additional account settings will be added here.</p>
           </CardContent>
         </Card>
       </div>
