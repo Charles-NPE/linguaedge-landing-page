@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +10,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const formSchema = z.object({
   academyName: z.string().min(2, "Academy name is required"),
@@ -51,6 +51,9 @@ const ProfilePage = () => {
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
+  
+  const userRole = user?.role || 'student';
+  const dashboardPath = userRole === 'teacher' ? "/teacher" : "/student";
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
@@ -231,6 +234,16 @@ const ProfilePage = () => {
   return (
     <div className="container max-w-4xl py-10">
       <h1 className="text-3xl font-bold mb-6">Academy Profile</h1>
+      
+      {/* Back button */}
+      <div className="mb-6">
+        <Link to={dashboardPath}>
+          <Button variant="outline" className="gap-2">
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
