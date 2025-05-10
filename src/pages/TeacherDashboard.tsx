@@ -1,6 +1,6 @@
 
 import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import FeatureCard from "@/components/dashboards/FeatureCard";
@@ -81,9 +81,11 @@ const TeacherDashboard: React.FC = () => {
                     </span>
                   )}
                 </span>
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                  <CreditCard className="h-4 w-4" /> Manage Subscription
-                </Button>
+                <Link to="/billing">
+                  <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    <CreditCard className="h-4 w-4" /> Manage Subscription
+                  </Button>
+                </Link>
               </AlertDescription>
             </Alert>
           </div>
