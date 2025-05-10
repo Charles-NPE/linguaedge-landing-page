@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,38 +12,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Upload, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-
 const formSchema = z.object({
   academyName: z.string().min(2, "Academy name is required"),
   adminName: z.string().min(2, "Admin name is required"),
   contactEmail: z.string().email().optional(),
   phone: z.string().optional(),
-  website: z
-    .string()
-    .optional()
-    .transform(val => {
-      if (!val) return "";                 // keep empty
-      if (!/^https?:\/\//i.test(val)) {    // add scheme when missing
-        return `https://${val}`;
-      }
-      return val;
-    })
-    .refine(
-      val =>
-        val === "" ||
-        /^https?:\/\/[^\s$.?#].[^\s]*$/i.test(val),
-      { message: "Please enter a valid URL" }
-    ),
+  website: z.string().optional().transform(val => {
+    if (!val) return ""; // keep empty
+    if (!/^https?:\/\//i.test(val)) {
+      // add scheme when missing
+      return `https://${val}`;
+    }
+    return val;
+  }).refine(val => val === "" || /^https?:\/\/[^\s$.?#].[^\s]*$/i.test(val), {
+    message: "Please enter a valid URL"
+  }),
   country: z.string().min(1, "Country is required"),
   timezone: z.string().min(1, "Timezone is required"),
   defaultLanguage: z.string().min(1, "Language is required")
 });
-
 type ProfileFormValues = z.infer<typeof formSchema>;
-
 const ProfilePage = () => {
-  const { toast } = useToast();
-  const { user } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    user
+  } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedLogo, setUploadedLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -52,10 +46,8 @@ const ProfilePage = () => {
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
-  
   const userRole = user?.role || 'student';
   const dashboardPath = userRole === 'teacher' ? "/teacher" : "/student";
-
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -81,17 +73,13 @@ const ProfilePage = () => {
     const fetchProfileData = async () => {
       if (!user?.id) return;
       setIsLoading(true);
-      
       try {
         // Select all columns from academy_profiles table
-        const { data, error } = await supabase
-          .from('academy_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
+        const {
+          data,
+          error
+        } = await supabase.from('academy_profiles').select('*').eq('user_id', user.id).maybeSingle();
         if (error) throw error;
-        
         if (data) {
           // Populate the form with ALL retrieved data
           form.reset({
@@ -104,7 +92,6 @@ const ProfilePage = () => {
             timezone: data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
             defaultLanguage: data.default_language || "en"
           });
-          
           setProfileId(data.id);
           setUploadedLogo(data.logo_url || null);
           setCreatedAt(data.created_at);
@@ -121,10 +108,8 @@ const ProfilePage = () => {
         setIsLoading(false);
       }
     };
-
     fetchProfileData();
   }, [user, form, toast]);
-
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -139,7 +124,6 @@ const ProfilePage = () => {
     setLogoFile(file);
     setUploadedLogo(URL.createObjectURL(file));
   };
-
   const uploadLogo = async () => {
     if (!logoFile || !user?.id) return null;
     setIsUploading(true);
@@ -148,29 +132,26 @@ const ProfilePage = () => {
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
 
       // Check if the logos bucket exists, create it if it doesn't
-      const { data: bucketData, error: bucketError } = await supabase
-        .storage
-        .getBucket('logos');
-      
+      const {
+        data: bucketData,
+        error: bucketError
+      } = await supabase.storage.getBucket('logos');
       if (bucketError && bucketError.message.includes('does not exist')) {
         // Create the bucket if it doesn't exist
         await supabase.storage.createBucket('logos', {
           public: true
         });
       }
-
-      const { error: uploadError, data } = await supabase.storage
-        .from("logos")
-        .upload(fileName, logoFile);
-        
+      const {
+        error: uploadError,
+        data
+      } = await supabase.storage.from("logos").upload(fileName, logoFile);
       if (uploadError) {
         throw uploadError;
       }
-      
-      const { data: publicUrlData } = supabase.storage
-        .from("logos")
-        .getPublicUrl(fileName);
-        
+      const {
+        data: publicUrlData
+      } = supabase.storage.from("logos").getPublicUrl(fileName);
       return publicUrlData.publicUrl;
     } catch (error) {
       console.error("Error uploading logo:", error);
@@ -184,7 +165,6 @@ const ProfilePage = () => {
       setIsUploading(false);
     }
   };
-
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user?.id) return;
     setIsLoading(true);
@@ -194,10 +174,11 @@ const ProfilePage = () => {
       if (logoFile) {
         logoUrl = await uploadLogo();
       }
-      
+
       // Prepare data for upsert
       const upsertData = {
-        id: profileId || undefined, // Use existing ID if available
+        id: profileId || undefined,
+        // Use existing ID if available
         user_id: user.id,
         academy_name: values.academyName,
         admin_name: values.adminName,
@@ -211,12 +192,11 @@ const ProfilePage = () => {
       };
 
       // Perform upsert operation
-      const { error } = await supabase
-        .from('academy_profiles')
-        .upsert(upsertData, {
-          onConflict: 'user_id'
-        });
-
+      const {
+        error
+      } = await supabase.from('academy_profiles').upsert(upsertData, {
+        onConflict: 'user_id'
+      });
       if (error) {
         toast({
           title: "Update failed",
@@ -226,7 +206,6 @@ const ProfilePage = () => {
         console.error("Supabase error:", error);
         return;
       }
-      
       toast({
         title: "Profile updated",
         description: "Your academy profile has been updated successfully."
@@ -245,9 +224,7 @@ const ProfilePage = () => {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="container max-w-4xl py-10">
+  return <div className="container max-w-4xl py-10">
       <h1 className="text-3xl font-bold mb-6">Academy Profile</h1>
       
       {/* Back button */}
@@ -415,26 +392,7 @@ const ProfilePage = () => {
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <FormLabel>Academy Logo (optional)</FormLabel>
-                <div className="flex items-center gap-6">
-                  <div className="h-24 w-24 rounded-lg overflow-hidden border flex items-center justify-center bg-gray-50">
-                    {uploadedLogo ? <img src={uploadedLogo} alt="Academy Logo" className="h-full w-full object-cover" /> : <div className="text-gray-400 text-xs text-center p-2">
-                        No logo uploaded
-                      </div>}
-                  </div>
-                  <div>
-                    <Button type="button" variant="outline" onClick={() => document.getElementById("logo-upload")?.click()} className="flex items-center gap-2">
-                      <Upload className="h-4 w-4" />
-                      Upload Logo
-                    </Button>
-                    <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Max size: 5MB. Recommended: 400x400px
-                    </p>
-                  </div>
-                </div>
-              </div>
+              
               
               {(createdAt || updatedAt) && <div className="flex gap-6 text-xs text-muted-foreground">
                   {createdAt && <div>Created: {new Date(createdAt).toLocaleDateString()}</div>}
@@ -453,8 +411,6 @@ const ProfilePage = () => {
           </Card>
         </form>
       </Form>
-    </div>
-  );
+    </div>;
 };
-
 export default ProfilePage;
