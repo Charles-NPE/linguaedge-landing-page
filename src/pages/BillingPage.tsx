@@ -14,6 +14,7 @@ const BillingPage = () => {
   const userRole = profile?.role || 'student';
   const dashboardPath = userRole === 'teacher' ? "/teacher" : "/student";
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   useEffect(() => {
     const redirectToStripePortal = async () => {
@@ -22,14 +23,25 @@ const BillingPage = () => {
       try {
         setIsRedirecting(true);
         
-        // Invoke the create-customer-portal edge function
+        // Invoke the create-customer-portal edge function - using correct name
         const { data, error } = await supabase.functions.invoke('create-customer-portal');
         
-        if (error || !data?.url) {
-          console.error('Error creating customer portal session:', error || 'No URL returned');
+        if (error) {
+          console.error('Error creating customer portal session:', error);
           toast({
-            title: "Error",
-            description: "Failed to redirect to subscription management. Please try again.",
+            title: "Stripe error",
+            description: error.message || "Failed to redirect to subscription management",
+            variant: "destructive",
+          });
+          setIsRedirecting(false);
+          return;
+        }
+        
+        if (!data?.url) {
+          console.error('No URL returned from create-customer-portal function');
+          toast({
+            title: "Stripe error",
+            description: "Portal URL missing",
             variant: "destructive",
           });
           setIsRedirecting(false);
@@ -51,7 +63,12 @@ const BillingPage = () => {
     };
     
     redirectToStripePortal();
-  }, [user, userRole]);
+  }, [user, userRole, retryCount]);
+  
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    setIsRedirecting(true);
+  };
   
   if (isRedirecting) {
     return (
@@ -103,7 +120,7 @@ const BillingPage = () => {
             <div className="pt-4">
               <Button 
                 className="w-full sm:w-auto flex items-center justify-center gap-2"
-                onClick={() => setIsRedirecting(true)}
+                onClick={handleRetry}
               >
                 <CreditCard size={18} />
                 Manage Subscription
