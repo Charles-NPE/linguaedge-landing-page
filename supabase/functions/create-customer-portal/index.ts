@@ -24,7 +24,7 @@ serve(async (req) => {
     logStep("Function started");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    if (!stripeKey) throw new Error("ENV STRIPE_SECRET_KEY missing");
     logStep("Stripe key verified");
 
     // Initialize Supabase client with the service role key
@@ -34,57 +34,54 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Get user info from request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    // ----- Auth -----
+    const jwt = req.headers.get("Authorization")?.replace("Bearer ", "");
+    if (!jwt) throw new Error("No JWT provided in Authorization header");
     logStep("Authorization header found");
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    const user = userData.user;
-    if (!user?.id) throw new Error("User not authenticated");
-    logStep("User authenticated", { userId: user.id });
+    const { data: userData, error: userErr } = await supabaseClient.auth.getUser(jwt);
+    if (userErr) throw new Error(`Auth error: ${userErr.message}`);
+    const uid = userData.user?.id;
+    if (!uid) throw new Error("Could not extract user id");
+    logStep("User OK", { uid });
 
-    // Get customer from database
-    const { data: profileData, error: profileError } = await supabaseClient
+    // ----- Customer lookup -----
+    const { data: profile, error: profErr } = await supabaseClient
       .from("profiles")
       .select("stripe_customer_id")
-      .eq("id", user.id)
+      .eq("id", uid)
       .single();
 
-    if (profileError || !profileData?.stripe_customer_id) {
-      logStep("No Stripe customer found", { error: profileError?.message });
-      throw new Error("No Stripe customer found for this user");
-    }
+    if (profErr) throw new Error(`Profile fetch error: ${profErr.message}`);
+    if (!profile?.stripe_customer_id)
+      throw new Error("stripe_customer_id is NULL for this user");
 
-    const customerId = profileData.stripe_customer_id;
-    logStep("Found Stripe customer", { customerId });
+    const customerId = profile.stripe_customer_id;
+    logStep("Customer id found", { customerId });
 
-    // Create Stripe Customer Portal session
+    // ----- Portal session -----
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
-    
-    const returnUrl = Deno.env.get("STRIPE_PORTAL_RETURN_URL") || 
-                     `${req.headers.get("origin") || "https://linguaedge-landing-page.lovable.app"}/teacher`;
+    const returnUrl = Deno.env.get("STRIPE_PORTAL_RETURN_URL") ||
+      `${req.headers.get("origin") || "https://linguaedge-landing-page.lovable.app"}/teacher`;
     
     logStep("Creating portal session", { returnUrl });
-    const portalSession = await stripe.billingPortal.sessions.create({
+    const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
     });
     
-    logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
+    logStep("Portal session created", { sessionId: session.id, url: session.url });
 
-    return new Response(JSON.stringify({ url: portalSession.url }), {
+    return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in customer-portal", { message: errorMessage });
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    logStep("ERROR", { message: errorMessage });
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status: 400,
     });
   }
 });

@@ -1,5 +1,4 @@
 
-
 # This is the Supabase configuration file for Edge Functions
 
 project_id = "amityhneeclqenbiyixl"
@@ -12,4 +11,3 @@ verify_jwt = true
 
 [functions.create-customer-portal]
 verify_jwt = true
-

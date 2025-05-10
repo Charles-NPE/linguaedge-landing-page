@@ -27,7 +27,7 @@ const BillingPage = () => {
         const { data, error } = await supabase.functions.invoke('create-customer-portal');
         
         if (error) {
-          console.error('Error creating customer portal session:', error);
+          console.error('Stripe portal invoke error:', error);
           toast({
             title: "Stripe error",
             description: error.message || "Failed to redirect to subscription management",
