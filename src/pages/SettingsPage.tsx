@@ -1,20 +1,124 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Globe, LayoutDashboard, Bell } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+
+type UserSettings = {
+  theme: "light" | "dark";
+  dashboard_density: "comfortable" | "compact";
+  language: "en" | "es" | "fr";
+  notification_emails: boolean;
+};
 
 const SettingsPage = () => {
   const { user, profile } = useAuth();
   const { theme, setTheme } = useTheme();
+  const [isLoading, setIsLoading] = useState(false);
   
   const userRole = profile?.role || 'student';
   const dashboardPath = userRole === 'teacher' ? "/teacher" : "/student";
+  
+  const form = useForm<UserSettings>({
+    defaultValues: {
+      theme: "light",
+      dashboard_density: "comfortable",
+      language: "en",
+      notification_emails: true
+    }
+  });
+
+  const { setValue, watch } = form;
+
+  // Load user settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("user_settings")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching settings:", error);
+          return;
+        }
+        
+        if (data) {
+          form.reset({
+            theme: data.theme || "light",
+            dashboard_density: data.dashboard_density || "comfortable",
+            language: data.language || "en",
+            notification_emails: data.notification_emails !== null ? data.notification_emails : true
+          });
+        }
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadSettings();
+  }, [user, form]);
+
+  // Save settings when they change
+  const saveSettings = async (field: string, value: any) => {
+    if (!user) return;
+    
+    try {
+      const settings = {
+        user_id: user.id,
+        [field]: value,
+        updated_at: new Date().toISOString()
+      };
+      
+      const { error } = await supabase
+        .from("user_settings")
+        .upsert(settings, { onConflict: "user_id" });
+        
+      if (error) {
+        toast({
+          title: "Failed to save settings",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Don't show toast for theme changes to avoid too many notifications
+      if (field !== "theme") {
+        toast({
+          title: "Settings updated",
+          description: "Your preferences have been saved."
+        });
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+    }
+  };
+
+  // Handle theme change
+  const handleThemeChange = async (checked: boolean) => {
+    const newTheme = checked ? "dark" : "light";
+    setValue("theme", newTheme as "light" | "dark");
+    await setTheme(newTheme);
+    await saveSettings("theme", newTheme);
+  };
 
   return (
     <DashboardLayout title="Settings">
@@ -46,23 +150,102 @@ const SettingsPage = () => {
                 </p>
               </div>
               <Switch 
-                checked={theme === "dark"}
-                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                checked={watch("theme") === "dark"}
+                onCheckedChange={handleThemeChange}
               />
             </div>
           </CardContent>
         </Card>
         
-        {/* Account Settings */}
+        {/* Interface Settings */}
+        <Card className="bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 mb-6">
+          <CardHeader>
+            <CardTitle className="text-slate-900 dark:text-white">Interface Settings</CardTitle>
+            <CardDescription className="dark:text-slate-300">
+              Customize your dashboard experience
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <LayoutDashboard className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                <h3 className="font-medium text-slate-900 dark:text-white">Dashboard Density</h3>
+              </div>
+              <Select 
+                value={watch("dashboard_density")} 
+                onValueChange={(value) => {
+                  setValue("dashboard_density", value as "comfortable" | "compact");
+                  saveSettings("dashboard_density", value);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[240px]">
+                  <SelectValue placeholder="Select density" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="comfortable">Comfortable</SelectItem>
+                  <SelectItem value="compact">Compact</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground dark:text-slate-400">
+                Choose how dense you want the dashboard layout to be
+              </p>
+            </div>
+            
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Globe className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                <h3 className="font-medium text-slate-900 dark:text-white">Language</h3>
+              </div>
+              <Select 
+                value={watch("language")} 
+                onValueChange={(value) => {
+                  setValue("language", value as "en" | "es" | "fr");
+                  saveSettings("language", value);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[240px]">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Español</SelectItem>
+                  <SelectItem value="fr">Français</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground dark:text-slate-400">
+                Select your preferred language for the interface
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Notification Settings */}
         <Card className="bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100">
           <CardHeader>
-            <CardTitle className="text-slate-900 dark:text-white">Account Settings</CardTitle>
+            <CardTitle className="text-slate-900 dark:text-white">Notification Settings</CardTitle>
             <CardDescription className="dark:text-slate-300">
-              Manage your account preferences
+              Manage how and when we contact you
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="dark:text-slate-300">Additional account settings will be added here.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Bell className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                  <p className="font-medium text-slate-900 dark:text-white">Email Notifications</p>
+                </div>
+                <p className="text-sm text-muted-foreground dark:text-slate-300">
+                  Receive updates and important notifications via email
+                </p>
+              </div>
+              <Switch 
+                checked={watch("notification_emails")}
+                onCheckedChange={(checked) => {
+                  setValue("notification_emails", checked);
+                  saveSettings("notification_emails", checked);
+                }}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
