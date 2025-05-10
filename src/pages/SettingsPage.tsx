@@ -14,10 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 
+type ThemeType = "light" | "dark";
+type DensityType = "comfortable" | "compact";
+type LanguageType = "en" | "es" | "fr";
+
 type UserSettings = {
-  theme: "light" | "dark";
-  dashboard_density: "comfortable" | "compact";
-  language: "en" | "es" | "fr";
+  theme: ThemeType;
+  dashboard_density: DensityType;
+  language: LanguageType;
   notification_emails: boolean;
 };
 
@@ -59,10 +63,15 @@ const SettingsPage = () => {
         }
         
         if (data) {
+          // Use type assertion to ensure the values match the expected string literal types
+          const themeValue = (data.theme || "light") as ThemeType;
+          const densityValue = (data.dashboard_density || "comfortable") as DensityType;
+          const languageValue = (data.language || "en") as LanguageType;
+          
           form.reset({
-            theme: data.theme || "light",
-            dashboard_density: data.dashboard_density || "comfortable",
-            language: data.language || "en",
+            theme: themeValue,
+            dashboard_density: densityValue,
+            language: languageValue,
             notification_emails: data.notification_emails !== null ? data.notification_emails : true
           });
         }
@@ -114,8 +123,8 @@ const SettingsPage = () => {
 
   // Handle theme change
   const handleThemeChange = async (checked: boolean) => {
-    const newTheme = checked ? "dark" : "light";
-    setValue("theme", newTheme as "light" | "dark");
+    const newTheme = checked ? "dark" : "light" as ThemeType;
+    setValue("theme", newTheme);
     await setTheme(newTheme);
     await saveSettings("theme", newTheme);
   };
@@ -174,7 +183,7 @@ const SettingsPage = () => {
               <Select 
                 value={watch("dashboard_density")} 
                 onValueChange={(value) => {
-                  setValue("dashboard_density", value as "comfortable" | "compact");
+                  setValue("dashboard_density", value as DensityType);
                   saveSettings("dashboard_density", value);
                 }}
               >
@@ -199,7 +208,7 @@ const SettingsPage = () => {
               <Select 
                 value={watch("language")} 
                 onValueChange={(value) => {
-                  setValue("language", value as "en" | "es" | "fr");
+                  setValue("language", value as LanguageType);
                   saveSettings("language", value);
                 }}
               >
