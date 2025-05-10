@@ -83,7 +83,7 @@ const ProfilePage = () => {
       setIsLoading(true);
       
       try {
-        // Fix: Select all columns from academy_profiles table instead of just a subset
+        // Select all columns from academy_profiles table
         const { data, error } = await supabase
           .from('academy_profiles')
           .select('*')
@@ -106,7 +106,7 @@ const ProfilePage = () => {
           });
           
           setProfileId(data.id);
-          setUploadedLogo(data.logo_url);
+          setUploadedLogo(data.logo_url || null);
           setCreatedAt(data.created_at);
           setUpdatedAt(data.updated_at);
         }
@@ -147,6 +147,18 @@ const ProfilePage = () => {
       const fileExt = logoFile.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
 
+      // Check if the logos bucket exists, create it if it doesn't
+      const { data: bucketData, error: bucketError } = await supabase
+        .storage
+        .getBucket('logos');
+      
+      if (bucketError && bucketError.message.includes('does not exist')) {
+        // Create the bucket if it doesn't exist
+        await supabase.storage.createBucket('logos', {
+          public: true
+        });
+      }
+
       const { error: uploadError, data } = await supabase.storage
         .from("logos")
         .upload(fileName, logoFile);
@@ -185,7 +197,7 @@ const ProfilePage = () => {
       
       // Prepare data for upsert
       const upsertData = {
-        id: profileId || user.id, // Use existing ID or user ID for new profiles
+        id: profileId || undefined, // Use existing ID if available
         user_id: user.id,
         academy_name: values.academyName,
         admin_name: values.adminName,
@@ -202,7 +214,7 @@ const ProfilePage = () => {
       const { error } = await supabase
         .from('academy_profiles')
         .upsert(upsertData, {
-          onConflict: 'id'
+          onConflict: 'user_id'
         });
 
       if (error) {
@@ -326,7 +338,7 @@ const ProfilePage = () => {
                   field
                 }) => <FormItem>
                         <FormLabel>Country *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select country" />
@@ -356,7 +368,7 @@ const ProfilePage = () => {
                   field
                 }) => <FormItem>
                         <FormLabel>Time Zone *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select time zone" />
@@ -385,7 +397,7 @@ const ProfilePage = () => {
                   field
                 }) => <FormItem>
                         <FormLabel>Default Language *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select language" />
