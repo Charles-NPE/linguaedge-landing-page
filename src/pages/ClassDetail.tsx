@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +53,8 @@ interface Student {
   student_id?: string;
   status?: string;
   profiles?: StudentProfile | null;
+  // For handling invited students who aren't registered yet
+  invited_email?: string;
 }
 
 interface Author {
@@ -79,6 +80,13 @@ interface Post {
   post_replies: Reply[];
   author?: Author | null;
 }
+
+// Helper function to create a default author when data is missing
+const createDefaultAuthor = (authorId: string): Author => ({
+  id: authorId,
+  email: "Anonymous",
+  avatar_url: undefined
+});
 
 const ClassDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -162,8 +170,23 @@ const ClassDetail = () => {
       if (studentsError) {
         console.error("Error fetching students:", studentsError);
       } else if (studentsData) {
-        // Type assertion to ensure TypeScript knows the structure
-        setStudents(studentsData as Student[]);
+        // Ensure we handle the data correctly regardless of errors
+        const processedStudents: Student[] = studentsData.map(student => {
+          // If profiles exist and are valid, use them
+          if (student.profiles && typeof student.profiles === 'object' && 'id' in student.profiles) {
+            return student as Student;
+          }
+          
+          // Otherwise, create a default student object
+          return {
+            student_id: student.student_id,
+            status: student.status,
+            // If student_id looks like an email, use it as the invited_email
+            invited_email: student.student_id && student.student_id.includes('@') ? student.student_id : undefined
+          };
+        });
+        
+        setStudents(processedStudents);
       }
       
       // Fetch posts with replies
@@ -174,7 +197,7 @@ const ClassDetail = () => {
           content, 
           created_at, 
           author_id,
-          post_replies(id, author_id, content, created_at)
+          post_replies(id, author_id, content, created_at, post_id)
         `)
         .eq('class_id', id)
         .order('created_at', { ascending: true });
@@ -199,25 +222,36 @@ const ClassDetail = () => {
         const authorMap = new Map<string, Author>();
         if (authorProfiles) {
           authorProfiles.forEach(profile => {
-            authorMap.set(profile.id, profile as Author);
+            if (profile && typeof profile === 'object' && 'id' in profile) {
+              authorMap.set(profile.id, profile as Author);
+            }
           });
         }
         
         // Attach author profiles to posts and replies
         const postsWithAuthors = postsData.map(post => {
-          const repliesWithAuthors = post.post_replies.map(reply => ({
-            ...reply,
-            author: authorMap.get(reply.author_id) || null
-          }));
+          // Handle replies with proper type safety
+          const repliesWithAuthors = post.post_replies.map(reply => {
+            // Default author or from map
+            const replyAuthor = authorMap.get(reply.author_id) || createDefaultAuthor(reply.author_id);
+            
+            return {
+              ...reply,
+              author: replyAuthor
+            } as Reply;
+          });
+          
+          // Default author or from map
+          const postAuthor = authorMap.get(post.author_id) || createDefaultAuthor(post.author_id);
           
           return {
             ...post,
             post_replies: repliesWithAuthors,
-            author: authorMap.get(post.author_id) || null
-          };
+            author: postAuthor
+          } as Post;
         });
         
-        setPosts(postsWithAuthors as Post[]);
+        setPosts(postsWithAuthors);
       }
       
       // Subscribe to real-time updates
@@ -256,7 +290,23 @@ const ClassDetail = () => {
             if (error) {
               console.error("Error fetching updated students:", error);
             } else if (data) {
-              setStudents(data as Student[]);
+              // Process the data to ensure it fits our Student interface
+              const processedStudents: Student[] = data.map(student => {
+                // If profiles exist and are valid, use them
+                if (student.profiles && typeof student.profiles === 'object' && 'id' in student.profiles) {
+                  return student as Student;
+                }
+                
+                // Otherwise, create a default student object
+                return {
+                  student_id: student.student_id,
+                  status: student.status,
+                  // If student_id looks like an email, use it as the invited_email
+                  invited_email: student.student_id && student.student_id.includes('@') ? student.student_id : undefined
+                };
+              });
+              
+              setStudents(processedStudents);
             }
           });
       })
@@ -276,13 +326,18 @@ const ClassDetail = () => {
           .eq('id', newPost.author_id)
           .single();
 
+        // Create a proper author object
+        const postAuthor = (authorData && typeof authorData === 'object' && 'id' in authorData) 
+          ? authorData as Author 
+          : createDefaultAuthor(newPost.author_id);
+
         // Add new post to the list with author info
         setPosts(prev => [
           ...prev, 
           { 
             ...newPost,
             post_replies: [],
-            author: authorData as Author || null
+            author: postAuthor
           }
         ]);
       })
@@ -305,18 +360,20 @@ const ClassDetail = () => {
           .eq('id', newReply.author_id)
           .single();
           
-        // Add author info to the reply
-        const replyWithAuthor = { 
-          ...newReply, 
-          author: authorData as Author || null 
-        };
+        // Create a proper author object
+        const replyAuthor = (authorData && typeof authorData === 'object' && 'id' in authorData) 
+          ? authorData as Author 
+          : createDefaultAuthor(newReply.author_id);
         
         // Add new reply to the appropriate post
         setPosts(prev => prev.map(post => {
           if (post.id === newReply.post_id) {
             return {
               ...post,
-              post_replies: [...post.post_replies, replyWithAuthor]
+              post_replies: [...post.post_replies, {
+                ...newReply,
+                author: replyAuthor
+              } as Reply]
             };
           }
           return post;
@@ -331,7 +388,7 @@ const ClassDetail = () => {
   };
 
   const authorName = (post: Post | Reply) => {
-    if (post.author) {
+    if (post.author && typeof post.author === 'object' && 'email' in post.author) {
       return post.author.email || 'Anonymous';
     }
     return 'Anonymous';
@@ -574,18 +631,20 @@ const ClassDetail = () => {
                 </TableRow>
               ) : (
                 students.map((s) => (
-                  <TableRow key={s.student_id || (s.profiles?.id || 'pending')}>
+                  <TableRow key={s.student_id || s.invited_email || 'pending'}>
                     <TableCell className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
                           {s.profiles && s.profiles.email 
                             ? s.profiles.email.charAt(0).toUpperCase()
-                            : 'S'}
+                            : s.invited_email 
+                              ? s.invited_email.charAt(0).toUpperCase() 
+                              : 'S'}
                         </AvatarFallback>
                       </Avatar>
-                      {s.profiles ? s.profiles.email : 'Pending Invitation'}
+                      {s.profiles ? s.profiles.email : s.invited_email || 'Pending Invitation'}
                     </TableCell>
-                    <TableCell>{s.profiles ? s.profiles.email : 'Pending'}</TableCell>
+                    <TableCell>{s.profiles ? s.profiles.email : s.invited_email || 'Pending'}</TableCell>
                     <TableCell>
                       {s.status === 'invited' ? 
                         <span className="text-amber-600 dark:text-amber-500">Invited</span> : 
@@ -623,7 +682,7 @@ const ClassDetail = () => {
               posts.map((p) => (
                 <Card key={p.id}>
                   <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                    <div className="font-semibold">{p.author ? p.author.email : 'Anonymous'}</div>
+                    <div className="font-semibold">{authorName(p)}</div>
                     <div className="text-xs text-muted-foreground">
                       {formatDate(p.created_at)}
                     </div>
@@ -638,7 +697,7 @@ const ClassDetail = () => {
                           {p.post_replies.map((r) => (
                             <div key={r.id} className="pl-4 border-l border-slate-200 dark:border-slate-700">
                               <div className="flex justify-between items-center">
-                                <span className="font-medium">{r.author ? r.author.email : 'Anonymous'}</span>
+                                <span className="font-medium">{authorName(r)}</span>
                                 <span className="text-xs text-muted-foreground">
                                   {formatDate(r.created_at)}
                                 </span>
