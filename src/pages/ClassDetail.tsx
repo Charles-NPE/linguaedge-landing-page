@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,11 +16,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // Import the components and types
-import StudentsList, { Student } from "@/components/classes/StudentsList";
-import ClassForum, { Post, Reply, Author } from "@/components/classes/ClassForum";
+import StudentsList from "@/components/classes/StudentsList";
+import ClassForum from "@/components/classes/ClassForum";
 import InviteStudentDialog from "@/components/classes/InviteStudentDialog";
 import DeleteClassDialog from "@/components/classes/DeleteClassDialog";
-import { StudentProfile, ClassRow } from "@/types/class.types";
+import { StudentProfile, ClassRow, Student, Post, Reply, Author } from "@/types/class.types";
 
 // Helper function to create a default author when data is missing
 const createDefaultAuthor = (authorId: string): Author => ({
@@ -115,11 +116,17 @@ const ClassDetail = () => {
             return {} as Student;
           }
           
+          // Handle the case where profile is a SelectQueryError
+          let processedProfile: StudentProfile | null = null;
+          if (student.profiles && typeof student.profiles === 'object' && 'id' in student.profiles) {
+            processedProfile = student.profiles as StudentProfile;
+          }
+          
           // Process valid student data
           return {
             student_id: student.student_id,
             status: 'enrolled', // Default status
-            profiles: student.profiles as StudentProfile | null,
+            profiles: processedProfile,
             // If student_id looks like an email, use it as the invited_email
             invited_email: student.student_id && typeof student.student_id === 'string' && 
               student.student_id.includes('@') ? student.student_id : undefined
@@ -137,7 +144,8 @@ const ClassDetail = () => {
           content, 
           created_at, 
           author_id,
-          post_replies(id, author_id, content, created_at, post_id)
+          author:profiles(id, email, avatar_url, academy_name, full_name),
+          post_replies(id, author_id, content, created_at, post_id, author:profiles(id, email, avatar_url, academy_name, full_name))
         `)
         .eq('class_id', id)
         .order('created_at', { ascending: true });
@@ -145,53 +153,39 @@ const ClassDetail = () => {
       if (postsError) {
         console.error("Error fetching posts:", postsError);
       } else if (postsData) {
-        // Get unique author IDs from posts and replies
-        const authorIds = new Set<string>();
-        postsData.forEach(post => {
-          authorIds.add(post.author_id);
-          post.post_replies.forEach(reply => authorIds.add(reply.author_id));
-        });
-        
-        // Fetch author profiles in a single query
-        const { data: authorProfiles } = await supabase
-          .from('profiles')
-          .select('id, email, avatar_url')
-          .in('id', Array.from(authorIds));
+        // Process posts and replies with proper author information
+        const processedPosts: Post[] = postsData.map(post => {
+          // Create a proper author object
+          let processedAuthor: Author | null = null;
+          if (post.author && typeof post.author === 'object' && 'id' in post.author) {
+            processedAuthor = post.author as Author;
+          } else {
+            processedAuthor = createDefaultAuthor(post.author_id);
+          }
           
-        // Create a map of author profiles by ID
-        const authorMap = new Map<string, Author>();
-        if (authorProfiles) {
-          authorProfiles.forEach(profile => {
-            if (profile && typeof profile === 'object' && 'id' in profile) {
-              authorMap.set(profile.id, profile as unknown as Author);
+          // Process replies
+          const processedReplies: Reply[] = post.post_replies.map(reply => {
+            let replyAuthor: Author | null = null;
+            if (reply.author && typeof reply.author === 'object' && 'id' in reply.author) {
+              replyAuthor = reply.author as Author;
+            } else {
+              replyAuthor = createDefaultAuthor(reply.author_id);
             }
-          });
-        }
-        
-        // Attach author profiles to posts and replies
-        const postsWithAuthors = postsData.map(post => {
-          // Handle replies with proper type safety
-          const repliesWithAuthors = post.post_replies.map(reply => {
-            // Default author or from map
-            const replyAuthor = authorMap.get(reply.author_id) || createDefaultAuthor(reply.author_id);
             
             return {
               ...reply,
               author: replyAuthor
-            } as Reply;
+            };
           });
-          
-          // Default author or from map
-          const postAuthor = authorMap.get(post.author_id) || createDefaultAuthor(post.author_id);
           
           return {
             ...post,
-            post_replies: repliesWithAuthors,
-            author: postAuthor
-          } as Post;
+            post_replies: processedReplies,
+            author: processedAuthor
+          };
         });
         
-        setPosts(postsWithAuthors);
+        setPosts(processedPosts);
       }
       
       // Subscribe to real-time updates
@@ -236,10 +230,16 @@ const ClassDetail = () => {
                   return {} as Student;
                 }
                 
+                // Handle the case where profile is a SelectQueryError
+                let processedProfile: StudentProfile | null = null;
+                if (student.profiles && typeof student.profiles === 'object' && 'id' in student.profiles) {
+                  processedProfile = student.profiles as StudentProfile;
+                }
+                
                 return {
                   student_id: student.student_id,
                   status: 'enrolled',
-                  profiles: student.profiles as StudentProfile | null,
+                  profiles: processedProfile,
                   invited_email: student.student_id && typeof student.student_id === 'string' && 
                     student.student_id.includes('@') ? student.student_id : undefined
                 };
@@ -261,7 +261,7 @@ const ClassDetail = () => {
         // Fetch the author information for the new post
         const { data: authorData } = await supabase
           .from('profiles')
-          .select('id, email, avatar_url')
+          .select('id, email, avatar_url, academy_name, full_name')
           .eq('id', newPost.author_id)
           .single();
 
@@ -295,7 +295,7 @@ const ClassDetail = () => {
         // Fetch the author information for the new reply
         const { data: authorData } = await supabase
           .from('profiles')
-          .select('id, email, avatar_url')
+          .select('id, email, avatar_url, academy_name, full_name')
           .eq('id', newReply.author_id)
           .single();
           
@@ -312,11 +312,32 @@ const ClassDetail = () => {
               post_replies: [...post.post_replies, {
                 ...newReply,
                 author: replyAuthor
-              } as Reply]
+              }]
             };
           }
           return post;
         }));
+      })
+      // Listen for deleted posts
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'posts'
+      }, (payload) => {
+        const deletedPostId = payload.old.id;
+        setPosts(prev => prev.filter(post => post.id !== deletedPostId));
+      })
+      // Listen for deleted replies
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'post_replies'
+      }, (payload) => {
+        const deletedReplyId = payload.old.id;
+        setPosts(prev => prev.map(post => ({
+          ...post,
+          post_replies: post.post_replies.filter(reply => reply.id !== deletedReplyId)
+        })));
       })
       .subscribe();
       
@@ -359,36 +380,14 @@ const ClassDetail = () => {
   const inviteStudent = async (inviteEmail: string) => {
     if (!classRow) return;
     
-    try {
-      const { error } = await supabase.functions.invoke('invite-student', {
-        body: {
-          class_id: classRow.id,
-          email: inviteEmail,
-          class_name: classRow.name,
-          code: classRow.code
-        }
-      });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Invitation sent to student",
-      });
-      
-      setIsInviteDialogOpen(false);
-      
-      // Refresh the students list
-      fetchClassData();
-      
-    } catch (error) {
-      console.error("Error inviting student:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send invitation",
-        variant: "destructive",
-      });
-    }
+    // Temporary toast message instead of actual invite
+    toast({
+      title: "Coming soon",
+      description: "Email invites will be enabled later."
+    });
+    
+    // Skip the actual invite functionality
+    setIsInviteDialogOpen(false);
   };
 
   const deleteClass = async () => {
@@ -467,6 +466,44 @@ const ClassDetail = () => {
     }
   };
 
+  const deletePost = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+        
+      if (error) throw error;
+      
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete post",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteReply = async (replyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('post_replies')
+        .delete()
+        .eq('id', replyId);
+        
+      if (error) throw error;
+      
+    } catch (error) {
+      console.error("Error deleting reply:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete reply",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout title="Loading class...">
@@ -480,6 +517,8 @@ const ClassDetail = () => {
   if (!classRow || !hasAccess) {
     return null; // Navigation to home will happen in the useEffect
   }
+
+  const isTeacher = profile?.role === "teacher" && classRow.teacher_id === user?.id;
 
   return (
     <DashboardLayout title={classRow.name}>
@@ -497,7 +536,7 @@ const ClassDetail = () => {
           </div>
         </div>
         
-        {profile?.role === 'teacher' && (
+        {isTeacher && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -537,7 +576,11 @@ const ClassDetail = () => {
           <ClassForum 
             posts={posts} 
             onSubmitPost={submitPost} 
-            onSubmitReply={submitReply} 
+            onSubmitReply={submitReply}
+            onDeletePost={deletePost}
+            onDeleteReply={deleteReply}
+            currentUserId={user?.id}
+            isTeacher={isTeacher}
           />
         </TabsContent>
       </Tabs>

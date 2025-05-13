@@ -2,14 +2,17 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
+import { Trash2 } from "lucide-react";
+import ReplyBox from "./ReplyBox";
 
 export interface Author {
   id: string;
   email?: string;
   avatar_url?: string;
+  academy_name?: string;
+  full_name?: string;
 }
 
 export interface Reply {
@@ -34,14 +37,16 @@ interface ClassForumProps {
   posts: Post[];
   onSubmitPost: (content: string) => Promise<void>;
   onSubmitReply: (postId: string, content: string) => Promise<void>;
+  onDeletePost?: (postId: string) => Promise<void>;
+  onDeleteReply?: (replyId: string) => Promise<void>;
+  currentUserId?: string;
+  isTeacher?: boolean;
 }
 
 // Helper function to get author name
-const authorName = (entity: Post | Reply) => {
-  if (entity.author && typeof entity.author === 'object' && 'email' in entity.author) {
-    return entity.author.email || 'Anonymous';
-  }
-  return 'Anonymous';
+const authorName = (author?: Author | null) => {
+  if (!author) return 'Anonymous';
+  return author.academy_name || author.full_name || author.email || 'Anonymous';
 };
 
 // Helper function to format date
@@ -57,6 +62,10 @@ const ClassForum: React.FC<ClassForumProps> = ({
   posts,
   onSubmitPost,
   onSubmitReply,
+  onDeletePost,
+  onDeleteReply,
+  currentUserId,
+  isTeacher
 }) => {
   const [newPost, setNewPost] = useState("");
 
@@ -67,14 +76,8 @@ const ClassForum: React.FC<ClassForumProps> = ({
     setNewPost("");
   };
 
-  const handleReply = async (e: React.KeyboardEvent<HTMLTextAreaElement>, postId: string) => {
-    if (e.key !== 'Enter' || !e.ctrlKey) return;
-    
-    const content = e.currentTarget.value.trim();
-    if (!content) return;
-    
-    await onSubmitReply(postId, content);
-    e.currentTarget.value = "";
+  const canDeleteItem = (authorId: string) => {
+    return (currentUserId === authorId) || isTeacher;
   };
 
   return (
@@ -87,9 +90,21 @@ const ClassForum: React.FC<ClassForumProps> = ({
         posts.map((p) => (
           <Card key={p.id}>
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-              <div className="font-semibold">{authorName(p)}</div>
-              <div className="text-xs text-muted-foreground">
-                {formatDate(p.created_at)}
+              <div className="font-semibold">{authorName(p.author)}</div>
+              <div className="flex items-center space-x-2">
+                <div className="text-xs text-muted-foreground">
+                  {formatDate(p.created_at)}
+                </div>
+                {canDeleteItem(p.author_id) && onDeletePost && (
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={() => onDeletePost(p.id)}
+                    className="h-7 w-7"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -102,10 +117,22 @@ const ClassForum: React.FC<ClassForumProps> = ({
                     {p.post_replies.map((r) => (
                       <div key={r.id} className="pl-4 border-l border-slate-200 dark:border-slate-700">
                         <div className="flex justify-between items-center">
-                          <span className="font-medium">{authorName(r)}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(r.created_at)}
-                          </span>
+                          <span className="font-medium">{authorName(r.author)}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-muted-foreground">
+                              {formatDate(r.created_at)}
+                            </span>
+                            {canDeleteItem(r.author_id) && onDeleteReply && (
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => onDeleteReply(r.id)}
+                                className="h-6 w-6"
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         <p className="text-sm mt-1 whitespace-pre-line">{r.content}</p>
                       </div>
@@ -114,10 +141,9 @@ const ClassForum: React.FC<ClassForumProps> = ({
                 </>
               )}
               
-              <Textarea 
-                placeholder="Reply to this post... (Ctrl+Enter to submit)" 
-                className="mt-2"
-                onKeyDown={(e) => handleReply(e, p.id)}
+              <ReplyBox 
+                onSubmit={(content) => onSubmitReply(p.id, content)} 
+                placeholder="Reply to this post..."
               />
             </CardContent>
           </Card>
@@ -125,16 +151,10 @@ const ClassForum: React.FC<ClassForumProps> = ({
       )}
       
       <div className="pt-4">
-        <Textarea
+        <ReplyBox
+          onSubmit={onSubmitPost}
           placeholder="Start a new discussion..."
-          value={newPost}
-          onChange={(e) => setNewPost(e.target.value)}
-          className="mb-2"
-          rows={3}
         />
-        <Button onClick={handleSubmitPost} disabled={!newPost.trim()}>
-          Post
-        </Button>
       </div>
     </div>
   );
