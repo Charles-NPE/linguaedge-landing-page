@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,6 +8,7 @@ import { BookOpen, BarChart, Users, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
+
 const TeacherDashboard: React.FC = () => {
   const {
     user,
@@ -15,6 +17,7 @@ const TeacherDashboard: React.FC = () => {
     checkSubscription
   } = useAuth();
   const navigate = useNavigate();
+
   useEffect(() => {
     // Check subscription when the dashboard loads
     const checkSubscriptionStatus = async () => {
@@ -56,6 +59,7 @@ const TeacherDashboard: React.FC = () => {
         </div>
       </DashboardLayout>;
   }
+  
   return <DashboardLayout title="Teacher Dashboard">
       <div className="mb-8">
         <h2 className="text-lg text-slate-900 dark:text-slate-100">
@@ -69,16 +73,29 @@ const TeacherDashboard: React.FC = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Link to="/teacher/classes" className="block">
+          <FeatureCard 
+            title="Manage Classes" 
+            description="Create and organize classes, add students, and track progress." 
+            icon={Users} 
+          />
+        </Link>
         <div className="card">
-          <FeatureCard title="Manage Classes" description="Create and organize classes, add students, and track progress." icon={Users} />
+          <FeatureCard 
+            title="Assign Essays" 
+            description="Create new writing assignments for your students." 
+            icon={BookOpen} 
+          />
         </div>
         <div className="card">
-          <FeatureCard title="Assign Essays" description="Create new writing assignments for your students." icon={BookOpen} />
-        </div>
-        <div className="card">
-          <FeatureCard title="View Analytics" description="Track student progress and identify areas for improvement." icon={BarChart} />
+          <FeatureCard 
+            title="View Analytics" 
+            description="Track student progress and identify areas for improvement." 
+            icon={BarChart} 
+          />
         </div>
       </div>
     </DashboardLayout>;
 };
+
 export default TeacherDashboard;

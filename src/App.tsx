@@ -27,6 +27,7 @@ import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import BillingPage from "./pages/BillingPage";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import TeacherClassesPage from "./pages/TeacherClassesPage";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,16 @@ const AppRoutes = () => (
       element={
         <RoleRoute allowed={['teacher']} requireSubscription={true}>
           <TeacherDashboard />
+        </RoleRoute>
+      } 
+    />
+    
+    {/* New Teacher Classes Route */}
+    <Route 
+      path="/teacher/classes" 
+      element={
+        <RoleRoute allowed={['teacher']} requireSubscription={true}>
+          <TeacherClassesPage />
         </RoleRoute>
       } 
     />
