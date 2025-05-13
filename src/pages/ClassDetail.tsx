@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -16,12 +16,26 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trash2 } from "lucide-react";
+import { ArrowLeft, MoreVertical, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter, 
+  DialogDescription 
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { formatDistanceToNow } from "date-fns";
 
 interface ClassRow {
   id: string;
@@ -32,11 +46,13 @@ interface ClassRow {
 
 interface Student {
   student_id?: string;
+  invited_email?: string;
+  status?: string;
   profiles?: {
     id: string;
     email?: string;
     role?: string;
-  };
+  } | null;
 }
 
 interface Reply {
@@ -45,6 +61,12 @@ interface Reply {
   content: string;
   created_at: string;
   post_id?: string;
+  author?: {
+    id: string;
+    email?: string;
+    full_name?: string;
+    avatar_url?: string;
+  } | null;
 }
 
 interface Post {
@@ -53,6 +75,12 @@ interface Post {
   content: string;
   created_at: string;
   post_replies: Reply[];
+  author?: {
+    id: string;
+    email?: string;
+    full_name?: string;
+    avatar_url?: string;
+  } | null;
 }
 
 const ClassDetail = () => {
@@ -66,8 +94,8 @@ const ClassDetail = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [newPost, setNewPost] = useState("");
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [userProfiles, setUserProfiles] = useState<Record<string, string>>({});
   const [defaultTab, setDefaultTab] = useState("students");
 
   useEffect(() => {
@@ -128,38 +156,27 @@ const ClassDetail = () => {
         return;
       }
       
-      // Fetch students
+      // Fetch students (both enrolled and invited)
       const { data: studentsData } = await supabase
         .from('class_students')
-        .select('student_id, profiles:student_id(id, email, role)')
+        .select('student_id, invited_email, status, profiles:student_id(*)')
         .eq('class_id', id);
         
       if (studentsData) {
         setStudents(studentsData);
-        
-        // Build a map of user IDs to names for the forum
-        const userIds = studentsData.map(s => s.student_id || '');
-        if (classData.teacher_id) userIds.push(classData.teacher_id);
-        
-        // Get profiles for all users
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .in('id', userIds);
-          
-        if (profiles) {
-          const profileMap: Record<string, string> = {};
-          profiles.forEach(p => {
-            profileMap[p.id] = p.email || 'Anonymous';
-          });
-          setUserProfiles(profileMap);
-        }
       }
       
-      // Fetch posts
+      // Fetch posts with author information
       const { data: postsData } = await supabase
         .from('posts')
-        .select('id, author_id, content, created_at, post_replies(id, author_id, content, created_at, post_id)')
+        .select(`
+          id, 
+          content, 
+          created_at, 
+          author_id,
+          author:author_id(id, email, avatar_url),
+          post_replies(id, author_id, content, created_at, author:author_id(id, email, avatar_url))
+        `)
         .eq('class_id', id)
         .order('created_at', { ascending: true });
         
@@ -184,90 +201,106 @@ const ClassDetail = () => {
   };
 
   const setupRealtimeSubscriptions = (classId: string) => {
-    // Subscribe to class_students changes
-    const studentsChannel = supabase
-      .channel('students-channel')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'class_students',
-          filter: `class_id=eq.${classId}`
-        },
-        () => {
-          // Refresh students on any change
-          supabase
-            .from('class_students')
-            .select('student_id, profiles:student_id(id, email, role)')
-            .eq('class_id', classId)
-            .then(({ data }) => {
-              if (data) setStudents(data);
-            });
-        }
-      )
-      .subscribe();
-      
-    // Subscribe to posts changes
-    const postsChannel = supabase
-      .channel('posts-channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'posts',
-          filter: `class_id=eq.${classId}`
-        },
-        (payload) => {
-          // Add new post to the list
-          const newPost = payload.new as Post;
-          setPosts(prev => [...prev, { ...newPost, post_replies: [] }]);
-        }
-      )
-      .subscribe();
-      
-    // Subscribe to post_replies changes
-    const repliesChannel = supabase
-      .channel('replies-channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'post_replies'
-        },
-        (payload) => {
-          // Add new reply to the appropriate post
-          const newReply = payload.new as Reply;
-          setPosts(prev => prev.map(post => {
-            if (post.id === newReply.post_id) {
-              return {
-                ...post,
-                post_replies: [...post.post_replies, newReply]
-              };
-            }
-            return post;
-          }));
-        }
-      )
+    // Create a single channel for all changes
+    const channel = supabase
+      .channel(`class_${classId}`)
+      // Listen for new students
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'class_students',
+        filter: `class_id=eq.${classId}`
+      }, () => {
+        // Refresh students list
+        supabase
+          .from('class_students')
+          .select('student_id, invited_email, status, profiles:student_id(*)')
+          .eq('class_id', classId)
+          .then(({ data }) => {
+            if (data) setStudents(data);
+          });
+      })
+      // Listen for new posts
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'posts',
+        filter: `class_id=eq.${classId}`
+      }, async (payload) => {
+        // Fetch the author information for the new post
+        const { data: authorData } = await supabase
+          .from('profiles')
+          .select('id, email, avatar_url')
+          .eq('id', payload.new.author_id)
+          .single();
+
+        // Add new post to the list with author info
+        setPosts(prev => [
+          ...prev, 
+          { 
+            ...payload.new as Post, 
+            post_replies: [],
+            author: authorData || null
+          }
+        ]);
+      })
+      // Listen for new replies
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'post_replies'
+      }, async (payload) => {
+        const newReply = payload.new as Reply;
+        
+        // Only process if this reply belongs to one of our posts
+        const postExists = posts.some(post => post.id === newReply.post_id);
+        if (!postExists) return;
+        
+        // Fetch the author information for the new reply
+        const { data: authorData } = await supabase
+          .from('profiles')
+          .select('id, email, avatar_url')
+          .eq('id', newReply.author_id)
+          .single();
+          
+        // Add author info to the reply
+        const replyWithAuthor = { 
+          ...newReply, 
+          author: authorData || null 
+        };
+        
+        // Add new reply to the appropriate post
+        setPosts(prev => prev.map(post => {
+          if (post.id === newReply.post_id) {
+            return {
+              ...post,
+              post_replies: [...post.post_replies, replyWithAuthor]
+            };
+          }
+          return post;
+        }));
+      })
       .subscribe();
       
     // Return cleanup function
     return () => {
-      supabase.removeChannel(studentsChannel);
-      supabase.removeChannel(postsChannel);
-      supabase.removeChannel(repliesChannel);
+      supabase.removeChannel(channel);
     };
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
+  const authorName = (post: Post | Reply) => {
+    if (post.author) {
+      return post.author.full_name || post.author.email || 'Anonymous';
+    }
+    return 'Anonymous';
   };
 
-  const authorName = (authorId: string) => {
-    return userProfiles[authorId] || 'Anonymous';
+  const formatDate = (dateString: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+    } catch (error) {
+      return 'some time ago';
+    }
   };
 
   const removeStudent = async (studentId: string) => {
@@ -304,61 +337,61 @@ const ClassDetail = () => {
     if (!classRow || !inviteEmail) return;
     
     try {
-      // First find the user by email
-      const { data: foundUser, error: userError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', inviteEmail)
-        .single();
-        
-      if (userError || !foundUser) {
-        toast({
-          title: "User not found",
-          description: "No user found with that email address",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Check if already a member
-      const { data: existingMember } = await supabase
-        .from('class_students')
-        .select('*')
-        .eq('class_id', classRow.id)
-        .eq('student_id', foundUser.id);
-        
-      if (existingMember && existingMember.length > 0) {
-        toast({
-          title: "Already enrolled",
-          description: "This student is already in this class",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Add to class
-      const { error } = await supabase
-        .from('class_students')
-        .insert({
+      const { error } = await supabase.functions.invoke('invite-student', {
+        body: {
           class_id: classRow.id,
-          student_id: foundUser.id
-        });
-        
+          email: inviteEmail,
+          class_name: classRow.name,
+          code: classRow.code
+        }
+      });
+      
       if (error) throw error;
       
       toast({
         title: "Success",
-        description: "Student invited to class",
+        description: "Invitation sent to student",
       });
       
       setInviteEmail("");
       setIsInviteDialogOpen(false);
       
+      // Refresh the students list
+      fetchClassData();
+      
     } catch (error) {
       console.error("Error inviting student:", error);
       toast({
         title: "Error",
-        description: "Failed to invite student",
+        description: "Failed to send invitation",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteClass = async () => {
+    if (!classRow) return;
+    
+    try {
+      const { error } = await supabase
+        .from('classes')
+        .delete()
+        .eq('id', classRow.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Class deleted successfully",
+      });
+      
+      navigate("/teacher/classes");
+      
+    } catch (error) {
+      console.error("Error deleting class:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete class",
         variant: "destructive",
       });
     }
@@ -435,11 +468,38 @@ const ClassDetail = () => {
 
   return (
     <DashboardLayout title={classRow.name}>
-      <div className="mb-4 flex justify-between items-center">
-        <div>
-          <span className="text-sm font-medium text-muted-foreground mr-2">Class Code:</span>
-          <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-sm">{classRow.code}</span>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center space-x-4">
+          <Link to={profile?.role === "teacher" ? "/teacher/classes" : "/student/dashboard"}>
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <ArrowLeft size={16} />
+              Back to Dashboard
+            </Button>
+          </Link>
+          <div>
+            <span className="text-sm font-medium text-muted-foreground mr-2">Class Code:</span>
+            <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-sm">{classRow.code}</span>
+          </div>
         </div>
+        
+        {profile?.role === 'teacher' && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                className="text-destructive focus:text-destructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Class
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       
       <Tabs defaultValue={defaultTab} className="mt-4">
@@ -459,28 +519,38 @@ const ClassDetail = () => {
               <TableRow>
                 <TableHead>Student</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Status</TableHead>
                 {profile?.role === 'teacher' && <TableHead className="w-[100px]">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {students.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={profile?.role === 'teacher' ? 3 : 2} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={profile?.role === 'teacher' ? 4 : 3} className="text-center text-muted-foreground py-8">
                     No students enrolled yet
                   </TableCell>
                 </TableRow>
               ) : (
                 students.map((s) => (
-                  <TableRow key={s.student_id}>
+                  <TableRow key={s.student_id || s.invited_email}>
                     <TableCell className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
-                          {((s.profiles?.email || 'S').charAt(0) || 'S').toUpperCase()}
+                          {s.profiles ? 
+                            ((s.profiles.email || 'S').charAt(0) || 'S').toUpperCase() :
+                            ((s.invited_email || 'S').charAt(0) || 'S').toUpperCase()
+                          }
                         </AvatarFallback>
                       </Avatar>
-                      {s.profiles?.email || 'Anonymous'}
+                      {s.profiles ? s.profiles.email : 'Pending Invitation'}
                     </TableCell>
-                    <TableCell>{s.profiles?.email}</TableCell>
+                    <TableCell>{s.profiles ? s.profiles.email : s.invited_email}</TableCell>
+                    <TableCell>
+                      {s.status === 'invited' ? 
+                        <span className="text-amber-600 dark:text-amber-500">Invited</span> : 
+                        <span className="text-green-600 dark:text-green-500">Enrolled</span>
+                      }
+                    </TableCell>
                     {profile?.role === 'teacher' && (
                       <TableCell>
                         <Button 
@@ -488,6 +558,7 @@ const ClassDetail = () => {
                           variant="ghost" 
                           onClick={() => removeStudent(s.student_id || '')}
                           title="Remove student"
+                          disabled={!s.student_id}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -511,7 +582,7 @@ const ClassDetail = () => {
               posts.map((p) => (
                 <Card key={p.id}>
                   <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                    <div className="font-semibold">{authorName(p.author_id)}</div>
+                    <div className="font-semibold">{authorName(p)}</div>
                     <div className="text-xs text-muted-foreground">
                       {formatDate(p.created_at)}
                     </div>
@@ -526,7 +597,7 @@ const ClassDetail = () => {
                           {p.post_replies.map((r) => (
                             <div key={r.id} className="pl-4 border-l border-slate-200 dark:border-slate-700">
                               <div className="flex justify-between items-center">
-                                <span className="font-medium">{authorName(r.author_id)}</span>
+                                <span className="font-medium">{authorName(r)}</span>
                                 <span className="text-xs text-muted-foreground">
                                   {formatDate(r.created_at)}
                                 </span>
@@ -583,6 +654,27 @@ const ClassDetail = () => {
             </Button>
             <Button onClick={inviteStudent}>
               Invite
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Class Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Class</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this class? This action cannot be undone.
+              All students will be removed and all class data will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteClass}>
+              Delete Class
             </Button>
           </DialogFooter>
         </DialogContent>

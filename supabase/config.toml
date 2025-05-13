@@ -33,3 +33,7 @@ enabled = true
 # Configure the Stripe webhook function to accept unauthenticated requests
 [functions.stripe-webhook]
 verify_jwt = false
+
+# Configure the invite-student function to accept unauthenticated requests
+[functions.invite-student]
+verify_jwt = false
