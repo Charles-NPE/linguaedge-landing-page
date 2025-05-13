@@ -8,13 +8,15 @@ import CreateClassDialog from "@/components/classes/CreateClassDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ClassWithStudents {
   id: string;
   name: string;
   code: string;
-  class_students: { count: number } | null;
+  class_students: { count: number; } | null;
 }
 
 const TeacherClassesPage = () => {
@@ -44,7 +46,8 @@ const TeacherClassesPage = () => {
     try {
       const { data, error } = await supabase
         .from('classes')
-        .select('id, name, code, class_students(count)');
+        .select('id, name, code, class_students(count)')
+        .eq('teacher_id', user.id);
         
       if (error) throw error;
       
@@ -128,8 +131,30 @@ const TeacherClassesPage = () => {
     }
   };
 
+  const totalStudents = getTotalStudents(classes);
+  const planLimit = getStudentLimit();
+
   return (
-    <DashboardLayout title="Manage Classes">
+    <DashboardLayout 
+      title="Manage Classes"
+      actions={
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2">
+                <Progress value={(totalStudents / planLimit) * 100} className="w-32 h-2" />
+                <span className="text-sm font-medium">
+                  {totalStudents} / {planLimit}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              You can enrol up to {planLimit} students in all your classes.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
+    >
       <div className="mb-6">
         <p className="text-slate-600 dark:text-slate-400">
           Create and manage your classes. Students can join using the class code.
@@ -161,7 +186,8 @@ const TeacherClassesPage = () => {
                   name={cls.name}
                   code={cls.code}
                   studentCount={cls.class_students?.count || 0}
-                  studentLimit={getStudentLimit()}
+                  studentLimit={planLimit}
+                  totalStudents={totalStudents}
                   onOpenClass={(id) => navigate(`/teacher/classes/${id}`)}
                 />
               ))}

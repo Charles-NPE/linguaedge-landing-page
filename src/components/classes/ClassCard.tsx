@@ -3,7 +3,8 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, BookOpen } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 interface ClassCardProps {
   id: string;
@@ -11,6 +12,7 @@ interface ClassCardProps {
   code: string;
   studentCount: number;
   studentLimit: number;
+  totalStudents: number;
   onOpenClass: (id: string) => void;
 }
 
@@ -20,6 +22,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
   code,
   studentCount,
   studentLimit,
+  totalStudents,
   onOpenClass
 }) => {
   const handleCopyCode = () => {
@@ -30,8 +33,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     });
   };
 
-  // Calculate progress percentage for the progress bar
-  const progressPercent = Math.min((studentCount / studentLimit) * 100, 100);
+  // Calculate progress percentage for the progress bar (based on total students)
+  const progressPercent = Math.min((totalStudents / studentLimit) * 100, 100);
   
   // Determine color based on capacity
   const getProgressColor = () => {
@@ -58,14 +61,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
           <div className="space-y-1">
             <div className="flex justify-between text-sm">
               <span className="text-slate-500 dark:text-slate-400">Students:</span>
-              <span>{studentCount} / {studentLimit}</span>
+              <span className="text-muted-foreground">{studentCount} students</span>
             </div>
-            <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div 
-                className={`h-full ${getProgressColor()} transition-all`}
-                style={{ width: `${progressPercent}%` }}
-              ></div>
-            </div>
+            <Progress 
+              value={progressPercent} 
+              className="h-1 bg-slate-200 dark:bg-slate-700" 
+            />
           </div>
         </div>
       </CardContent>

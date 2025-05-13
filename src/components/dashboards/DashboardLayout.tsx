@@ -8,9 +8,10 @@ import { Link } from "react-router-dom";
 interface DashboardLayoutProps {
   children: React.ReactNode;
   title: string;
+  actions?: React.ReactNode;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, actions }) => {
   const { signOut } = useAuth();
 
   return (
@@ -23,7 +24,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
             </Link>
             <h1 className="text-xl font-semibold hidden md:block text-slate-900 dark:text-white">{title}</h1>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
+            {actions}
             <UserDropdown />
           </div>
         </div>
