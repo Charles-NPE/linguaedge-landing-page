@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -44,15 +44,22 @@ interface ClassRow {
   teacher_id: string;
 }
 
+interface StudentProfile {
+  id: string;
+  email?: string;
+  avatar_url?: string;
+}
+
 interface Student {
   student_id?: string;
-  invited_email?: string;
   status?: string;
-  profiles?: {
-    id: string;
-    email?: string;
-    role?: string;
-  } | null;
+  profiles?: StudentProfile | null;
+}
+
+interface Author {
+  id: string;
+  email?: string;
+  avatar_url?: string;
 }
 
 interface Reply {
@@ -61,12 +68,7 @@ interface Reply {
   content: string;
   created_at: string;
   post_id?: string;
-  author?: {
-    id: string;
-    email?: string;
-    full_name?: string;
-    avatar_url?: string;
-  } | null;
+  author?: Author | null;
 }
 
 interface Post {
@@ -75,12 +77,7 @@ interface Post {
   content: string;
   created_at: string;
   post_replies: Reply[];
-  author?: {
-    id: string;
-    email?: string;
-    full_name?: string;
-    avatar_url?: string;
-  } | null;
+  author?: Author | null;
 }
 
 const ClassDetail = () => {
@@ -156,32 +153,71 @@ const ClassDetail = () => {
         return;
       }
       
-      // Fetch students (both enrolled and invited)
-      const { data: studentsData } = await supabase
+      // Fetch students
+      const { data: studentsData, error: studentsError } = await supabase
         .from('class_students')
-        .select('student_id, invited_email, status, profiles:student_id(*)')
+        .select('student_id, status, profiles:student_id(id, email, avatar_url)')
         .eq('class_id', id);
         
-      if (studentsData) {
-        setStudents(studentsData);
+      if (studentsError) {
+        console.error("Error fetching students:", studentsError);
+      } else if (studentsData) {
+        // Type assertion to ensure TypeScript knows the structure
+        setStudents(studentsData as Student[]);
       }
       
-      // Fetch posts with author information
-      const { data: postsData } = await supabase
+      // Fetch posts with replies
+      const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select(`
           id, 
           content, 
           created_at, 
           author_id,
-          author:author_id(id, email, avatar_url),
-          post_replies(id, author_id, content, created_at, author:author_id(id, email, avatar_url))
+          post_replies(id, author_id, content, created_at)
         `)
         .eq('class_id', id)
         .order('created_at', { ascending: true });
         
-      if (postsData) {
-        setPosts(postsData);
+      if (postsError) {
+        console.error("Error fetching posts:", postsError);
+      } else if (postsData) {
+        // Get unique author IDs from posts and replies
+        const authorIds = new Set<string>();
+        postsData.forEach(post => {
+          authorIds.add(post.author_id);
+          post.post_replies.forEach(reply => authorIds.add(reply.author_id));
+        });
+        
+        // Fetch author profiles in a single query
+        const { data: authorProfiles } = await supabase
+          .from('profiles')
+          .select('id, email, avatar_url')
+          .in('id', Array.from(authorIds));
+          
+        // Create a map of author profiles by ID
+        const authorMap = new Map<string, Author>();
+        if (authorProfiles) {
+          authorProfiles.forEach(profile => {
+            authorMap.set(profile.id, profile as Author);
+          });
+        }
+        
+        // Attach author profiles to posts and replies
+        const postsWithAuthors = postsData.map(post => {
+          const repliesWithAuthors = post.post_replies.map(reply => ({
+            ...reply,
+            author: authorMap.get(reply.author_id) || null
+          }));
+          
+          return {
+            ...post,
+            post_replies: repliesWithAuthors,
+            author: authorMap.get(post.author_id) || null
+          };
+        });
+        
+        setPosts(postsWithAuthors as Post[]);
       }
       
       // Subscribe to real-time updates
@@ -214,10 +250,14 @@ const ClassDetail = () => {
         // Refresh students list
         supabase
           .from('class_students')
-          .select('student_id, invited_email, status, profiles:student_id(*)')
+          .select('student_id, status, profiles:student_id(id, email, avatar_url)')
           .eq('class_id', classId)
-          .then(({ data }) => {
-            if (data) setStudents(data);
+          .then(({ data, error }) => {
+            if (error) {
+              console.error("Error fetching updated students:", error);
+            } else if (data) {
+              setStudents(data as Student[]);
+            }
           });
       })
       // Listen for new posts
@@ -227,20 +267,22 @@ const ClassDetail = () => {
         table: 'posts',
         filter: `class_id=eq.${classId}`
       }, async (payload) => {
+        const newPost = payload.new as Post;
+        
         // Fetch the author information for the new post
         const { data: authorData } = await supabase
           .from('profiles')
           .select('id, email, avatar_url')
-          .eq('id', payload.new.author_id)
+          .eq('id', newPost.author_id)
           .single();
 
         // Add new post to the list with author info
         setPosts(prev => [
           ...prev, 
           { 
-            ...payload.new as Post, 
+            ...newPost,
             post_replies: [],
-            author: authorData || null
+            author: authorData as Author || null
           }
         ]);
       })
@@ -266,7 +308,7 @@ const ClassDetail = () => {
         // Add author info to the reply
         const replyWithAuthor = { 
           ...newReply, 
-          author: authorData || null 
+          author: authorData as Author || null 
         };
         
         // Add new reply to the appropriate post
@@ -290,7 +332,7 @@ const ClassDetail = () => {
 
   const authorName = (post: Post | Reply) => {
     if (post.author) {
-      return post.author.full_name || post.author.email || 'Anonymous';
+      return post.author.email || 'Anonymous';
     }
     return 'Anonymous';
   };
@@ -532,19 +574,18 @@ const ClassDetail = () => {
                 </TableRow>
               ) : (
                 students.map((s) => (
-                  <TableRow key={s.student_id || s.invited_email}>
+                  <TableRow key={s.student_id || (s.profiles?.id || 'pending')}>
                     <TableCell className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
-                          {s.profiles ? 
-                            ((s.profiles.email || 'S').charAt(0) || 'S').toUpperCase() :
-                            ((s.invited_email || 'S').charAt(0) || 'S').toUpperCase()
-                          }
+                          {s.profiles && s.profiles.email 
+                            ? s.profiles.email.charAt(0).toUpperCase()
+                            : 'S'}
                         </AvatarFallback>
                       </Avatar>
                       {s.profiles ? s.profiles.email : 'Pending Invitation'}
                     </TableCell>
-                    <TableCell>{s.profiles ? s.profiles.email : s.invited_email}</TableCell>
+                    <TableCell>{s.profiles ? s.profiles.email : 'Pending'}</TableCell>
                     <TableCell>
                       {s.status === 'invited' ? 
                         <span className="text-amber-600 dark:text-amber-500">Invited</span> : 
@@ -556,7 +597,7 @@ const ClassDetail = () => {
                         <Button 
                           size="icon" 
                           variant="ghost" 
-                          onClick={() => removeStudent(s.student_id || '')}
+                          onClick={() => s.student_id ? removeStudent(s.student_id) : null}
                           title="Remove student"
                           disabled={!s.student_id}
                         >
@@ -582,7 +623,7 @@ const ClassDetail = () => {
               posts.map((p) => (
                 <Card key={p.id}>
                   <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                    <div className="font-semibold">{authorName(p)}</div>
+                    <div className="font-semibold">{p.author ? p.author.email : 'Anonymous'}</div>
                     <div className="text-xs text-muted-foreground">
                       {formatDate(p.created_at)}
                     </div>
@@ -597,7 +638,7 @@ const ClassDetail = () => {
                           {p.post_replies.map((r) => (
                             <div key={r.id} className="pl-4 border-l border-slate-200 dark:border-slate-700">
                               <div className="flex justify-between items-center">
-                                <span className="font-medium">{authorName(r)}</span>
+                                <span className="font-medium">{r.author ? r.author.email : 'Anonymous'}</span>
                                 <span className="text-xs text-muted-foreground">
                                   {formatDate(r.created_at)}
                                 </span>
