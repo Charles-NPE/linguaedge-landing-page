@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,18 +14,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Import the new components
+// Import the components and types
 import StudentsList, { Student } from "@/components/classes/StudentsList";
 import ClassForum, { Post, Reply, Author } from "@/components/classes/ClassForum";
 import InviteStudentDialog from "@/components/classes/InviteStudentDialog";
 import DeleteClassDialog from "@/components/classes/DeleteClassDialog";
-
-interface ClassRow {
-  id: string;
-  name: string;
-  code: string;
-  teacher_id: string;
-}
+import { StudentProfile, ClassRow } from "@/types/class.types";
 
 // Helper function to create a default author when data is missing
 const createDefaultAuthor = (authorId: string): Author => ({
@@ -274,7 +267,7 @@ const ClassDetail = () => {
 
         // Create a proper author object
         const postAuthor = (authorData && typeof authorData === 'object' && 'id' in authorData) 
-          ? authorData as unknown as Author 
+          ? (authorData as unknown as Author) 
           : createDefaultAuthor(newPost.author_id);
 
         // Add new post to the list with author info
@@ -308,7 +301,7 @@ const ClassDetail = () => {
           
         // Create a proper author object
         const replyAuthor = (authorData && typeof authorData === 'object' && 'id' in authorData) 
-          ? authorData as unknown as Author 
+          ? (authorData as unknown as Author) 
           : createDefaultAuthor(newReply.author_id);
         
         // Add new reply to the appropriate post
