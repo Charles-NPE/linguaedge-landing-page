@@ -44,12 +44,19 @@ const TeacherClassesPage = () => {
     try {
       const { data, error } = await supabase
         .from('classes')
-        .select('id, name, code, class_students(count)')
-        .eq('teacher_id', user.id);
+        .select('id, name, code, class_students(count)');
         
       if (error) throw error;
       
-      setClasses(data as ClassWithStudents[]);
+      // Transform the data to match our interface
+      const transformedClasses = data?.map(cls => ({
+        ...cls,
+        class_students: {
+          count: cls.class_students?.[0]?.count || 0
+        }
+      }));
+      
+      setClasses(transformedClasses as ClassWithStudents[]);
     } catch (error) {
       console.error("Error fetching classes:", error);
       toast({
