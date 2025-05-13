@@ -22,11 +22,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-
-// Extend dayjs with relative time plugin
-dayjs.extend(relativeTime);
 
 interface ClassRow {
   id: string;
@@ -35,15 +30,13 @@ interface ClassRow {
   teacher_id: string;
 }
 
-interface StudentProfile {
-  id: string;
-  full_name?: string;
-  email?: string;
-  avatar_url?: string;
-}
-
 interface Student {
-  profiles: StudentProfile;
+  student_id?: string;
+  profiles?: {
+    id: string;
+    email?: string;
+    role?: string;
+  };
 }
 
 interface Reply {
@@ -51,7 +44,7 @@ interface Reply {
   author_id: string;
   content: string;
   created_at: string;
-  post_id?: string; // Added this field to fix type error
+  post_id?: string;
 }
 
 interface Post {
@@ -138,26 +131,26 @@ const ClassDetail = () => {
       // Fetch students
       const { data: studentsData } = await supabase
         .from('class_students')
-        .select('profiles(id, full_name, email, avatar_url)')
+        .select('student_id, profiles:student_id(id, email, role)')
         .eq('class_id', id);
         
       if (studentsData) {
-        setStudents(studentsData as any); // Type cast to fix temporary issue
+        setStudents(studentsData);
         
         // Build a map of user IDs to names for the forum
-        const userIds = studentsData.map(s => (s.profiles as any).id);
+        const userIds = studentsData.map(s => s.student_id || '');
         if (classData.teacher_id) userIds.push(classData.teacher_id);
         
         // Get profiles for all users
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, full_name, email')
+          .select('id, email')
           .in('id', userIds);
           
         if (profiles) {
           const profileMap: Record<string, string> = {};
           profiles.forEach(p => {
-            profileMap[p.id] = p.full_name || p.email || 'Anonymous';
+            profileMap[p.id] = p.email || 'Anonymous';
           });
           setUserProfiles(profileMap);
         }
@@ -166,7 +159,7 @@ const ClassDetail = () => {
       // Fetch posts
       const { data: postsData } = await supabase
         .from('posts')
-        .select('id, author_id, content, created_at, post_replies(id, author_id, content, created_at)')
+        .select('id, author_id, content, created_at, post_replies(id, author_id, content, created_at, post_id)')
         .eq('class_id', id)
         .order('created_at', { ascending: true });
         
@@ -206,10 +199,10 @@ const ClassDetail = () => {
           // Refresh students on any change
           supabase
             .from('class_students')
-            .select('profiles(id, full_name, email, avatar_url)')
+            .select('student_id, profiles:student_id(id, email, role)')
             .eq('class_id', classId)
             .then(({ data }) => {
-              if (data) setStudents(data as any); // Type cast for now
+              if (data) setStudents(data);
             });
         }
       )
@@ -268,6 +261,11 @@ const ClassDetail = () => {
     };
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  };
+
   const authorName = (authorId: string) => {
     return userProfiles[authorId] || 'Anonymous';
   };
@@ -290,7 +288,7 @@ const ClassDetail = () => {
       });
       
       // Update UI immediately
-      setStudents(students.filter(s => (s.profiles as any).id !== studentId));
+      setStudents(students.filter(s => s.student_id !== studentId));
       
     } catch (error) {
       console.error("Error removing student:", error);
@@ -473,23 +471,22 @@ const ClassDetail = () => {
                 </TableRow>
               ) : (
                 students.map((s) => (
-                  <TableRow key={(s.profiles as any).id}>
+                  <TableRow key={s.student_id}>
                     <TableCell className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={(s.profiles as any).avatar_url || ''} />
                         <AvatarFallback>
-                          {((s.profiles as any).full_name || (s.profiles as any).email || 'S').charAt(0).toUpperCase()}
+                          {((s.profiles?.email || 'S').charAt(0) || 'S').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      {(s.profiles as any).full_name || (s.profiles as any).email || 'Anonymous'}
+                      {s.profiles?.email || 'Anonymous'}
                     </TableCell>
-                    <TableCell>{(s.profiles as any).email}</TableCell>
+                    <TableCell>{s.profiles?.email}</TableCell>
                     {profile?.role === 'teacher' && (
                       <TableCell>
                         <Button 
                           size="icon" 
                           variant="ghost" 
-                          onClick={() => removeStudent((s.profiles as any).id)}
+                          onClick={() => removeStudent(s.student_id || '')}
                           title="Remove student"
                         >
                           <Trash2 size={16} />
@@ -516,7 +513,7 @@ const ClassDetail = () => {
                   <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                     <div className="font-semibold">{authorName(p.author_id)}</div>
                     <div className="text-xs text-muted-foreground">
-                      {dayjs(p.created_at).fromNow()}
+                      {formatDate(p.created_at)}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -531,7 +528,7 @@ const ClassDetail = () => {
                               <div className="flex justify-between items-center">
                                 <span className="font-medium">{authorName(r.author_id)}</span>
                                 <span className="text-xs text-muted-foreground">
-                                  {dayjs(r.created_at).fromNow()}
+                                  {formatDate(r.created_at)}
                                 </span>
                               </div>
                               <p className="text-sm mt-1 whitespace-pre-line">{r.content}</p>
