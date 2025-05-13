@@ -1,13 +1,35 @@
 
-# This is the Supabase configuration file for Edge Functions
-
 project_id = "amityhneeclqenbiyixl"
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
 
-[functions.check-subscription]
-verify_jwt = true
+[db]
+port = 54322
 
-[functions.create-checkout]
-verify_jwt = true
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost"
 
-[functions.create-customer-portal]
-verify_jwt = true
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+
+[analytics]
+enabled = false
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+
+# Configure the Stripe webhook function to accept unauthenticated requests
+[functions.stripe-webhook]
+verify_jwt = false
