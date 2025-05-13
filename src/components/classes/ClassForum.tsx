@@ -67,15 +67,6 @@ const ClassForum: React.FC<ClassForumProps> = ({
   currentUserId,
   isTeacher
 }) => {
-  const [newPost, setNewPost] = useState("");
-
-  const handleSubmitPost = async () => {
-    if (!newPost.trim()) return;
-    
-    await onSubmitPost(newPost.trim());
-    setNewPost("");
-  };
-
   const canDeleteItem = (authorId: string) => {
     return (currentUserId === authorId) || isTeacher;
   };
