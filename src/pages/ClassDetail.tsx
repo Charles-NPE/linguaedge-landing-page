@@ -430,7 +430,13 @@ const ClassDetail = () => {
           content: content
         });
         
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to create post: " + error.message,
+          variant: "destructive",
+        });
+      }
       
     } catch (error) {
       console.error("Error creating post:", error);
@@ -454,7 +460,13 @@ const ClassDetail = () => {
           content: content
         });
         
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to submit reply: " + error.message,
+          variant: "destructive",
+        });
+      }
       
     } catch (error) {
       console.error("Error replying to post:", error);
@@ -473,7 +485,13 @@ const ClassDetail = () => {
         .delete()
         .eq('id', postId);
         
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete post: " + error.message,
+          variant: "destructive",
+        });
+      }
       
     } catch (error) {
       console.error("Error deleting post:", error);
@@ -492,7 +510,13 @@ const ClassDetail = () => {
         .delete()
         .eq('id', replyId);
         
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete reply: " + error.message,
+          variant: "destructive",
+        });
+      }
       
     } catch (error) {
       console.error("Error deleting reply:", error);

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -46,7 +46,7 @@ interface ClassForumProps {
 // Helper function to get author name
 const authorName = (author?: Author | null) => {
   if (!author) return 'Anonymous';
-  return author.academy_name || author.full_name || author.email || 'Anonymous';
+  return author.academy_name ?? author.full_name ?? author.email ?? 'Anonymous';
 };
 
 // Helper function to format date
