@@ -30,6 +30,10 @@ jobs:
       - name: TypeScript strict mode
         run: npx tsc -p tsconfig.strict.json --noEmit
 
+      # --- Unit Tests ---
+      - name: Unit tests (Vitest)
+        run: npx vitest run
+
       # --- Build (Vite + SWC) ---
       - name: Build
-        run: npm run build
+        run: NODE_ENV=production npm run build
