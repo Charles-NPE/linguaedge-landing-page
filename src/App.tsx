@@ -134,10 +134,12 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>
-            <Toaster />
-            <Sonner />
-            <AppRoutes />
-            <CookieConsent />
+            <div className="min-h-screen flex flex-col w-full">
+              <Toaster />
+              <Sonner />
+              <AppRoutes />
+              <CookieConsent />
+            </div>
           </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>
