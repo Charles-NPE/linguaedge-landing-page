@@ -1,0 +1,497 @@
+
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/components/ui/use-toast";
+import { ClassRow, Student, Post, Author, Reply } from "@/types/class.types";
+import { createDefaultAuthor, processStudentProfile } from "../utils/classUtils";
+
+interface UseClassDataProps {
+  classId: string;
+  userId?: string;
+  userRole?: string;
+}
+
+export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) => {
+  const navigate = useNavigate();
+  const [classRow, setClassRow] = useState<ClassRow | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [defaultTab, setDefaultTab] = useState("students");
+
+  useEffect(() => {
+    if (!userId || !userRole || !classId) return;
+    
+    // Set default tab based on user role
+    if (userRole === 'student') {
+      setDefaultTab("forum");
+    }
+    
+    fetchClassData();
+    
+    return () => {
+      // Cleanup subscriptions
+      supabase.removeChannel(`class_${classId}`);
+    };
+  }, [userId, userRole, classId]);
+
+  const fetchClassData = async () => {
+    if (!userId || !classId) return;
+    
+    setIsLoading(true);
+    try {
+      // Fetch class details
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('id, name, code, teacher_id')
+        .eq('id', classId)
+        .single();
+        
+      if (classError || !classData) {
+        throw new Error(classError?.message || "Class not found");
+      }
+      
+      setClassRow(classData);
+      
+      // Check if student is a member of this class
+      let isMember = false;
+      if (userRole === 'student') {
+        const { data: memberData } = await supabase
+          .from('class_students')
+          .select('*')
+          .eq('class_id', classId)
+          .eq('student_id', userId);
+          
+        isMember = !!memberData && memberData.length > 0;
+      }
+      
+      // Determine access
+      const hasPermission = 
+        (userRole === "teacher" && classData.teacher_id === userId) || 
+        (userRole === "student" && isMember);
+        
+      setHasAccess(hasPermission);
+      
+      if (!hasPermission) {
+        toast({
+          title: "Access denied",
+          description: "You don't have permission to view this class",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+      
+      await Promise.all([
+        fetchStudents(classId),
+        fetchPosts(classId)
+      ]);
+      
+      // Subscribe to real-time updates
+      setupRealtimeSubscriptions(classId);
+      
+    } catch (error) {
+      console.error("Error fetching class data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load class data",
+        variant: "destructive",
+      });
+      navigate("/");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchStudents = async (classId: string) => {
+    const { data: studentsData, error: studentsError } = await supabase
+      .from('class_students')
+      .select('student_id, profiles:student_id(id, email, avatar_url)')
+      .eq('class_id', classId);
+      
+    if (studentsError) {
+      console.error("Error fetching students:", studentsError);
+      return;
+    } else if (studentsData) {
+      // Process the student data to fit our Student interface
+      const processedStudents: Student[] = studentsData.map(student => {
+        // If it's an error object or doesn't have the expected shape
+        if (!student || typeof student !== 'object' || !('student_id' in student)) {
+          return {} as Student;
+        }
+        
+        // Process the profile data
+        const processedProfile = processStudentProfile(student);
+        
+        // Process valid student data
+        return {
+          student_id: student.student_id,
+          status: 'enrolled', // Default status
+          profiles: processedProfile,
+          // If student_id looks like an email, use it as the invited_email
+          invited_email: student.student_id && typeof student.student_id === 'string' && 
+            student.student_id.includes('@') ? student.student_id : undefined
+        };
+      }).filter(student => Object.keys(student).length > 0);
+      
+      setStudents(processedStudents);
+    }
+  };
+
+  const fetchPosts = async (classId: string) => {
+    const { data: postsData, error: postsError } = await supabase
+      .from('posts')
+      .select(`
+        id, 
+        content, 
+        created_at, 
+        author_id,
+        author:profiles(id, email, avatar_url, academy_name, full_name),
+        post_replies(id, author_id, content, created_at, post_id, author:profiles(id, email, avatar_url, academy_name, full_name))
+      `)
+      .eq('class_id', classId)
+      .order('created_at', { ascending: true });
+      
+    if (postsError) {
+      console.error("Error fetching posts:", postsError);
+      return;
+    } else if (postsData) {
+      // Process posts and replies with proper author information
+      const processedPosts: Post[] = postsData.map(post => {
+        // Create a proper author object
+        let processedAuthor: Author | null = null;
+        if (post.author && typeof post.author === 'object' && 'id' in post.author) {
+          processedAuthor = post.author as Author;
+        } else {
+          processedAuthor = createDefaultAuthor(post.author_id);
+        }
+        
+        // Process replies
+        const processedReplies: Reply[] = post.post_replies.map(reply => {
+          let replyAuthor: Author | null = null;
+          if (reply.author && typeof reply.author === 'object' && 'id' in reply.author) {
+            replyAuthor = reply.author as Author;
+          } else {
+            replyAuthor = createDefaultAuthor(reply.author_id);
+          }
+          
+          return {
+            ...reply,
+            author: replyAuthor
+          };
+        });
+        
+        return {
+          ...post,
+          post_replies: processedReplies,
+          author: processedAuthor
+        };
+      });
+      
+      setPosts(processedPosts);
+    }
+  };
+
+  const setupRealtimeSubscriptions = (classId: string) => {
+    // Create a single channel for all changes
+    const channel = supabase
+      .channel(`class_${classId}`)
+      // Listen for new students
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'class_students',
+        filter: `class_id=eq.${classId}`
+      }, () => {
+        // Refresh students list
+        fetchStudents(classId);
+      })
+      // Listen for new posts
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'posts',
+        filter: `class_id=eq.${classId}`
+      }, async (payload) => {
+        const newPost = payload.new as Post;
+        
+        // Fetch the author information for the new post
+        const { data: authorData } = await supabase
+          .from('profiles')
+          .select('id, email, avatar_url, academy_name, full_name')
+          .eq('id', newPost.author_id)
+          .single();
+
+        // Create a proper author object
+        const postAuthor = (authorData && typeof authorData === 'object' && 'id' in authorData) 
+          ? (authorData as unknown as Author) 
+          : createDefaultAuthor(newPost.author_id);
+
+        // Add new post to the list with author info
+        setPosts(prev => [
+          ...prev, 
+          { 
+            ...newPost,
+            post_replies: [],
+            author: postAuthor
+          }
+        ]);
+      })
+      // Listen for new replies
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'post_replies'
+      }, async (payload) => {
+        const newReply = payload.new as Reply;
+        
+        // Only process if this reply belongs to one of our posts
+        const postExists = posts.some(post => post.id === newReply.post_id);
+        if (!postExists) return;
+        
+        // Fetch the author information for the new reply
+        const { data: authorData } = await supabase
+          .from('profiles')
+          .select('id, email, avatar_url, academy_name, full_name')
+          .eq('id', newReply.author_id)
+          .single();
+          
+        // Create a proper author object
+        const replyAuthor = (authorData && typeof authorData === 'object' && 'id' in authorData) 
+          ? (authorData as unknown as Author) 
+          : createDefaultAuthor(newReply.author_id);
+        
+        // Add new reply to the appropriate post
+        setPosts(prev => prev.map(post => {
+          if (post.id === newReply.post_id) {
+            return {
+              ...post,
+              post_replies: [...post.post_replies, {
+                ...newReply,
+                author: replyAuthor
+              }]
+            };
+          }
+          return post;
+        }));
+      })
+      // Listen for deleted posts
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'posts'
+      }, (payload) => {
+        const deletedPostId = payload.old.id;
+        setPosts(prev => prev.filter(post => post.id !== deletedPostId));
+      })
+      // Listen for deleted replies
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'post_replies'
+      }, (payload) => {
+        const deletedReplyId = payload.old.id;
+        setPosts(prev => prev.map(post => ({
+          ...post,
+          post_replies: post.post_replies.filter(reply => reply.id !== deletedReplyId)
+        })));
+      })
+      .subscribe();
+  };
+
+  const removeStudent = async (studentId: string) => {
+    if (!classRow) return;
+    
+    try {
+      const { error } = await supabase
+        .from('class_students')
+        .delete()
+        .eq('class_id', classRow.id)
+        .eq('student_id', studentId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Student removed from class",
+      });
+      
+      // Update UI immediately
+      setStudents(students.filter(s => s.student_id !== studentId));
+      
+    } catch (error) {
+      console.error("Error removing student:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove student",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const inviteStudent = async (inviteEmail: string) => {
+    if (!classRow) return;
+    
+    // Temporary toast message instead of actual invite
+    toast({
+      title: "Coming soon",
+      description: "Email invites will be enabled later."
+    });
+  };
+
+  const deleteClass = async () => {
+    if (!classRow) return;
+    
+    try {
+      const { error } = await supabase
+        .from('classes')
+        .delete()
+        .eq('id', classRow.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Class deleted successfully",
+      });
+      
+      navigate("/teacher/classes");
+      
+    } catch (error) {
+      console.error("Error deleting class:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete class",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const submitPost = async (content: string) => {
+    if (!classRow || !content || !userId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .insert({
+          class_id: classRow.id,
+          author_id: userId,
+          content: content
+        });
+        
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to create post: " + error.message,
+          variant: "destructive",
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error creating post:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create post",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const submitReply = async (postId: string, content: string) => {
+    if (!content || !userId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('post_replies')
+        .insert({
+          post_id: postId,
+          author_id: userId,
+          content: content
+        });
+        
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to submit reply: " + error.message,
+          variant: "destructive",
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error replying to post:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit reply",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deletePost = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+        
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete post: " + error.message,
+          variant: "destructive",
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete post",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteReply = async (replyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('post_replies')
+        .delete()
+        .eq('id', replyId);
+        
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete reply: " + error.message,
+          variant: "destructive",
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error deleting reply:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete reply",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return {
+    classRow,
+    students,
+    posts,
+    isLoading,
+    hasAccess,
+    defaultTab,
+    removeStudent,
+    inviteStudent,
+    deleteClass,
+    submitPost,
+    submitReply,
+    deletePost,
+    deleteReply,
+  };
+};
