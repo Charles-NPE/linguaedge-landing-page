@@ -1,0 +1,35 @@
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --- Lint ---
+      - name: ESLint strict check
+        run: npx eslint . --ext .ts,.tsx
+
+      # --- TypeScript strict check ---
+      - name: TypeScript strict mode
+        run: npx tsc -p tsconfig.strict.json --noEmit
+
+      # --- Build (Vite + SWC) ---
+      - name: Build
+        run: npm run build
