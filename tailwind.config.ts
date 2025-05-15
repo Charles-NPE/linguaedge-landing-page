@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -40,7 +41,7 @@ export default {
 				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
-					foreground: 'hsl(var(--muted-foreground))'
+					foreground: '#475569' // slate-600 for better contrast (4.5:1 on white)
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',

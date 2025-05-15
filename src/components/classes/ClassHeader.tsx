@@ -42,7 +42,7 @@ const ClassHeader: React.FC<ClassHeaderProps> = ({
       {isTeacher && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Class options">
               <MoreVertical size={16} />
             </Button>
           </DropdownMenuTrigger>

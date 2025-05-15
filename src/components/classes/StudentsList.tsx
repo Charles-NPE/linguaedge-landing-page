@@ -91,7 +91,7 @@ const StudentsList: React.FC<StudentsListProps> = ({
                       size="icon" 
                       variant="ghost" 
                       onClick={() => s.student_id ? onRemoveStudent(s.student_id) : null}
-                      title="Remove student"
+                      aria-label="Remove student"
                       disabled={!s.student_id}
                     >
                       <Trash2 size={16} />
