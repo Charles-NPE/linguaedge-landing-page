@@ -28,7 +28,7 @@ export interface Reply {
   content: string;
   created_at: string;
   post_id?: string;
-  author?: Author | null;
+  author: Author; // Removed | null
 }
 
 export interface Post {
@@ -37,7 +37,7 @@ export interface Post {
   content: string;
   created_at: string;
   post_replies: Reply[];
-  author?: Author | null;
+  author: Author; // Removed | null
 }
 
 export interface ClassRow {

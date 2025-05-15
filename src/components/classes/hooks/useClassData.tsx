@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -174,33 +173,18 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     } else if (postsData) {
       // Process posts and replies with proper author information
       const processedPosts: Post[] = postsData.map(post => {
-        // Create a proper author object with null safety
-        // First check if post.author is null before doing any type checking
-        const safePostAuthor: Author = post.author !== null ? 
-          (typeof post.author === 'object' && 'id' in post.author ? 
-            (post.author as Author) : 
-            { ...fallbackAuthor, id: post.author_id }) : 
-          { ...fallbackAuthor, id: post.author_id };
-        
-        // Process replies with null safety
-        const processedReplies: Reply[] = post.post_replies.map(reply => {
-          // First check if reply.author is null before doing any type checking
-          const safeReplyAuthor: Author = reply.author !== null ? 
-            (typeof reply.author === 'object' && 'id' in reply.author ? 
-              (reply.author as Author) : 
-              { ...fallbackAuthor, id: reply.author_id }) : 
-            { ...fallbackAuthor, id: reply.author_id };
-          
-          return {
-            ...reply,
-            author: safeReplyAuthor
-          };
-        });
-        
         return {
           ...post,
-          post_replies: processedReplies,
-          author: safePostAuthor
+          author: (post.author && 'id' in post.author)
+            ? (post.author as Author)
+            : { ...fallbackAuthor, id: post.author_id },
+
+          post_replies: post.post_replies.map(reply => ({
+            ...reply,
+            author: (reply.author && 'id' in reply.author)
+              ? (reply.author as Author)
+              : { ...fallbackAuthor, id: reply.author_id },
+          })),
         };
       });
       
@@ -232,27 +216,20 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         const newPost = payload.new as Post;
         
         // Fetch the author information for the new post
-        const { data: authorData } = await supabase
+        const { data: dbAuthor } = await supabase
           .from('profiles')
           .select('id, email, avatar_url, academy_name, full_name')
           .eq('id', newPost.author_id)
           .single();
 
-        // First check if authorData is null before doing any type checking
-        const safeAuthorData: Author = authorData !== null ?
-          (typeof authorData === 'object' && 'id' in authorData ? 
-            (authorData as unknown as Author) : 
-            { ...fallbackAuthor, id: newPost.author_id }) : 
-          { ...fallbackAuthor, id: newPost.author_id };
+        const safeAuthor: Author =
+          dbAuthor && 'id' in dbAuthor
+            ? (dbAuthor as Author)
+            : { ...fallbackAuthor, id: newPost.author_id };
 
-        // Add new post to the list with author info
         setPosts(prev => [
           ...prev, 
-          { 
-            ...newPost,
-            post_replies: [],
-            author: safeAuthorData
-          }
+          { ...newPost, author: safeAuthor, post_replies: [] }
         ]);
       })
       // Listen for new replies
@@ -264,36 +241,27 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         const newReply = payload.new as Reply;
         
         // Only process if this reply belongs to one of our posts
-        const postExists = posts.some(post => post.id === newReply.post_id);
-        if (!postExists) return;
+        if (!posts.some(p => p.id === newReply.post_id)) return;
         
         // Fetch the author information for the new reply
-        const { data: authorData } = await supabase
+        const { data: dbAuthor } = await supabase
           .from('profiles')
           .select('id, email, avatar_url, academy_name, full_name')
           .eq('id', newReply.author_id)
           .single();
           
-        // First check if authorData is null before doing any type checking
-        const safeAuthorData: Author = authorData !== null ? 
-          (typeof authorData === 'object' && 'id' in authorData ? 
-            (authorData as unknown as Author) : 
-            { ...fallbackAuthor, id: newReply.author_id }) : 
-          { ...fallbackAuthor, id: newReply.author_id };
+        const safeAuthor: Author =
+          dbAuthor && 'id' in dbAuthor
+            ? (dbAuthor as Author)
+            : { ...fallbackAuthor, id: newReply.author_id };
         
-        // Add new reply to the appropriate post
-        setPosts(prev => prev.map(post => {
-          if (post.id === newReply.post_id) {
-            return {
-              ...post,
-              post_replies: [...post.post_replies, {
-                ...newReply,
-                author: safeAuthorData
-              }]
-            };
-          }
-          return post;
-        }));
+        setPosts(prev =>
+          prev.map(p =>
+            p.id === newReply.post_id
+              ? { ...p, post_replies: [...p.post_replies, { ...newReply, author: safeAuthor }] }
+              : p
+          )
+        );
       })
       // Listen for deleted posts
       .on('postgres_changes', {
