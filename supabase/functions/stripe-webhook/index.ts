@@ -1,6 +1,12 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { Resend } from "npm:resend@2.0.0";
+
+// Initialize Stripe with the secret key from environment variables
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2023-10-16" });
+const WH_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
 
 // Helper function for logging
 const logWebhook = (type: string, details?: any) => {
@@ -8,93 +14,93 @@ const logWebhook = (type: string, details?: any) => {
   console.log(`[STRIPE] ${type}${detailsStr}`);
 };
 
-// Initialize Stripe with the secret key from environment variables
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2023-10-16" });
-const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
-
 serve(async (req) => {
   try {
-    // 1. Validate the signature
+    // Get the signature from the header
     const sig = req.headers.get("stripe-signature");
     if (!sig) {
-      throw new Error("No Stripe signature found in request headers");
+      return new Response(JSON.stringify({ error: "No signature found" }), { status: 400 });
     }
-
+    
     const body = await req.text();
     
-    // Validate the webhook signature using Stripe's SDK
-    const event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    // Verify the signature
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(body, sig, WH_SECRET);
+    } catch (err) {
+      return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 400 });
+    }
     
     // Log the event type
     logWebhook(event.type);
-
-    // 2. Handle the events you care about
-    switch (event.type) {
-      case "checkout.session.completed":
-        // Handle completed checkout
-        const checkoutSession = event.data.object as Stripe.Checkout.Session;
-        logWebhook("checkout.session.completed", { 
-          sessionId: checkoutSession.id,
-          customerId: checkoutSession.customer
-        });
-        // TODO: activate subscription / store customerId in database, etc.
-        break;
-
-      case "customer.subscription.created":
-        // Handle new subscription
-        const subscriptionCreated = event.data.object as Stripe.Subscription;
-        logWebhook("customer.subscription.created", {
-          subscriptionId: subscriptionCreated.id,
-          customerId: subscriptionCreated.customer
-        });
-        break;
-        
-      case "customer.subscription.updated":
-        // Handle subscription updates
-        const subscriptionUpdated = event.data.object as Stripe.Subscription;
-        logWebhook("customer.subscription.updated", {
-          subscriptionId: subscriptionUpdated.id,
-          status: subscriptionUpdated.status
-        });
-        break;
-
-      case "invoice.payment_succeeded":
-        // Handle successful payment
-        const invoice = event.data.object as Stripe.Invoice;
-        logWebhook("invoice.payment_succeeded", {
-          invoiceId: invoice.id,
-          customerId: invoice.customer
-        });
-        // TODO: update subscription status in DB
-        break;
-
-      case "customer.subscription.deleted":
-        // Handle subscription cancellation
-        const subscriptionDeleted = event.data.object as Stripe.Subscription;
-        logWebhook("customer.subscription.deleted", {
-          subscriptionId: subscriptionDeleted.id
-        });
-        // TODO: update subscription status in DB
-        break;
-
-      // Add more cases as needed
-      default:
-        logWebhook(`Unhandled event type: ${event.type}`);
-    }
-  } catch (e) {
-    // Log the error but DO NOT return an error status to Stripe
-    console.error("[STRIPE] Webhook error:", e.message);
     
-    // Additional debug information
-    if (e instanceof Error) {
-      console.error("[STRIPE] Error details:", {
-        name: e.name,
-        message: e.message,
-        stack: e.stack
+    // Handle the checkout.session.completed event specifically
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const customerId = session.customer as string;
+      const metadata = session.metadata || {}; // Contains supabase_uid sent from Checkout
+      
+      logWebhook("checkout.session.completed", { 
+        sessionId: session.id,
+        customerId,
+        metadata
       });
+      
+      // Only proceed if we have the user ID in metadata
+      if (metadata.supabase_uid) {
+        // Create Supabase client
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          { auth: { persistSession: false } }
+        );
+        
+        // 1) Store Stripe customer id in profiles and mark as subscribed
+        const { error: updateError } = await supabaseAdmin
+          .from("profiles")
+          .update({ 
+            stripe_customer_id: customerId, 
+            stripe_status: 'active'
+          })
+          .eq("id", metadata.supabase_uid);
+          
+        if (updateError) {
+          console.error("[STRIPE] Error updating profile:", updateError);
+        }
+        
+        // 2) Send welcome email via Resend if API key is available
+        const resendKey = Deno.env.get("RESEND_API_KEY");
+        if (resendKey && session.customer_details?.email) {
+          try {
+            const resend = new Resend(resendKey);
+            await resend.emails.send({
+              from: "no-reply@linguaedge.ai",
+              to: session.customer_details.email,
+              subject: "Your LinguaEdge Subscription is Active",
+              html: `
+                <h1>Welcome to LinguaEdge!</h1>
+                <p>Thank you for subscribing. Your account is now active and you have full access to all premium features.</p>
+                <p>If you have any questions, please don't hesitate to contact our support team.</p>
+                <p>Best regards,<br>The LinguaEdge Team</p>
+              `
+            });
+            console.log("[RESEND] Welcome email sent successfully");
+          } catch (emailError) {
+            console.error("[RESEND] Error sending welcome email:", emailError);
+          }
+        }
+      } else {
+        console.warn("[STRIPE] Missing supabase_uid in session metadata");
+      }
     }
+    
+    // For all other event types, just acknowledge receipt
+    
+  } catch (e) {
+    console.error("[STRIPE] Webhook error:", e);
   }
 
-  // 3. Always acknowledge the event so Stripe stops retrying
+  // Always return 200 OK to Stripe to avoid retries
   return new Response("OK", { status: 200 });
 });
