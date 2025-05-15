@@ -175,26 +175,26 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       // Process posts and replies with proper author information
       const processedPosts: Post[] = postsData.map(post => {
         // Create a proper author object with null safety
-        const processedAuthor: Author = (post.author && typeof post.author === 'object' && 'id' in post.author) 
+        const safePostAuthor: Author = post.author && typeof post.author === 'object' && 'id' in post.author
           ? (post.author as Author) 
           : { ...fallbackAuthor, id: post.author_id };
         
         // Process replies with null safety
         const processedReplies: Reply[] = post.post_replies.map(reply => {
-          const replyAuthor: Author = (reply.author && typeof reply.author === 'object' && 'id' in reply.author) 
+          const safeReplyAuthor: Author = reply.author && typeof reply.author === 'object' && 'id' in reply.author
             ? (reply.author as Author) 
             : { ...fallbackAuthor, id: reply.author_id };
           
           return {
             ...reply,
-            author: replyAuthor
+            author: safeReplyAuthor
           };
         });
         
         return {
           ...post,
           post_replies: processedReplies,
-          author: processedAuthor
+          author: safePostAuthor
         };
       });
       
@@ -233,7 +233,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .single();
 
         // Create a proper author object with null safety
-        const postAuthor: Author = (authorData && typeof authorData === 'object' && 'id' in authorData) 
+        const safeAuthorData: Author = authorData && typeof authorData === 'object' && 'id' in authorData
           ? (authorData as unknown as Author) 
           : { ...fallbackAuthor, id: newPost.author_id };
 
@@ -243,7 +243,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           { 
             ...newPost,
             post_replies: [],
-            author: postAuthor
+            author: safeAuthorData
           }
         ]);
       })
@@ -267,7 +267,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .single();
           
         // Create a proper author object with null safety
-        const replyAuthor: Author = (authorData && typeof authorData === 'object' && 'id' in authorData) 
+        const safeAuthorData: Author = authorData && typeof authorData === 'object' && 'id' in authorData
           ? (authorData as unknown as Author) 
           : { ...fallbackAuthor, id: newReply.author_id };
         
@@ -278,7 +278,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
               ...post,
               post_replies: [...post.post_replies, {
                 ...newReply,
-                author: replyAuthor
+                author: safeAuthorData
               }]
             };
           }
