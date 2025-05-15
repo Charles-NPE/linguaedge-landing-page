@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -174,17 +175,21 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       // Process posts and replies with proper author information
       const processedPosts: Post[] = postsData.map(post => {
         // Create a proper author object with null safety
-        // Fix TS18047: Check if post.author is null before the type check
-        const safePostAuthor: Author = (post.author !== null && typeof post.author === 'object' && 'id' in post.author)
-          ? (post.author as Author) 
-          : { ...fallbackAuthor, id: post.author_id };
+        // First check if post.author is null before doing any type checking
+        const safePostAuthor: Author = post.author !== null ? 
+          (typeof post.author === 'object' && 'id' in post.author ? 
+            (post.author as Author) : 
+            { ...fallbackAuthor, id: post.author_id }) : 
+          { ...fallbackAuthor, id: post.author_id };
         
         // Process replies with null safety
         const processedReplies: Reply[] = post.post_replies.map(reply => {
-          // Fix TS18047: Check if reply.author is null before the type check
-          const safeReplyAuthor: Author = (reply.author !== null && typeof reply.author === 'object' && 'id' in reply.author)
-            ? (reply.author as Author) 
-            : { ...fallbackAuthor, id: reply.author_id };
+          // First check if reply.author is null before doing any type checking
+          const safeReplyAuthor: Author = reply.author !== null ? 
+            (typeof reply.author === 'object' && 'id' in reply.author ? 
+              (reply.author as Author) : 
+              { ...fallbackAuthor, id: reply.author_id }) : 
+            { ...fallbackAuthor, id: reply.author_id };
           
           return {
             ...reply,
@@ -233,10 +238,12 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newPost.author_id)
           .single();
 
-        // Fix TS18047: Check if authorData is null before the type check
-        const safeAuthorData: Author = (authorData !== null && typeof authorData === 'object' && 'id' in authorData)
-          ? (authorData as unknown as Author) 
-          : { ...fallbackAuthor, id: newPost.author_id };
+        // First check if authorData is null before doing any type checking
+        const safeAuthorData: Author = authorData !== null ?
+          (typeof authorData === 'object' && 'id' in authorData ? 
+            (authorData as unknown as Author) : 
+            { ...fallbackAuthor, id: newPost.author_id }) : 
+          { ...fallbackAuthor, id: newPost.author_id };
 
         // Add new post to the list with author info
         setPosts(prev => [
@@ -267,10 +274,12 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newReply.author_id)
           .single();
           
-        // Fix TS18047: Check if authorData is null before the type check
-        const safeAuthorData: Author = (authorData !== null && typeof authorData === 'object' && 'id' in authorData)
-          ? (authorData as unknown as Author) 
-          : { ...fallbackAuthor, id: newReply.author_id };
+        // First check if authorData is null before doing any type checking
+        const safeAuthorData: Author = authorData !== null ? 
+          (typeof authorData === 'object' && 'id' in authorData ? 
+            (authorData as unknown as Author) : 
+            { ...fallbackAuthor, id: newReply.author_id }) : 
+          { ...fallbackAuthor, id: newReply.author_id };
         
         // Add new reply to the appropriate post
         setPosts(prev => prev.map(post => {
