@@ -3,6 +3,8 @@ export interface StudentProfile {
   id: string;
   email?: string;
   avatar_url?: string;
+  academy_name?: string;
+  full_name?: string;
 }
 
 export interface Student {
@@ -15,7 +17,7 @@ export interface Student {
 export interface Author {
   id: string;
   email?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
   academy_name?: string;
   full_name?: string;
 }

@@ -5,7 +5,9 @@ import { Author, Post, Reply, StudentProfile } from "@/types/class.types";
 export const createDefaultAuthor = (authorId: string): Author => ({
   id: authorId,
   email: "Anonymous",
-  avatar_url: undefined
+  avatar_url: undefined,
+  academy_name: undefined,
+  full_name: "Unknown"
 });
 
 // Helper function to get author name

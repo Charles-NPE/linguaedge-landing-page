@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +11,15 @@ interface UseClassDataProps {
   userId?: string;
   userRole?: string;
 }
+
+// Define fallback author to use when author data is null
+const fallbackAuthor: Author = {
+  id: "unknown",
+  full_name: "Unknown",
+  avatar_url: null,
+  email: "unknown",
+  academy_name: "Unknown"
+};
 
 export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) => {
   const navigate = useNavigate();
@@ -164,22 +174,16 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     } else if (postsData) {
       // Process posts and replies with proper author information
       const processedPosts: Post[] = postsData.map(post => {
-        // Create a proper author object
-        let processedAuthor: Author | null = null;
-        if (post.author && typeof post.author === 'object' && 'id' in post.author) {
-          processedAuthor = post.author as Author;
-        } else {
-          processedAuthor = createDefaultAuthor(post.author_id);
-        }
+        // Create a proper author object with null safety
+        const processedAuthor: Author = (post.author && typeof post.author === 'object' && 'id' in post.author) 
+          ? (post.author as Author) 
+          : { ...fallbackAuthor, id: post.author_id };
         
         // Process replies with null safety
         const processedReplies: Reply[] = post.post_replies.map(reply => {
-          let replyAuthor: Author | null = null;
-          if (reply.author && typeof reply.author === 'object' && 'id' in reply.author) {
-            replyAuthor = reply.author as Author;
-          } else {
-            replyAuthor = createDefaultAuthor(reply.author_id);
-          }
+          const replyAuthor: Author = (reply.author && typeof reply.author === 'object' && 'id' in reply.author) 
+            ? (reply.author as Author) 
+            : { ...fallbackAuthor, id: reply.author_id };
           
           return {
             ...reply,
@@ -228,10 +232,10 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newPost.author_id)
           .single();
 
-        // Create a proper author object
-        const postAuthor = (authorData && typeof authorData === 'object' && 'id' in authorData) 
+        // Create a proper author object with null safety
+        const postAuthor: Author = (authorData && typeof authorData === 'object' && 'id' in authorData) 
           ? (authorData as unknown as Author) 
-          : createDefaultAuthor(newPost.author_id);
+          : { ...fallbackAuthor, id: newPost.author_id };
 
         // Add new post to the list with author info
         setPosts(prev => [
@@ -262,10 +266,10 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newReply.author_id)
           .single();
           
-        // Create a proper author object
-        const replyAuthor = (authorData && typeof authorData === 'object' && 'id' in authorData) 
+        // Create a proper author object with null safety
+        const replyAuthor: Author = (authorData && typeof authorData === 'object' && 'id' in authorData) 
           ? (authorData as unknown as Author) 
-          : createDefaultAuthor(newReply.author_id);
+          : { ...fallbackAuthor, id: newReply.author_id };
         
         // Add new reply to the appropriate post
         setPosts(prev => prev.map(post => {
