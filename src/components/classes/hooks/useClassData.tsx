@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -175,13 +174,15 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       // Process posts and replies with proper author information
       const processedPosts: Post[] = postsData.map(post => {
         // Create a proper author object with null safety
-        const safePostAuthor: Author = post.author && typeof post.author === 'object' && 'id' in post.author
+        // Fix TS18047: Check if post.author is null before the type check
+        const safePostAuthor: Author = (post.author !== null && typeof post.author === 'object' && 'id' in post.author)
           ? (post.author as Author) 
           : { ...fallbackAuthor, id: post.author_id };
         
         // Process replies with null safety
         const processedReplies: Reply[] = post.post_replies.map(reply => {
-          const safeReplyAuthor: Author = reply.author && typeof reply.author === 'object' && 'id' in reply.author
+          // Fix TS18047: Check if reply.author is null before the type check
+          const safeReplyAuthor: Author = (reply.author !== null && typeof reply.author === 'object' && 'id' in reply.author)
             ? (reply.author as Author) 
             : { ...fallbackAuthor, id: reply.author_id };
           
@@ -232,8 +233,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newPost.author_id)
           .single();
 
-        // Create a proper author object with null safety
-        const safeAuthorData: Author = authorData && typeof authorData === 'object' && 'id' in authorData
+        // Fix TS18047: Check if authorData is null before the type check
+        const safeAuthorData: Author = (authorData !== null && typeof authorData === 'object' && 'id' in authorData)
           ? (authorData as unknown as Author) 
           : { ...fallbackAuthor, id: newPost.author_id };
 
@@ -266,8 +267,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newReply.author_id)
           .single();
           
-        // Create a proper author object with null safety
-        const safeAuthorData: Author = authorData && typeof authorData === 'object' && 'id' in authorData
+        // Fix TS18047: Check if authorData is null before the type check
+        const safeAuthorData: Author = (authorData !== null && typeof authorData === 'object' && 'id' in authorData)
           ? (authorData as unknown as Author) 
           : { ...fallbackAuthor, id: newReply.author_id };
         
