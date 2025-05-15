@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -33,7 +32,12 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     
     return () => {
       // Cleanup subscriptions
-      supabase.removeChannel(`class_${classId}`);
+      const channels = supabase.getChannels();
+      channels.forEach(channel => {
+        if (channel.topic === `class_${classId}`) {
+          supabase.removeChannel(channel);
+        }
+      });
     };
   }, [userId, userRole, classId]);
 
@@ -168,7 +172,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           processedAuthor = createDefaultAuthor(post.author_id);
         }
         
-        // Process replies
+        // Process replies with null safety
         const processedReplies: Reply[] = post.post_replies.map(reply => {
           let replyAuthor: Author | null = null;
           if (reply.author && typeof reply.author === 'object' && 'id' in reply.author) {
