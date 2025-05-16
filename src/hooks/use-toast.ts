@@ -1,7 +1,6 @@
 
-// Re-export sonner's toast functionality
-import { toast, useToast as sonnerUseToast } from "sonner";
+// Import directly from the original source
+import { useToast, toast } from "@/components/ui/toast-hook";
 
-// Export the useToast hook from sonner
-export const useToast = sonnerUseToast;
-export { toast };
+// Re-export the hook and toast function
+export { useToast, toast };

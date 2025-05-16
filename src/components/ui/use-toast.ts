@@ -1,5 +1,4 @@
 
-import { toast } from "@/lib/toastShim";
-import { useToast } from "@/lib/toastShim";
+import { useToast, toast } from "@/hooks/use-toast";
 
 export { useToast, toast };
