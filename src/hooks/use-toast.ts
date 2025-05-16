@@ -1,6 +1,5 @@
 
-// Import directly from the original source
-import { useToast, toast } from "@/components/ui/toast-hook";
+// Re-export sonner's toast functionality
+import { toast } from "sonner";
 
-// Re-export the hook and toast function
-export { useToast, toast };
+export { toast };

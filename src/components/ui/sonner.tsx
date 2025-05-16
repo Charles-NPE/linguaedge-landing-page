@@ -1,6 +1,6 @@
 
 import { useTheme } from "@/contexts/ThemeContext"
-import { Toaster as Sonner, toast } from "sonner"
+import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
@@ -13,8 +13,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       duration={4000}
       position="bottom-right"
+      closeButton
+      richColors
       toastOptions={{
-        dismissible: true,
         classNames: {
           toast:
             "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
@@ -30,4 +31,4 @@ const Toaster = ({ ...props }: ToasterProps) => {
   )
 }
 
-export { Toaster, toast }
+export { Toaster, toast } from "sonner"
