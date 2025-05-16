@@ -1,7 +1,7 @@
 
 // Re-export sonner's toast functionality
-import { toast } from "sonner";
+import { toast, useToast as sonnerUseToast } from "sonner";
 
 // Export the useToast hook from sonner
-export { useToast } from "sonner";
+export const useToast = sonnerUseToast;
 export { toast };

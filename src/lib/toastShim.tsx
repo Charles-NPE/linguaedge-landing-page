@@ -1,41 +1,36 @@
 
-import { toast as sonnerToast } from "sonner";
-import React from "react";
+import { toast as sonnerToast, useToast as sonnerUseToast } from "sonner";
+import React, { ReactNode } from "react";
 
 type LegacyOptions = {
-  /** Heading shown in bold */
   title?: string;
-  /** Secondary line */
   description?: string;
-  /** "default" | "destructive" | etc. */
   variant?: "default" | "destructive" | string;
-  /** milliseconds (optional) */
-  duration?: number;
+  duration?: number;            // ms
 };
 
-/**
- * Accepts the old object syntax and forwards to Sonner v2.
- * Usage stays the same: toast({ title: "...", description: "..." })
- */
+/** Drop-in replacement for the old object API */
 export function toast(opts: LegacyOptions) {
   const { title, description, variant, duration } = opts;
 
-  // Simple text toast → use built-in helpers
+  // single-line helper
   if (!description) {
     return variant === "destructive"
       ? sonnerToast.error(title, { duration })
       : sonnerToast.success(title, { duration });
   }
 
-  // Two-line toast → render our own node
-  return sonnerToast.custom(
+  // two-line custom toast (note the callback)
+  return sonnerToast.custom(() => (
     <div className="flex flex-col gap-1">
       <span className="font-medium">{title}</span>
       <span className="text-sm text-muted-foreground">{description}</span>
-    </div>,
-    {
-      duration,
-      className: variant === "destructive" ? "bg-destructive text-white" : "",
-    }
-  );
+    </div>
+  ), {
+    duration,
+    className: variant === "destructive" ? "bg-destructive text-white" : "",
+  });
 }
+
+/** keep the original hook available */
+export const useToast = sonnerUseToast;
