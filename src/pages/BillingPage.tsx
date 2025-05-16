@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, CreditCard, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/lib/toastShim";
 
 const BillingPage = () => {
   const { profile, user } = useAuth();

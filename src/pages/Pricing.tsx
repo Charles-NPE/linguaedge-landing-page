@@ -8,7 +8,7 @@ import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/lib/toastShim";
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const plans = [
