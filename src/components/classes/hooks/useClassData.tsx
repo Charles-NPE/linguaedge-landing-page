@@ -466,22 +466,28 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
   };
 
   /* NEW helpers – optimistic update */
-  const updatePost = async (postId: string, content: string) => {
+  const updatePost = async (postId: string, content: string): Promise<void> => {
     if (!content.trim()) return;
     const patch = { content: content.trim() };
     const { error } = await supabase.from("posts")
       .update(patch).eq("id", postId).select("content").single();
-    if (error) return toast({ title:"Error", description:error.message, variant:"destructive" });
+    if (error) {
+      toast({ title:"Error", description:error.message, variant:"destructive" });
+      return;
+    }
 
     setPosts(p => p.map(x => x.id === postId ? { ...x, ...patch } : x));
   };
 
-  const updateReply = async (replyId: string, content: string) => {
+  const updateReply = async (replyId: string, content: string): Promise<void> => {
     if (!content.trim()) return;
     const patch = { content: content.trim() };
     const { error } = await supabase.from("post_replies")
       .update(patch).eq("id", replyId).select("content").single();
-    if (error) return toast({ title:"Error", description:error.message, variant:"destructive" });
+    if (error) {
+      toast({ title:"Error", description:error.message, variant:"destructive" });
+      return;
+    }
 
     setPosts(p => p.map(post => ({
       ...post,
