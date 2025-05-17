@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/lib/toastShim";
 import { ClassRow, Student, Post, Author, Reply } from "@/types/class.types";
 import { createDefaultAuthor, processStudentProfile } from "../utils/classUtils";
 
@@ -465,6 +465,32 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     }
   };
 
+  /* NEW helpers – optimistic update */
+  const updatePost = async (postId: string, content: string) => {
+    if (!content.trim()) return;
+    const patch = { content: content.trim() };
+    const { error } = await supabase.from("posts")
+      .update(patch).eq("id", postId).select("content").single();
+    if (error) return toast({ title:"Error", description:error.message, variant:"destructive" });
+
+    setPosts(p => p.map(x => x.id === postId ? { ...x, ...patch } : x));
+  };
+
+  const updateReply = async (replyId: string, content: string) => {
+    if (!content.trim()) return;
+    const patch = { content: content.trim() };
+    const { error } = await supabase.from("post_replies")
+      .update(patch).eq("id", replyId).select("content").single();
+    if (error) return toast({ title:"Error", description:error.message, variant:"destructive" });
+
+    setPosts(p => p.map(post => ({
+      ...post,
+      post_replies: post.post_replies.map(r =>
+        r.id === replyId ? { ...r, ...patch } : r
+      )
+    })));
+  };
+
   return {
     classRow,
     students,
@@ -479,5 +505,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     submitReply,
     deletePost,
     deleteReply,
+    updatePost,
+    updateReply,
   };
 };

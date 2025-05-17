@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import ReplyBox from "./ReplyBox";
 
 export interface Author {
@@ -37,8 +37,10 @@ interface ClassForumProps {
   posts: Post[];
   onSubmitPost: (content: string) => Promise<void>;
   onSubmitReply: (postId: string, content: string) => Promise<void>;
-  onDeletePost?: (postId: string) => Promise<void>;
-  onDeleteReply?: (replyId: string) => Promise<void>;
+  onDeletePost?: (id: string) => Promise<void>;
+  onDeleteReply?: (id: string) => Promise<void>;
+  onEditPost?: (id: string, c: string) => Promise<void>;
+  onEditReply?: (id: string, c: string) => Promise<void>;
   currentUserId?: string;
   isTeacher?: boolean;
 }
@@ -46,7 +48,7 @@ interface ClassForumProps {
 // Helper function to get author name
 const authorName = (author?: Author | null) => {
   if (!author) return 'Anonymous';
-  return author.academy_name ?? author.full_name ?? author.email ?? 'Anonymous';
+  return author.full_name ?? author.academy_name ?? author.email ?? 'Anonymous';
 };
 
 // Helper function to format date
@@ -64,6 +66,8 @@ const ClassForum: React.FC<ClassForumProps> = ({
   onSubmitReply,
   onDeletePost,
   onDeleteReply,
+  onEditPost,
+  onEditReply,
   currentUserId,
   isTeacher
 }) => {
@@ -86,6 +90,19 @@ const ClassForum: React.FC<ClassForumProps> = ({
                 <div className="text-xs text-muted-foreground">
                   {formatDate(p.created_at)}
                 </div>
+                {canDeleteItem(p.author_id) && onEditPost && (
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={() => {
+                      const c = prompt("Edit post:", p.content);
+                      if (c !== null) onEditPost(p.id, c);
+                    }}
+                    className="h-7 w-7"
+                  >
+                    <Pencil size={16} />
+                  </Button>
+                )}
                 {canDeleteItem(p.author_id) && onDeletePost && (
                   <Button 
                     size="icon" 
@@ -113,6 +130,19 @@ const ClassForum: React.FC<ClassForumProps> = ({
                             <span className="text-xs text-muted-foreground">
                               {formatDate(r.created_at)}
                             </span>
+                            {canDeleteItem(r.author_id) && onEditReply && (
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => {
+                                  const c = prompt("Edit reply:", r.content);
+                                  if (c !== null) onEditReply(r.id, c);
+                                }}
+                                className="h-6 w-6"
+                              >
+                                <Pencil size={14} />
+                              </Button>
+                            )}
                             {canDeleteItem(r.author_id) && onDeleteReply && (
                               <Button 
                                 size="icon" 

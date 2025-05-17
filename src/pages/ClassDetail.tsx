@@ -33,6 +33,8 @@ const ClassDetail = () => {
     submitReply,
     deletePost,
     deleteReply,
+    updatePost,
+    updateReply,
   } = useClassData({ 
     classId: id || '', 
     userId: user?.id, 
@@ -88,6 +90,8 @@ const ClassDetail = () => {
             onSubmitReply={submitReply}
             onDeletePost={deletePost}
             onDeleteReply={deleteReply}
+            onEditPost={updatePost}
+            onEditReply={updateReply}
             currentUserId={user?.id}
             isTeacher={isTeacher}
           />
