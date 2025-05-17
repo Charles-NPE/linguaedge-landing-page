@@ -1,4 +1,3 @@
 
-import { useToast, toast } from "@/hooks/use-toast";
-
-export { useToast, toast };
+// Re-export from our shim
+export { useToast, toast } from "@/lib/toastShim";
