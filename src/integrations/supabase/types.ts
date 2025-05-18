@@ -224,6 +224,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "posts_author_fk"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "academy_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "posts_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
@@ -381,24 +388,7 @@ export type Database = {
       }
     }
     Views: {
-      v_forum_authors: {
-        Row: {
-          academy_name: string | null
-          admin_name: string | null
-          id: string | null
-        }
-        Insert: {
-          academy_name?: string | null
-          admin_name?: string | null
-          id?: string | null
-        }
-        Update: {
-          academy_name?: string | null
-          admin_name?: string | null
-          id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never
