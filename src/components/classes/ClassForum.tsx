@@ -9,6 +9,7 @@ import { Trash2, Pencil } from "lucide-react";
 import ReplyBox from "./ReplyBox";
 import { Post, Reply, Author } from "@/types/class.types";
 import { authorName } from "./utils/classUtils";
+import { useRelativeTime } from "@/hooks/useRelativeTime";
 
 interface ClassForumProps {
   posts: Post[];
@@ -22,10 +23,10 @@ interface ClassForumProps {
   isTeacher?: boolean;
 }
 
-// Helper function to format date
+// Helper function to format date for fallback
 const formatDate = (dateString: string) => {
   try {
-    return formatDistanceToNowStrict(toZonedTime(new Date(dateString), "UTC"), { 
+    return formatDistanceToNowStrict(toZonedTime(new Date(dateString), Intl.DateTimeFormat().resolvedOptions().timeZone), { 
       addSuffix: true 
     });
   } catch (error) {
@@ -61,7 +62,7 @@ const ClassForum: React.FC<ClassForumProps> = ({
               <div className="font-semibold">{authorName(p.author)}</div>
               <div className="flex items-center space-x-2">
                 <div className="text-xs text-muted-foreground">
-                  {formatDate(p.created_at)}
+                  {useRelativeTime(p.created_at)}
                 </div>
                 {canDeleteItem(p.author_id) && onEditPost && (
                   <Button 
@@ -101,7 +102,7 @@ const ClassForum: React.FC<ClassForumProps> = ({
                           <span className="font-medium">{authorName(r.author)}</span>
                           <div className="flex items-center space-x-2">
                             <span className="text-xs text-muted-foreground">
-                              {formatDate(r.created_at)}
+                              {useRelativeTime(r.created_at)}
                             </span>
                             {canDeleteItem(r.author_id) && onEditReply && (
                               <Button 

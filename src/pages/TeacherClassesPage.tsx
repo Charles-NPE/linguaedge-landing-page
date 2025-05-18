@@ -1,13 +1,13 @@
 
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import ClassCard from "@/components/classes/ClassCard";
 import CreateClassDialog from "@/components/classes/CreateClassDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -155,6 +155,15 @@ const TeacherClassesPage = () => {
         </TooltipProvider>
       }
     >
+      <div className="mb-4">
+        <Button asChild variant="ghost" size="sm" className="gap-1 px-2">
+          <Link to="/teacher">
+            <ChevronLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
+      </div>
+      
       <div className="mb-6">
         <p className="text-slate-600 dark:text-slate-400">
           Create and manage your classes. Students can join using the class code.

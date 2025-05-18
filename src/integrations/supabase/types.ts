@@ -185,6 +185,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "post_replies_author_fk"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "academy_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "post_replies_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
