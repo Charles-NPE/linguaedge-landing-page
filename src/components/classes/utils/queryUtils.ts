@@ -1,6 +1,8 @@
 
+export interface QueryError { error: true }
+
 export function isQueryError<T>(
-  row: T | { error: true }
-): row is { error: true } {
+  row: T | QueryError
+): row is QueryError {
   return (row as any)?.error === true;
 }

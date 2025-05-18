@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -173,7 +172,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       return;
     } else if (postsData) {
       // Filter out any rows with query errors before setting state
-      setPosts(postsData.filter(p => !isQueryError(p)));
+      const cleaned = (postsData || []).filter(p => !isQueryError(p));
+      setPosts(cleaned);
     }
   };
 
@@ -261,9 +261,9 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
             .eq('id', postId)
             .single();
             
-          if (postData) {
+          if (postData && !isQueryError(postData)) {
             setPosts(prev => 
-              prev.map(p => p.id === postId ? postData as Post : p)
+              prev.map(p => p.id === postId ? postData : p)
             );
           } else {
             // Fallback: remove the reply directly
