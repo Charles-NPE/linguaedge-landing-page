@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -169,8 +168,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         content, 
         created_at, 
         author_id,
-        author:profiles(id, email, avatar_url, academy_name, full_name),
-        post_replies(id, author_id, content, created_at, post_id, author:profiles(id, email, avatar_url, academy_name, full_name))
+        author:author_id(id, email, avatar_url, academy_name, full_name),
+        post_replies(id, author_id, content, created_at, post_id, author:author_id(id, email, avatar_url, academy_name, full_name))
       `)
       .eq('class_id', classId)
       .order('created_at', { ascending: true });
@@ -367,17 +366,20 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     if (!classRow || !content || !userId) return;
     
     try {
-      const { data: created, error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('posts')
         .insert({
           class_id: classRow.id,
           author_id: userId,
           content: content
         })
-        .select("id, content, created_at, author_id")
+        .select(`
+          id, content, created_at, author_id,
+          author:author_id(id, email, full_name, academy_name, avatar_url)
+        `)
         .single();
         
-      if (error || !created) {
+      if (error || !inserted) {
         toast({
           title: "Error",
           description: `Failed to create post: ${error?.message}`,
@@ -386,20 +388,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         return;
       }
       
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id, email, avatar_url, academy_name, full_name")
-        .eq("id", created.author_id)
-        .single();
-      
-      const newPost: Post = {
-        ...created,
-        author: ensureAuthor(profile, created.author_id),
-        post_replies: [],
-      };
-      
       // Optimistic UI update
-      setPosts(prev => [...prev, newPost]);
+      setPosts(prev => [...prev, { ...inserted, post_replies: [] }] as Post[]);
       
     } catch (error) {
       console.error("Error creating post:", error);
@@ -415,17 +405,20 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     if (!content || !userId) return;
     
     try {
-      const { data: created, error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('post_replies')
         .insert({
           post_id: postId,
           author_id: userId,
           content: content
         })
-        .select("id, content, created_at, author_id, post_id")
+        .select(`
+          id, content, created_at, author_id, post_id,
+          author:author_id(id, email, full_name, academy_name, avatar_url)
+        `)
         .single();
         
-      if (error || !created) {
+      if (error || !inserted) {
         toast({
           title: "Error",
           description: `Failed to submit reply: ${error?.message}`,
@@ -434,24 +427,13 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         return;
       }
       
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id, email, avatar_url, academy_name, full_name")
-        .eq("id", created.author_id)
-        .single();
-      
-      const newReply: Reply = {
-        ...created,
-        author: ensureAuthor(profile, created.author_id),
-      };
-      
       // Optimistic UI update
       setPosts(prev =>
         prev.map(p =>
           p.id === postId
-            ? { ...p, post_replies: [...p.post_replies, newReply] }
+            ? { ...p, post_replies: [...p.post_replies, inserted] }
             : p
-        )
+        ) as Post[]
       );
       
     } catch (error) {

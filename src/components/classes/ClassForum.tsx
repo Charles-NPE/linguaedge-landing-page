@@ -46,10 +46,11 @@ interface ClassForumProps {
 }
 
 // Helper function to get author name
-const authorName = (author?: Author | null) => {
-  if (!author) return 'Anonymous';
-  return author.full_name ?? author.academy_name ?? author.email ?? 'Anonymous';
-};
+const authorName = (a?: Author | null) =>
+  a?.full_name?.trim() ||
+  a?.academy_name?.trim() ||
+  a?.email?.split('@')[0] ||
+  "Anonymous";
 
 // Helper function to format date
 const formatDate = (dateString: string) => {
