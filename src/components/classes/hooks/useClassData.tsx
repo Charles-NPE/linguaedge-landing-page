@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -237,7 +238,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         setPosts(prev => [
           ...prev, 
           { ...newPost, author: safeAuthor, post_replies: [] }
-        ]);
+        ] as Post[]);
       })
       // Listen for new replies
       .on('postgres_changes', {
@@ -267,7 +268,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
             p.id === newReply.post_id
               ? { ...p, post_replies: [...p.post_replies, { ...newReply, author: safeAuthor }] }
               : p
-          )
+          ) as Post[]
         );
       })
       // Listen for deleted posts
@@ -277,7 +278,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         table: 'posts'
       }, (payload) => {
         const deletedPostId = payload.old.id;
-        setPosts(prev => prev.filter(post => post.id !== deletedPostId));
+        setPosts(prev => prev.filter(post => post.id !== deletedPostId) as Post[]);
       })
       // Listen for deleted replies
       .on('postgres_changes', {
@@ -289,7 +290,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         setPosts(prev => prev.map(post => ({
           ...post,
           post_replies: post.post_replies.filter(reply => reply.id !== deletedReplyId)
-        })));
+        })) as Post[]);
       })
       .subscribe();
   };
@@ -379,10 +380,10 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         `)
         .single();
         
-      if (error || !inserted) {
+      if (error) {
         toast({
           title: "Error",
-          description: `Failed to create post: ${error?.message}`,
+          description: `Failed to create post: ${error.message}`,
           variant: "destructive",
         });
         return;
@@ -405,7 +406,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     if (!content || !userId) return;
     
     try {
-      const { data: inserted, error } = await supabase
+      const { data: rep, error } = await supabase
         .from('post_replies')
         .insert({
           post_id: postId,
@@ -413,15 +414,15 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           content: content
         })
         .select(`
-          id, content, created_at, author_id, post_id,
+          id, content, created_at, post_id, author_id,
           author:author_id(id, email, full_name, academy_name, avatar_url)
         `)
         .single();
         
-      if (error || !inserted) {
+      if (error) {
         toast({
           title: "Error",
-          description: `Failed to submit reply: ${error?.message}`,
+          description: `Failed to submit reply: ${error.message}`,
           variant: "destructive",
         });
         return;
@@ -431,7 +432,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       setPosts(prev =>
         prev.map(p =>
           p.id === postId
-            ? { ...p, post_replies: [...p.post_replies, inserted] }
+            ? { ...p, post_replies: [...p.post_replies, rep] }
             : p
         ) as Post[]
       );
@@ -507,7 +508,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       return;
     }
 
-    setPosts(p => p.map(x => x.id === postId ? { ...x, ...patch } : x));
+    setPosts(p => p.map(x => x.id === postId ? { ...x, ...patch } : x) as Post[]);
   };
 
   const updateReply = async (replyId: string, content: string): Promise<void> => {
@@ -525,7 +526,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       post_replies: post.post_replies.map(r =>
         r.id === replyId ? { ...r, ...patch } : r
       )
-    })));
+    })) as Post[]);
   };
 
   return {
