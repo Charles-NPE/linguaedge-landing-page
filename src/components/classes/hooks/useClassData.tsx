@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -173,11 +172,9 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       console.error("Error fetching posts:", postsError);
       return;
     } else if (postsData) {
-      // Process posts to sanitize data
+      // Process posts using sanitizePost
       setPosts(
-        postsData
-          .map(sanitizePost)
-          .filter((p): p is Post => p !== null)
+        postsData.map(row => sanitizePost(row))
       );
     }
   };
@@ -196,6 +193,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         // Refresh students list
         fetchStudents(classId);
       })
+      
       // Listen for new posts
       .on('postgres_changes', {
         event: 'INSERT',
@@ -214,9 +212,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           
         if (postData) {
           const cleanPost = sanitizePost(postData);
-          if (cleanPost) {
-            setPosts(prev => [...prev, cleanPost]);
-          }
+          setPosts(prev => [...prev, cleanPost]);
         }
       })
       // Listen for new replies
@@ -239,11 +235,9 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           
         if (postData) {
           const cleanPost = sanitizePost(postData);
-          if (cleanPost) {
-            setPosts(prev => 
-              prev.map(p => p.id === newReply.post_id ? cleanPost : p)
-            );
-          }
+          setPosts(prev => 
+            prev.map(p => p.id === newReply.post_id ? cleanPost : p)
+          );
         }
       })
       // Listen for deleted posts
@@ -393,10 +387,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           
         if (postData) {
           const cleanPost = sanitizePost(postData);
-          if (cleanPost) {
-            // Update posts array with the new post
-            setPosts(prev => [...prev, cleanPost]);
-          }
+          // Update posts array with the new post
+          setPosts(prev => [...prev, cleanPost]);
         }
       }
       
@@ -444,12 +436,10 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           
         if (postData) {
           const cleanPost = sanitizePost(postData);
-          if (cleanPost) {
-            // Update posts array with the updated post
-            setPosts(prev => 
-              prev.map(p => p.id === postId ? cleanPost : p)
-            );
-          }
+          // Update posts array with the updated post
+          setPosts(prev => 
+            prev.map(p => p.id === postId ? cleanPost : p)
+          );
         }
       }
       

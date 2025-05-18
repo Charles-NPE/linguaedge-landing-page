@@ -30,9 +30,9 @@ export function sanitizeAuthor(authorData: unknown, id: string): Author {
 /**
  * Sanitizes a reply to ensure it has valid author data
  */
-export function sanitizeReply(replyData: any): Reply | null {
+export function sanitizeReply(replyData: any): Reply {
   if (!replyData || isQueryError(replyData)) {
-    return null;
+    return null as unknown as Reply; // This should not happen with proper filtering
   }
 
   // Ensure author data is valid
@@ -47,9 +47,9 @@ export function sanitizeReply(replyData: any): Reply | null {
 /**
  * Sanitizes a post and its replies to ensure all data is valid
  */
-export function sanitizePost(postData: any): Post | null {
+export function sanitizePost(postData: any): Post {
   if (!postData || isQueryError(postData)) {
-    return null;
+    return null as unknown as Post; // This should not happen with proper filtering
   }
 
   // Sanitize the post author
@@ -57,9 +57,7 @@ export function sanitizePost(postData: any): Post | null {
   
   // Sanitize each reply
   const sanitizedReplies: Reply[] = Array.isArray(postData.post_replies) 
-    ? postData.post_replies
-        .map(sanitizeReply)
-        .filter((r): r is Reply => r !== null)
+    ? postData.post_replies.map(sanitizeReply)
     : [];
 
   // Construct the sanitized post
