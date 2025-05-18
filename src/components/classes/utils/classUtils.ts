@@ -11,7 +11,7 @@ export const createDefaultAuthor = (authorId: string): Author => ({
 // Helper function to get author name
 export const authorName = (author?: Author | null): string => {
   if (!author) return 'Anonymous';
-  return author.admin_name ?? author.academy_name ?? 'Anonymous';
+  return author.admin_name?.trim() ?? author.academy_name?.trim() ?? 'Anonymous';
 };
 
 // Helper function to format date

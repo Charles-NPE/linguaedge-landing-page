@@ -3,33 +3,12 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { Trash2, Pencil } from "lucide-react";
 import ReplyBox from "./ReplyBox";
-
-export interface Author {
-  id: string;
-  academy_name?: string | null;
-  admin_name?: string | null;
-}
-
-export interface Reply {
-  id: string;
-  author_id: string;
-  content: string;
-  created_at: string;
-  post_id?: string;
-  author?: Author | null;
-}
-
-export interface Post {
-  id: string;
-  author_id: string;
-  content: string;
-  created_at: string;
-  post_replies: Reply[];
-  author?: Author | null;
-}
+import { Post, Reply, Author } from "@/types/class.types";
+import { authorName } from "./utils/classUtils";
 
 interface ClassForumProps {
   posts: Post[];
@@ -43,16 +22,12 @@ interface ClassForumProps {
   isTeacher?: boolean;
 }
 
-// Helper function to get author name
-const authorName = (a?: Author | null) =>
-  a?.admin_name?.trim() ||
-  a?.academy_name?.trim() ||
-  "Anonymous";
-
 // Helper function to format date
 const formatDate = (dateString: string) => {
   try {
-    return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+    return formatDistanceToNowStrict(toZonedTime(new Date(dateString), "UTC"), { 
+      addSuffix: true 
+    });
   } catch (error) {
     return 'some time ago';
   }

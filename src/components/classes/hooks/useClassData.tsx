@@ -127,7 +127,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
   const fetchStudents = async (classId: string) => {
     const { data: studentsData, error: studentsError } = await supabase
       .from('class_students')
-      .select('student_id, profiles:student_id(id, email, avatar_url)')
+      .select('student_id, profiles:student_id(id, avatar_url)')
       .eq('class_id', classId);
       
     if (studentsError) {
@@ -159,17 +159,19 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     }
   };
 
+  const getPostsSelectString = () => `
+    id, 
+    content, 
+    created_at, 
+    author_id,
+    author:academy_profiles!author_id(id:user_id, academy_name, admin_name),
+    post_replies(id, author_id, content, created_at, post_id, author:academy_profiles!author_id(id:user_id, academy_name, admin_name))
+  `;
+
   const fetchPosts = async (classId: string) => {
     const { data: postsData, error: postsError } = await supabase
       .from('posts')
-      .select(`
-        id, 
-        content, 
-        created_at, 
-        author_id,
-        author:academy_profiles!author_id(id:user_id, academy_name, admin_name),
-        post_replies(id, author_id, content, created_at, post_id, author:academy_profiles!author_id(id:user_id, academy_name, admin_name))
-      `)
+      .select(getPostsSelectString())
       .eq('class_id', classId)
       .order('created_at', { ascending: true });
       
@@ -372,9 +374,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           author_id: userId,
           content: content
         })
-        .select(`
-          id, content, created_at, author_id
-        `)
+        .select(getPostsSelectString())
         .single();
         
       if (error) {
@@ -386,19 +386,20 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         return;
       }
 
-      // Fetch author information separately
-      const { data: authorData } = await supabase
-        .from('academy_profiles')
-        .select('user_id, academy_name, admin_name')
-        .eq('user_id', userId)
-        .single();
-      
-      const authorInfo: Author = authorData
-        ? { id: authorData.user_id, academy_name: authorData.academy_name, admin_name: authorData.admin_name }
-        : { ...fallbackAuthor, id: userId };
-      
-      // Optimistic UI update
-      setPosts(prev => [...prev, { ...inserted, author: authorInfo, post_replies: [] }] as Post[]);
+      // Process the returned data to fit our Post interface
+      if (inserted) {
+        const processedPost: Post = {
+          ...inserted,
+          author: inserted.author || { ...fallbackAuthor, id: userId },
+          post_replies: (inserted.post_replies || []).map(reply => ({
+            ...reply,
+            author: reply.author || { ...fallbackAuthor, id: reply.author_id }
+          }))
+        };
+        
+        // Optimistic UI update
+        setPosts(prev => [...prev, processedPost]);
+      }
       
     } catch (error) {
       console.error("Error creating post:", error);
@@ -414,7 +415,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     if (!content || !userId) return;
     
     try {
-      const { data: rep, error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('post_replies')
         .insert({
           post_id: postId,
@@ -422,7 +423,12 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           content: content
         })
         .select(`
-          id, content, created_at, post_id, author_id
+          id, 
+          content, 
+          created_at, 
+          post_id, 
+          author_id,
+          author:academy_profiles!author_id(id:user_id, academy_name, admin_name)
         `)
         .single();
         
@@ -435,25 +441,22 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         return;
       }
       
-      // Fetch author information separately
-      const { data: authorData } = await supabase
-        .from('academy_profiles')
-        .select('user_id, academy_name, admin_name')
-        .eq('user_id', userId)
-        .single();
-      
-      const authorInfo: Author = authorData
-        ? { id: authorData.user_id, academy_name: authorData.academy_name, admin_name: authorData.admin_name }
-        : { ...fallbackAuthor, id: userId };
-      
-      // Optimistic UI update
-      setPosts(prev =>
-        prev.map(p =>
-          p.id === postId
-            ? { ...p, post_replies: [...p.post_replies, { ...rep, author: authorInfo }] }
-            : p
-        ) as Post[]
-      );
+      // Process the returned data
+      if (inserted) {
+        const processedReply: Reply = {
+          ...inserted,
+          author: inserted.author || { ...fallbackAuthor, id: userId }
+        };
+        
+        // Optimistic UI update
+        setPosts(prev =>
+          prev.map(p =>
+            p.id === postId
+              ? { ...p, post_replies: [...p.post_replies, processedReply] }
+              : p
+          ) as Post[]
+        );
+      }
       
     } catch (error) {
       console.error("Error replying to post:", error);
@@ -478,7 +481,11 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           description: "Failed to delete post: " + error.message,
           variant: "destructive",
         });
+        return;
       }
+      
+      // Optimistic UI update
+      setPosts(prev => prev.filter(post => post.id !== postId));
       
     } catch (error) {
       console.error("Error deleting post:", error);
@@ -503,7 +510,14 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           description: "Failed to delete reply: " + error.message,
           variant: "destructive",
         });
+        return;
       }
+      
+      // Optimistic UI update
+      setPosts(prev => prev.map(post => ({
+        ...post,
+        post_replies: post.post_replies.filter(reply => reply.id !== replyId)
+      })));
       
     } catch (error) {
       console.error("Error deleting reply:", error);
@@ -515,7 +529,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     }
   };
 
-  /* NEW helpers – optimistic update */
+  /* Helpers for optimistic update */
   const updatePost = async (postId: string, content: string): Promise<void> => {
     if (!content.trim()) return;
     const patch = { content: content.trim() };

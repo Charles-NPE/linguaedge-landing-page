@@ -1,7 +1,6 @@
 
 export interface StudentProfile {
   id: string;
-  email?: string;
   avatar_url?: string;
   academy_name?: string;
   full_name?: string;
