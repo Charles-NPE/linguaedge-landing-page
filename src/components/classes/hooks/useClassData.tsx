@@ -172,11 +172,9 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       console.error("Error fetching posts:", postsError);
       return;
     } else if (postsData) {
-      // Process posts using sanitizePost
+      // Process posts using sanitizePost without filtering
       setPosts(
-        postsData
-          .map(row => sanitizePost(row))
-          .filter(Boolean)
+        postsData.map(row => sanitizePost(row))
       );
     }
   };
@@ -214,7 +212,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           
         if (postData) {
           const cleanPost = sanitizePost(postData);
-          setPosts(prev => [...prev, cleanPost].filter(Boolean));
+          setPosts(prev => [...prev, cleanPost]);
         }
       })
       // Listen for new replies
@@ -239,7 +237,6 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           const cleanPost = sanitizePost(postData);
           setPosts(prev => 
             prev.map(p => p.id === newReply.post_id ? cleanPost : p)
-              .filter(Boolean)
           );
         }
       })
@@ -391,7 +388,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         if (postData) {
           const cleanPost = sanitizePost(postData);
           // Update posts array with the new post
-          setPosts(prev => [...prev, cleanPost].filter(Boolean));
+          setPosts(prev => [...prev, cleanPost]);
         }
       }
       
@@ -442,7 +439,6 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           // Update posts array with the updated post
           setPosts(prev => 
             prev.map(p => p.id === postId ? cleanPost : p)
-              .filter(Boolean)
           );
         }
       }
@@ -535,7 +531,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     if (postData) {
       const cleanPost = sanitizePost(postData);
       if (cleanPost) {
-        setPosts(p => p.map(x => x.id === postId ? cleanPost : x).filter(Boolean));
+        setPosts(p => p.map(x => x.id === postId ? cleanPost : x));
       }
     }
   };
@@ -570,7 +566,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       if (cleanPost) {
         setPosts(p => p.map(post => 
           post.id === postWithReply.id ? cleanPost : post
-        ).filter(Boolean));
+        ));
       }
     }
   };
