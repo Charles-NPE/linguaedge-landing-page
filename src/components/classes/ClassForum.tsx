@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -9,8 +8,7 @@ import ReplyBox from "./ReplyBox";
 
 export interface Author {
   id: string;
-  email?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
   academy_name?: string;
   full_name?: string;
 }
@@ -49,7 +47,6 @@ interface ClassForumProps {
 const authorName = (a?: Author | null) =>
   a?.full_name?.trim() ||
   a?.academy_name?.trim() ||
-  a?.email?.split('@')[0] ||
   "Anonymous";
 
 // Helper function to format date

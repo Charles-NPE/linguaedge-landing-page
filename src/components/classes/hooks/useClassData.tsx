@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +23,6 @@ const fallbackAuthor: Author = {
   id: "unknown",
   full_name: "Unknown",
   avatar_url: null,
-  email: "unknown",
   academy_name: "Unknown"
 };
 
@@ -169,8 +167,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         content, 
         created_at, 
         author_id,
-        author:author_id(id, email, avatar_url, academy_name, full_name),
-        post_replies(id, author_id, content, created_at, post_id, author:author_id(id, email, avatar_url, academy_name, full_name))
+        author:author_id(id, full_name, academy_name, avatar_url),
+        post_replies(id, author_id, content, created_at, post_id, author:author_id(id, full_name, academy_name, avatar_url))
       `)
       .eq('class_id', classId)
       .order('created_at', { ascending: true });
@@ -226,7 +224,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         // Fetch the author information for the new post
         const { data: dbAuthor } = await supabase
           .from('profiles')
-          .select('id, email, avatar_url, academy_name, full_name')
+          .select('id, full_name, academy_name, avatar_url')
           .eq('id', newPost.author_id)
           .single();
 
@@ -376,7 +374,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         })
         .select(`
           id, content, created_at, author_id,
-          author:author_id(id, email, full_name, academy_name, avatar_url)
+          author:author_id(id, full_name, academy_name, avatar_url)
         `)
         .single();
         
@@ -415,7 +413,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         })
         .select(`
           id, content, created_at, post_id, author_id,
-          author:author_id(id, email, full_name, academy_name, avatar_url)
+          author:author_id(id, full_name, academy_name, avatar_url)
         `)
         .single();
         
