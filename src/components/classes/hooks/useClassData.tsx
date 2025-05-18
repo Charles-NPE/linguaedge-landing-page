@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -355,17 +356,23 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     }
   };
 
-  const submitPost = async (content: string) => {
+  const submitPost = async (content: string): Promise<void> => {
     if (!classRow || !content || !userId) return;
     
     try {
-      const { error } = await supabase
+      // Insert & immediately SELECT the full row with joined author
+      const { data, error } = await supabase
         .from('posts')
         .insert({
           class_id: classRow.id,
           author_id: userId,
           content: content
-        });
+        })
+        .select(`
+          id, content, created_at, author_id,
+          author:profiles(id, email, avatar_url, academy_name, full_name)
+        `)
+        .single();
         
       if (error) {
         toast({
@@ -373,7 +380,18 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           description: "Failed to create post: " + error.message,
           variant: "destructive",
         });
+        return;
       }
+      
+      // Optimistic UI update
+      setPosts(prev => [
+        ...prev,
+        {
+          ...data,
+          post_replies: [],
+          author: data.author ?? { ...fallbackAuthor, id: data.author_id },
+        },
+      ]);
       
     } catch (error) {
       console.error("Error creating post:", error);
@@ -385,17 +403,22 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     }
   };
 
-  const submitReply = async (postId: string, content: string) => {
+  const submitReply = async (postId: string, content: string): Promise<void> => {
     if (!content || !userId) return;
     
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('post_replies')
         .insert({
           post_id: postId,
           author_id: userId,
           content: content
-        });
+        })
+        .select(`
+          id, content, created_at, author_id, post_id,
+          author:profiles(id, email, avatar_url, academy_name, full_name)
+        `)
+        .single();
         
       if (error) {
         toast({
@@ -403,7 +426,26 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           description: "Failed to submit reply: " + error.message,
           variant: "destructive",
         });
+        return;
       }
+      
+      // Optimistic UI update
+      setPosts(prev =>
+        prev.map(p =>
+          p.id === postId
+            ? {
+                ...p,
+                post_replies: [
+                  ...p.post_replies,
+                  {
+                    ...data,
+                    author: data.author ?? { ...fallbackAuthor, id: data.author_id },
+                  },
+                ],
+              }
+            : p
+        )
+      );
       
     } catch (error) {
       console.error("Error replying to post:", error);
