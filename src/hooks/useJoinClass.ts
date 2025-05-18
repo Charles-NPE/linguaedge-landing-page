@@ -17,13 +17,18 @@ export async function joinClass(code: string, userId: string): Promise<JoinClass
   // Find the class by code (case-insensitive search)
   const { data: classData, error: classError } = await supabase
     .from("classes")
-    .select("id, name")
+    .select("id, name, code")
     .ilike("code", normalized)
-    .single();
+    .limit(1)
+    .maybeSingle();
 
-  if (classError || !classData) {
+  if (classError) {
     console.error("Error finding class:", classError);
-    throw new Error("Invalid class code. Please check and try again.");
+    throw new Error("Error searching class. Try again later.");
+  }
+  
+  if (!classData) {
+    throw new Error(`No class found with code ${normalized}.`);
   }
 
   // Add student to class (using upsert to avoid duplicates)
