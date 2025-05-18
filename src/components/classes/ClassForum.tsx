@@ -23,17 +23,6 @@ interface ClassForumProps {
   isTeacher?: boolean;
 }
 
-// Helper function to format date for fallback
-const formatDate = (dateString: string) => {
-  try {
-    return formatDistanceToNowStrict(toZonedTime(new Date(dateString), Intl.DateTimeFormat().resolvedOptions().timeZone), { 
-      addSuffix: true 
-    });
-  } catch (error) {
-    return 'some time ago';
-  }
-};
-
 const ClassForum: React.FC<ClassForumProps> = ({
   posts,
   onSubmitPost,
