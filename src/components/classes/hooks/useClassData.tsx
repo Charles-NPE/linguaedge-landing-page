@@ -6,6 +6,13 @@ import { toast } from "@/lib/toastShim";
 import { ClassRow, Student, Post, Author, Reply } from "@/types/class.types";
 import { createDefaultAuthor, processStudentProfile } from "../utils/classUtils";
 
+/** Accept anything returned by Supabase and coerce it into `Author` */
+const ensureAuthor = (raw: unknown, id: string): Author => {
+  return raw && typeof raw === "object" && "id" in raw
+    ? (raw as Author)
+    : { ...fallbackAuthor, id };
+};
+
 interface UseClassDataProps {
   classId: string;
   userId?: string;
@@ -374,24 +381,23 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         `)
         .single();
         
-      if (error) {
+      if (error || !data) {
         toast({
           title: "Error",
-          description: "Failed to create post: " + error.message,
+          description: "Failed to create post: " + (error?.message || "Unknown error"),
           variant: "destructive",
         });
         return;
       }
       
+      const optimisticPost: Post = {
+        ...data,
+        author: ensureAuthor(data.author, data.author_id),
+        post_replies: [],
+      };
+      
       // Optimistic UI update
-      setPosts(prev => [
-        ...prev,
-        {
-          ...data,
-          post_replies: [],
-          author: data.author ?? { ...fallbackAuthor, id: data.author_id },
-        },
-      ]);
+      setPosts(prev => [...prev, optimisticPost]);
       
     } catch (error) {
       console.error("Error creating post:", error);
@@ -420,29 +426,25 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         `)
         .single();
         
-      if (error) {
+      if (error || !data) {
         toast({
           title: "Error",
-          description: "Failed to submit reply: " + error.message,
+          description: "Failed to submit reply: " + (error?.message || "Unknown error"),
           variant: "destructive",
         });
         return;
       }
       
+      const optimisticReply: Reply = {
+        ...data,
+        author: ensureAuthor(data.author, data.author_id),
+      };
+      
       // Optimistic UI update
       setPosts(prev =>
         prev.map(p =>
           p.id === postId
-            ? {
-                ...p,
-                post_replies: [
-                  ...p.post_replies,
-                  {
-                    ...data,
-                    author: data.author ?? { ...fallbackAuthor, id: data.author_id },
-                  },
-                ],
-              }
+            ? { ...p, post_replies: [...p.post_replies, optimisticReply] }
             : p
         )
       );
