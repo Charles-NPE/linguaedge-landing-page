@@ -8,6 +8,9 @@ import { PenTool, FileCheck, LineChart, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { JoinClassDialog } from "@/components/student";
+import { joinClass } from "@/hooks/useJoinClass";
+import { toast } from "@/lib/toastShim";
 
 interface ClassInfo {
   id: string;
@@ -20,41 +23,62 @@ const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
 
-  useEffect(() => {
+  const fetchClasses = async () => {
     if (!user) return;
     
-    const fetchClasses = async () => {
-      try {
-        setIsLoading(true);
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('class_students')
+        .select('class_id, classes(id, name, code)')
+        .eq('student_id', user.id);
         
-        const { data, error } = await supabase
-          .from('class_students')
-          .select('class_id, classes(id, name, code)')
-          .eq('student_id', user.id);
+      if (error) throw error;
+      
+      if (data) {
+        const classesData = data
+          .filter(item => item.classes) // Filter out any null values
+          .map(item => ({
+            id: item.classes.id,
+            name: item.classes.name,
+            code: item.classes.code
+          }));
           
-        if (error) throw error;
-        
-        if (data) {
-          const classesData = data
-            .filter(item => item.classes) // Filter out any null values
-            .map(item => ({
-              id: item.classes.id,
-              name: item.classes.name,
-              code: item.classes.code
-            }));
-            
-          setClasses(classesData);
-        }
-      } catch (error) {
-        console.error("Error fetching classes:", error);
-      } finally {
-        setIsLoading(false);
+        setClasses(classesData);
       }
-    };
-    
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchClasses();
   }, [user]);
+
+  const handleJoinClass = async (code: string) => {
+    if (!user) return;
+    
+    try {
+      const result = await joinClass(code, user.id);
+      toast({
+        title: "Class joined!",
+        description: `Welcome to ${result.name}!`,
+      });
+      setShowJoinDialog(false);
+      fetchClasses(); // Refresh classes list
+    } catch (error) {
+      toast({
+        title: "Error joining class",
+        description: error instanceof Error ? error.message : "Failed to join class. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <DashboardLayout title="Student Dashboard">
@@ -66,7 +90,17 @@ const StudentDashboard: React.FC = () => {
 
       {/* My Classes Section */}
       <div className="mb-10">
-        <h3 className="text-lg font-medium mb-4">My Classes</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium">My Classes</h3>
+          <Button 
+            size="sm" 
+            onClick={() => setShowJoinDialog(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            Join a class
+          </Button>
+        </div>
+        
         {isLoading ? (
           <div className="flex justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
@@ -87,13 +121,23 @@ const StudentDashboard: React.FC = () => {
                   <CardDescription>Class Code: {cls.code}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button 
-                    className="w-full mt-2"
-                    onClick={() => navigate(`/teacher/classes/${cls.id}`)}
-                  >
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Open Class
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button 
+                      className="w-full mt-2"
+                      onClick={() => navigate(`/teacher/classes/${cls.id}`)}
+                    >
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Open Class
+                    </Button>
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => navigate(`/student/classes/${cls.id}/forum`)}
+                    >
+                      Forum
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -125,6 +169,12 @@ const StudentDashboard: React.FC = () => {
           />
         </div>
       </div>
+
+      <JoinClassDialog 
+        isOpen={showJoinDialog} 
+        onOpenChange={setShowJoinDialog} 
+        onJoin={handleJoinClass} 
+      />
     </DashboardLayout>
   );
 };
