@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -5,6 +6,7 @@ import { toast } from "@/lib/toastShim";
 import { ClassRow, Student, Post, Author, Reply } from "@/types/class.types";
 import { createDefaultAuthor, processStudentProfile } from "../utils/classUtils";
 import { POST_SELECT } from "../utils/postSelect";
+import { isQueryError } from "../utils/queryUtils";
 
 /** Accept anything returned by Supabase and coerce it into `Author` */
 const ensureAuthor = (raw: unknown, id: string): Author => {
@@ -170,8 +172,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       console.error("Error fetching posts:", postsError);
       return;
     } else if (postsData) {
-      // Process and set posts data directly
-      setPosts(postsData as Post[]);
+      // Filter out any rows with query errors before setting state
+      setPosts(postsData.filter(p => !isQueryError(p)));
     }
   };
 
@@ -205,8 +207,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newPostId)
           .single();
           
-        if (postData) {
-          setPosts(prev => [...prev, postData as Post]);
+        if (postData && !isQueryError(postData)) {
+          setPosts(prev => [...prev, postData]);
         }
       })
       // Listen for new replies
@@ -227,9 +229,9 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newReply.post_id)
           .single();
           
-        if (postData) {
+        if (postData && !isQueryError(postData)) {
           setPosts(prev => 
-            prev.map(p => p.id === newReply.post_id ? postData as Post : p)
+            prev.map(p => p.id === newReply.post_id ? postData : p)
           );
         }
       })
@@ -375,9 +377,9 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', inserted.id)
           .single();
           
-        if (postData) {
+        if (postData && !isQueryError(postData)) {
           // Update posts array with the new post
-          setPosts(prev => [...prev, postData as Post]);
+          setPosts(prev => [...prev, postData]);
         }
       }
       
@@ -423,10 +425,10 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', postId)
           .single();
           
-        if (postData) {
+        if (postData && !isQueryError(postData)) {
           // Update posts array with the updated post
           setPosts(prev => 
-            prev.map(p => p.id === postId ? postData as Post : p)
+            prev.map(p => p.id === postId ? postData : p)
           );
         }
       }
@@ -516,8 +518,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       .eq('id', postId)
       .single();
       
-    if (postData) {
-      setPosts(p => p.map(x => x.id === postId ? postData as Post : x));
+    if (postData && !isQueryError(postData)) {
+      setPosts(p => p.map(x => x.id === postId ? postData : x));
     }
   };
 
@@ -546,9 +548,9 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       .eq('id', postWithReply.id)
       .single();
       
-    if (postData) {
+    if (postData && !isQueryError(postData)) {
       setPosts(p => p.map(post => 
-        post.id === postWithReply.id ? postData as Post : post
+        post.id === postWithReply.id ? postData : post
       ));
     }
   };
