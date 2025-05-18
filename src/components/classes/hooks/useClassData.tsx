@@ -7,6 +7,7 @@ import { ClassRow, Student, Post, Author, Reply } from "@/types/class.types";
 import { createDefaultAuthor, processStudentProfile } from "../utils/classUtils";
 import { POST_SELECT } from "../utils/postSelect";
 import { isQueryError } from "../utils/queryUtils";
+import { sanitizePost } from "../utils/sanitizeForum";
 
 /** Accept anything returned by Supabase and coerce it into `Author` */
 const ensureAuthor = (raw: unknown, id: string): Author => {
@@ -172,9 +173,12 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       console.error("Error fetching posts:", postsError);
       return;
     } else if (postsData) {
-      // Filter out any rows with query errors before setting state
-      const cleaned = (postsData || []).filter(p => !isQueryError(p));
-      setPosts(cleaned as Post[]);
+      // Process posts to sanitize data
+      setPosts(
+        postsData
+          .map(sanitizePost)
+          .filter((p): p is Post => p !== null)
+      );
     }
   };
 
@@ -208,11 +212,11 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newPostId)
           .single();
           
-        if (postData && !isQueryError(postData)) {
-          setPosts(prev => {
-            const next = [...prev, postData];
-            return next.filter(p => !isQueryError(p)) as Post[];
-          });
+        if (postData) {
+          const cleanPost = sanitizePost(postData);
+          if (cleanPost) {
+            setPosts(prev => [...prev, cleanPost]);
+          }
         }
       })
       // Listen for new replies
@@ -233,11 +237,13 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', newReply.post_id)
           .single();
           
-        if (postData && !isQueryError(postData)) {
-          setPosts(prev => {
-            const next = prev.map(p => p.id === newReply.post_id ? postData : p);
-            return next.filter(p => !isQueryError(p)) as Post[];
-          });
+        if (postData) {
+          const cleanPost = sanitizePost(postData);
+          if (cleanPost) {
+            setPosts(prev => 
+              prev.map(p => p.id === newReply.post_id ? cleanPost : p)
+            );
+          }
         }
       })
       // Listen for deleted posts
@@ -247,10 +253,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         table: 'posts'
       }, (payload) => {
         const deletedPostId = payload.old.id;
-        setPosts(prev => {
-          const next = prev.filter(post => post.id !== deletedPostId);
-          return next.filter(p => !isQueryError(p)) as Post[];
-        });
+        setPosts(prev => prev.filter(post => post.id !== deletedPostId));
       })
       // Listen for deleted replies
       .on('postgres_changes', {
@@ -269,20 +272,19 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
             .eq('id', postId)
             .single();
             
-          if (postData && !isQueryError(postData)) {
-            setPosts(prev => {
-              const next = prev.map(p => p.id === postId ? postData : p);
-              return next.filter(p => !isQueryError(p)) as Post[];
-            });
+          if (postData) {
+            const cleanPost = sanitizePost(postData);
+            if (cleanPost) {
+              setPosts(prev => 
+                prev.map(p => p.id === postId ? cleanPost : p)
+              );
+            }
           } else {
             // Fallback: remove the reply directly
-            setPosts(prev => {
-              const next = prev.map(post => ({
-                ...post,
-                post_replies: post.post_replies.filter(reply => reply.id !== deletedReplyId)
-              }));
-              return next.filter(p => !isQueryError(p)) as Post[];
-            });
+            setPosts(prev => prev.map(post => ({
+              ...post,
+              post_replies: post.post_replies.filter(reply => reply.id !== deletedReplyId)
+            })));
           }
         }
       })
@@ -389,12 +391,12 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', inserted.id)
           .single();
           
-        if (postData && !isQueryError(postData)) {
-          // Update posts array with the new post
-          setPosts(prev => {
-            const next = [...prev, postData];
-            return next.filter(p => !isQueryError(p)) as Post[];
-          });
+        if (postData) {
+          const cleanPost = sanitizePost(postData);
+          if (cleanPost) {
+            // Update posts array with the new post
+            setPosts(prev => [...prev, cleanPost]);
+          }
         }
       }
       
@@ -440,12 +442,14 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           .eq('id', postId)
           .single();
           
-        if (postData && !isQueryError(postData)) {
-          // Update posts array with the updated post
-          setPosts(prev => {
-            const next = prev.map(p => p.id === postId ? postData : p);
-            return next.filter(p => !isQueryError(p)) as Post[];
-          });
+        if (postData) {
+          const cleanPost = sanitizePost(postData);
+          if (cleanPost) {
+            // Update posts array with the updated post
+            setPosts(prev => 
+              prev.map(p => p.id === postId ? cleanPost : p)
+            );
+          }
         }
       }
       
@@ -534,11 +538,11 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       .eq('id', postId)
       .single();
       
-    if (postData && !isQueryError(postData)) {
-      setPosts(p => {
-        const next = p.map(x => x.id === postId ? postData : x);
-        return next.filter(item => !isQueryError(item)) as Post[];
-      });
+    if (postData) {
+      const cleanPost = sanitizePost(postData);
+      if (cleanPost) {
+        setPosts(p => p.map(x => x.id === postId ? cleanPost : x));
+      }
     }
   };
 
@@ -567,13 +571,13 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       .eq('id', postWithReply.id)
       .single();
       
-    if (postData && !isQueryError(postData)) {
-      setPosts(p => {
-        const next = p.map(post => 
-          post.id === postWithReply.id ? postData : post
-        );
-        return next.filter(item => !isQueryError(item)) as Post[];
-      });
+    if (postData) {
+      const cleanPost = sanitizePost(postData);
+      if (cleanPost) {
+        setPosts(p => p.map(post => 
+          post.id === postWithReply.id ? cleanPost : post
+        ));
+      }
     }
   };
 
