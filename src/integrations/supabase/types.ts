@@ -381,7 +381,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_forum_authors: {
+        Row: {
+          academy_name: string | null
+          admin_name: string | null
+          id: string | null
+        }
+        Insert: {
+          academy_name?: string | null
+          admin_name?: string | null
+          id?: string | null
+        }
+        Update: {
+          academy_name?: string | null
+          admin_name?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

@@ -1,69 +1,37 @@
 
-import { Post, Reply, Author } from "@/types/class.types";
-import { isQueryError, QueryError } from "./queryUtils";
+import { Author, Reply, Post } from "@/types/class.types";
+import { isQueryError } from "./queryUtils";
 
-// Create fallback author for cases where author data is missing or invalid
 const fallbackAuthor: Author = {
   id: "unknown",
+  admin_name: "Unknown",
   academy_name: "Unknown",
-  admin_name: "Unknown"
 };
 
-/**
- * Sanitizes author data, handling cases where it might be a SelectQueryError
- */
-export function sanitizeAuthor(authorData: unknown, id: string): Author {
-  // If the author data is an error or doesn't match expected shape, use fallback
-  if (!authorData || isQueryError(authorData)) {
+/* ---------- helpers ---------- */
+
+export function sanitizeAuthor(raw: unknown, id: string): Author {
+  if (!raw || isQueryError(raw) || typeof raw !== "object" || !("id" in raw)) {
     return { ...fallbackAuthor, id };
   }
-  
-  // Check if it has the expected shape
-  if (typeof authorData === "object" && "id" in authorData) {
-    return authorData as Author;
-  }
-  
-  // Default fallback
-  return { ...fallbackAuthor, id };
+  return raw as Author;
 }
 
-/**
- * Sanitizes a reply to ensure it has valid author data
- */
-export function sanitizeReply(replyData: any): Reply {
-  if (!replyData || isQueryError(replyData)) {
-    return null as unknown as Reply; // This should not happen with proper filtering
-  }
-
-  // Ensure author data is valid
-  const sanitizedAuthor = sanitizeAuthor(replyData.author, replyData.author_id);
-
+export function sanitizeReply(r: any): Reply {
+  if (!r || isQueryError(r)) return null as unknown as Reply;
   return {
-    ...replyData,
-    author: sanitizedAuthor
+    ...r,
+    author: sanitizeAuthor(r.author, r.author_id),
   };
 }
 
-/**
- * Sanitizes a post and its replies to ensure all data is valid
- */
-export function sanitizePost(postData: any): Post {
-  if (!postData || isQueryError(postData)) {
-    return null as unknown as Post; // This should not happen with proper filtering
-  }
-
-  // Sanitize the post author
-  const sanitizedAuthor = sanitizeAuthor(postData.author, postData.author_id);
-  
-  // Sanitize each reply
-  const sanitizedReplies: Reply[] = Array.isArray(postData.post_replies) 
-    ? postData.post_replies.map(sanitizeReply)
-    : [];
-
-  // Construct the sanitized post
+export function sanitizePost(p: any): Post {
+  if (!p || isQueryError(p)) return null as unknown as Post;
   return {
-    ...postData,
-    author: sanitizedAuthor,
-    post_replies: sanitizedReplies
+    ...p,
+    author: sanitizeAuthor(p.author, p.author_id),
+    post_replies: Array.isArray(p.post_replies)
+      ? p.post_replies.map(sanitizeReply)
+      : [],
   };
 }
