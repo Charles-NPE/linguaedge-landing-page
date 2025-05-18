@@ -11,11 +11,14 @@ export interface JoinClassResult {
  * Join a class using a class code
  */
 export async function joinClass(code: string, userId: string): Promise<JoinClassResult> {
-  // Find the class by code
+  // Normalize code by trimming and converting to uppercase
+  const normalized = code.trim().toUpperCase();
+
+  // Find the class by code (case-insensitive search)
   const { data: classData, error: classError } = await supabase
     .from("classes")
     .select("id, name")
-    .eq("code", code)
+    .ilike("code", normalized)
     .single();
 
   if (classError || !classData) {
