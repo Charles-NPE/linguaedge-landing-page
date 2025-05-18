@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -21,9 +22,8 @@ interface UseClassDataProps {
 // Define fallback author to use when author data is null
 const fallbackAuthor: Author = {
   id: "unknown",
-  full_name: "Unknown",
-  avatar_url: null,
-  academy_name: "Unknown"
+  academy_name: "Unknown",
+  admin_name: "Unknown"
 };
 
 export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) => {
@@ -167,8 +167,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         content, 
         created_at, 
         author_id,
-        author:author_id(id, full_name, academy_name, avatar_url),
-        post_replies(id, author_id, content, created_at, post_id, author:author_id(id, full_name, academy_name, avatar_url))
+        author:academy_profiles!author_id(id:user_id, academy_name, admin_name),
+        post_replies(id, author_id, content, created_at, post_id, author:academy_profiles!author_id(id:user_id, academy_name, admin_name))
       `)
       .eq('class_id', classId)
       .order('created_at', { ascending: true });
@@ -223,14 +223,14 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         
         // Fetch the author information for the new post
         const { data: dbAuthor } = await supabase
-          .from('profiles')
-          .select('id, full_name, academy_name, avatar_url')
-          .eq('id', newPost.author_id)
+          .from('academy_profiles')
+          .select('user_id, academy_name, admin_name')
+          .eq('user_id', newPost.author_id)
           .single();
 
-        const safeAuthor: Author =
-          dbAuthor && 'id' in dbAuthor
-            ? (dbAuthor as Author)
+        const safeAuthor: Author = 
+          dbAuthor && 'user_id' in dbAuthor
+            ? { id: dbAuthor.user_id, academy_name: dbAuthor.academy_name, admin_name: dbAuthor.admin_name }
             : { ...fallbackAuthor, id: newPost.author_id };
 
         setPosts(prev => [
@@ -251,14 +251,14 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         
         // Fetch the author information for the new reply
         const { data: dbAuthor } = await supabase
-          .from('profiles')
-          .select('id, email, avatar_url, academy_name, full_name')
-          .eq('id', newReply.author_id)
+          .from('academy_profiles')
+          .select('user_id, academy_name, admin_name')
+          .eq('user_id', newReply.author_id)
           .single();
           
         const safeAuthor: Author =
-          dbAuthor && 'id' in dbAuthor
-            ? (dbAuthor as Author)
+          dbAuthor && 'user_id' in dbAuthor
+            ? { id: dbAuthor.user_id, academy_name: dbAuthor.academy_name, admin_name: dbAuthor.admin_name }
             : { ...fallbackAuthor, id: newReply.author_id };
         
         setPosts(prev =>
@@ -373,8 +373,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           content: content
         })
         .select(`
-          id, content, created_at, author_id,
-          author:author_id(id, full_name, academy_name, avatar_url)
+          id, content, created_at, author_id
         `)
         .single();
         
@@ -386,9 +385,20 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         });
         return;
       }
+
+      // Fetch author information separately
+      const { data: authorData } = await supabase
+        .from('academy_profiles')
+        .select('user_id, academy_name, admin_name')
+        .eq('user_id', userId)
+        .single();
+      
+      const authorInfo: Author = authorData
+        ? { id: authorData.user_id, academy_name: authorData.academy_name, admin_name: authorData.admin_name }
+        : { ...fallbackAuthor, id: userId };
       
       // Optimistic UI update
-      setPosts(prev => [...prev, { ...inserted, post_replies: [] }] as Post[]);
+      setPosts(prev => [...prev, { ...inserted, author: authorInfo, post_replies: [] }] as Post[]);
       
     } catch (error) {
       console.error("Error creating post:", error);
@@ -412,8 +422,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           content: content
         })
         .select(`
-          id, content, created_at, post_id, author_id,
-          author:author_id(id, full_name, academy_name, avatar_url)
+          id, content, created_at, post_id, author_id
         `)
         .single();
         
@@ -426,11 +435,22 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         return;
       }
       
+      // Fetch author information separately
+      const { data: authorData } = await supabase
+        .from('academy_profiles')
+        .select('user_id, academy_name, admin_name')
+        .eq('user_id', userId)
+        .single();
+      
+      const authorInfo: Author = authorData
+        ? { id: authorData.user_id, academy_name: authorData.academy_name, admin_name: authorData.admin_name }
+        : { ...fallbackAuthor, id: userId };
+      
       // Optimistic UI update
       setPosts(prev =>
         prev.map(p =>
           p.id === postId
-            ? { ...p, post_replies: [...p.post_replies, rep] }
+            ? { ...p, post_replies: [...p.post_replies, { ...rep, author: authorInfo }] }
             : p
         ) as Post[]
       );

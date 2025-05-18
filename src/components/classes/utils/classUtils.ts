@@ -4,16 +4,14 @@ import { Author, Post, Reply, StudentProfile } from "@/types/class.types";
 // Helper function to create a default author when data is missing
 export const createDefaultAuthor = (authorId: string): Author => ({
   id: authorId,
-  email: "Anonymous",
-  avatar_url: undefined,
-  academy_name: undefined,
-  full_name: "Unknown"
+  academy_name: "Unknown",
+  admin_name: "Unknown"
 });
 
 // Helper function to get author name
 export const authorName = (author?: Author | null): string => {
   if (!author) return 'Anonymous';
-  return author.academy_name ?? author.full_name ?? author.email ?? 'Anonymous';
+  return author.admin_name ?? author.academy_name ?? 'Anonymous';
 };
 
 // Helper function to format date

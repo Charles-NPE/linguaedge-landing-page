@@ -1,3 +1,4 @@
+
 export interface StudentProfile {
   id: string;
   email?: string;
@@ -15,9 +16,8 @@ export interface Student {
 
 export interface Author {
   id: string;
-  avatar_url?: string | null;
-  academy_name?: string;
-  full_name?: string;
+  academy_name?: string | null;
+  admin_name?: string | null;
 }
 
 export interface Reply {
@@ -26,7 +26,7 @@ export interface Reply {
   content: string;
   created_at: string;
   post_id?: string;
-  author: Author; // Removed | null
+  author: Author;
 }
 
 export interface Post {
@@ -35,7 +35,7 @@ export interface Post {
   content: string;
   created_at: string;
   post_replies: Reply[];
-  author: Author; // Removed | null
+  author: Author;
 }
 
 export interface ClassRow {

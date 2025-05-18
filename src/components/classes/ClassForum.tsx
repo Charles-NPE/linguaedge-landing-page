@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -8,9 +9,8 @@ import ReplyBox from "./ReplyBox";
 
 export interface Author {
   id: string;
-  avatar_url?: string | null;
-  academy_name?: string;
-  full_name?: string;
+  academy_name?: string | null;
+  admin_name?: string | null;
 }
 
 export interface Reply {
@@ -45,7 +45,7 @@ interface ClassForumProps {
 
 // Helper function to get author name
 const authorName = (a?: Author | null) =>
-  a?.full_name?.trim() ||
+  a?.admin_name?.trim() ||
   a?.academy_name?.trim() ||
   "Anonymous";
 
