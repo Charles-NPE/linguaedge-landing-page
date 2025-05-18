@@ -367,37 +367,39 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     if (!classRow || !content || !userId) return;
     
     try {
-      // Insert & immediately SELECT the full row with joined author
-      const { data, error } = await supabase
+      const { data: created, error } = await supabase
         .from('posts')
         .insert({
           class_id: classRow.id,
           author_id: userId,
           content: content
         })
-        .select(`
-          id, content, created_at, author_id,
-          author:profiles(id, email, avatar_url, academy_name, full_name)
-        `)
+        .select("id, content, created_at, author_id")
         .single();
         
-      if (error || !data) {
+      if (error || !created) {
         toast({
           title: "Error",
-          description: "Failed to create post: " + (error?.message || "Unknown error"),
+          description: `Failed to create post: ${error?.message}`,
           variant: "destructive",
         });
         return;
       }
       
-      const optimisticPost: Post = {
-        ...data,
-        author: ensureAuthor(data.author, data.author_id),
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, email, avatar_url, academy_name, full_name")
+        .eq("id", created.author_id)
+        .single();
+      
+      const newPost: Post = {
+        ...created,
+        author: ensureAuthor(profile, created.author_id),
         post_replies: [],
       };
       
       // Optimistic UI update
-      setPosts(prev => [...prev, optimisticPost]);
+      setPosts(prev => [...prev, newPost]);
       
     } catch (error) {
       console.error("Error creating post:", error);
@@ -413,38 +415,41 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     if (!content || !userId) return;
     
     try {
-      const { data, error } = await supabase
+      const { data: created, error } = await supabase
         .from('post_replies')
         .insert({
           post_id: postId,
           author_id: userId,
           content: content
         })
-        .select(`
-          id, content, created_at, author_id, post_id,
-          author:profiles(id, email, avatar_url, academy_name, full_name)
-        `)
+        .select("id, content, created_at, author_id, post_id")
         .single();
         
-      if (error || !data) {
+      if (error || !created) {
         toast({
           title: "Error",
-          description: "Failed to submit reply: " + (error?.message || "Unknown error"),
+          description: `Failed to submit reply: ${error?.message}`,
           variant: "destructive",
         });
         return;
       }
       
-      const optimisticReply: Reply = {
-        ...data,
-        author: ensureAuthor(data.author, data.author_id),
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, email, avatar_url, academy_name, full_name")
+        .eq("id", created.author_id)
+        .single();
+      
+      const newReply: Reply = {
+        ...created,
+        author: ensureAuthor(profile, created.author_id),
       };
       
       // Optimistic UI update
       setPosts(prev =>
         prev.map(p =>
           p.id === postId
-            ? { ...p, post_replies: [...p.post_replies, optimisticReply] }
+            ? { ...p, post_replies: [...p.post_replies, newReply] }
             : p
         )
       );
