@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toastShim";
 import { ClassRow, Student, Post, Author, Reply } from "@/types/class.types";
 import { createDefaultAuthor, processStudentProfile } from "../utils/classUtils";
+import { POST_SELECT } from "../utils/postSelect";
 
 /** Accept anything returned by Supabase and coerce it into `Author` */
 const ensureAuthor = (raw: unknown, id: string): Author => {
@@ -159,19 +159,10 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     }
   };
 
-  const getPostsSelectString = () => `
-    id, 
-    content, 
-    created_at, 
-    author_id,
-    author:academy_profiles!author_id(id:user_id, academy_name, admin_name),
-    post_replies(id, author_id, content, created_at, post_id, author:academy_profiles!author_id(id:user_id, academy_name, admin_name))
-  `;
-
   const fetchPosts = async (classId: string) => {
     const { data: postsData, error: postsError } = await supabase
       .from('posts')
-      .select(getPostsSelectString())
+      .select(POST_SELECT)
       .eq('class_id', classId)
       .order('created_at', { ascending: true });
       
@@ -179,24 +170,8 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       console.error("Error fetching posts:", postsError);
       return;
     } else if (postsData) {
-      // Process posts and replies with proper author information
-      const processedPosts: Post[] = postsData.map(post => {
-        return {
-          ...post,
-          author: (post.author && 'id' in post.author)
-            ? (post.author as Author)
-            : { ...fallbackAuthor, id: post.author_id },
-
-          post_replies: post.post_replies.map(reply => ({
-            ...reply,
-            author: (reply.author && 'id' in reply.author)
-              ? (reply.author as Author)
-              : { ...fallbackAuthor, id: reply.author_id },
-          })),
-        };
-      });
-      
-      setPosts(processedPosts);
+      // Process and set posts data directly
+      setPosts(postsData as Post[]);
     }
   };
 
@@ -221,24 +196,18 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         table: 'posts',
         filter: `class_id=eq.${classId}`
       }, async (payload) => {
-        const newPost = payload.new as Post;
+        const newPostId = payload.new.id;
         
-        // Fetch the author information for the new post
-        const { data: dbAuthor } = await supabase
-          .from('academy_profiles')
-          .select('user_id, academy_name, admin_name')
-          .eq('user_id', newPost.author_id)
+        // Fetch the complete post with author information
+        const { data: postData } = await supabase
+          .from('posts')
+          .select(POST_SELECT)
+          .eq('id', newPostId)
           .single();
-
-        const safeAuthor: Author = 
-          dbAuthor && 'user_id' in dbAuthor
-            ? { id: dbAuthor.user_id, academy_name: dbAuthor.academy_name, admin_name: dbAuthor.admin_name }
-            : { ...fallbackAuthor, id: newPost.author_id };
-
-        setPosts(prev => [
-          ...prev, 
-          { ...newPost, author: safeAuthor, post_replies: [] }
-        ] as Post[]);
+          
+        if (postData) {
+          setPosts(prev => [...prev, postData as Post]);
+        }
       })
       // Listen for new replies
       .on('postgres_changes', {
@@ -246,30 +215,23 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         schema: 'public',
         table: 'post_replies'
       }, async (payload) => {
-        const newReply = payload.new as Reply;
+        const newReply = payload.new as any;
         
         // Only process if this reply belongs to one of our posts
         if (!posts.some(p => p.id === newReply.post_id)) return;
         
-        // Fetch the author information for the new reply
-        const { data: dbAuthor } = await supabase
-          .from('academy_profiles')
-          .select('user_id, academy_name, admin_name')
-          .eq('user_id', newReply.author_id)
+        // Fetch the complete post with the new reply
+        const { data: postData } = await supabase
+          .from('posts')
+          .select(POST_SELECT)
+          .eq('id', newReply.post_id)
           .single();
           
-        const safeAuthor: Author =
-          dbAuthor && 'user_id' in dbAuthor
-            ? { id: dbAuthor.user_id, academy_name: dbAuthor.academy_name, admin_name: dbAuthor.admin_name }
-            : { ...fallbackAuthor, id: newReply.author_id };
-        
-        setPosts(prev =>
-          prev.map(p =>
-            p.id === newReply.post_id
-              ? { ...p, post_replies: [...p.post_replies, { ...newReply, author: safeAuthor }] }
-              : p
-          ) as Post[]
-        );
+        if (postData) {
+          setPosts(prev => 
+            prev.map(p => p.id === newReply.post_id ? postData as Post : p)
+          );
+        }
       })
       // Listen for deleted posts
       .on('postgres_changes', {
@@ -278,19 +240,37 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         table: 'posts'
       }, (payload) => {
         const deletedPostId = payload.old.id;
-        setPosts(prev => prev.filter(post => post.id !== deletedPostId) as Post[]);
+        setPosts(prev => prev.filter(post => post.id !== deletedPostId));
       })
       // Listen for deleted replies
       .on('postgres_changes', {
         event: 'DELETE',
         schema: 'public',
         table: 'post_replies'
-      }, (payload) => {
+      }, async (payload) => {
         const deletedReplyId = payload.old.id;
-        setPosts(prev => prev.map(post => ({
-          ...post,
-          post_replies: post.post_replies.filter(reply => reply.id !== deletedReplyId)
-        })) as Post[]);
+        const postId = payload.old.post_id;
+        
+        // Fetch updated post after reply deletion
+        if (postId) {
+          const { data: postData } = await supabase
+            .from('posts')
+            .select(POST_SELECT)
+            .eq('id', postId)
+            .single();
+            
+          if (postData) {
+            setPosts(prev => 
+              prev.map(p => p.id === postId ? postData as Post : p)
+            );
+          } else {
+            // Fallback: remove the reply directly
+            setPosts(prev => prev.map(post => ({
+              ...post,
+              post_replies: post.post_replies.filter(reply => reply.id !== deletedReplyId)
+            })));
+          }
+        }
       })
       .subscribe();
   };
@@ -367,6 +347,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     if (!classRow || !content || !userId) return;
     
     try {
+      // Insert the post
       const { data: inserted, error } = await supabase
         .from('posts')
         .insert({
@@ -374,7 +355,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           author_id: userId,
           content: content
         })
-        .select(getPostsSelectString())
+        .select('id')
         .single();
         
       if (error) {
@@ -386,19 +367,18 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         return;
       }
 
-      // Process the returned data to fit our Post interface
+      // Fetch the complete post with author information
       if (inserted) {
-        const processedPost: Post = {
-          ...inserted,
-          author: inserted.author || { ...fallbackAuthor, id: userId },
-          post_replies: (inserted.post_replies || []).map(reply => ({
-            ...reply,
-            author: reply.author || { ...fallbackAuthor, id: reply.author_id }
-          }))
-        };
-        
-        // Optimistic UI update
-        setPosts(prev => [...prev, processedPost]);
+        const { data: postData } = await supabase
+          .from('posts')
+          .select(POST_SELECT)
+          .eq('id', inserted.id)
+          .single();
+          
+        if (postData) {
+          // Update posts array with the new post
+          setPosts(prev => [...prev, postData as Post]);
+        }
       }
       
     } catch (error) {
@@ -415,6 +395,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
     if (!content || !userId) return;
     
     try {
+      // Insert the reply
       const { data: inserted, error } = await supabase
         .from('post_replies')
         .insert({
@@ -422,14 +403,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
           author_id: userId,
           content: content
         })
-        .select(`
-          id, 
-          content, 
-          created_at, 
-          post_id, 
-          author_id,
-          author:academy_profiles!author_id(id:user_id, academy_name, admin_name)
-        `)
+        .select('id')
         .single();
         
       if (error) {
@@ -441,21 +415,20 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         return;
       }
       
-      // Process the returned data
+      // Fetch the updated post with the new reply
       if (inserted) {
-        const processedReply: Reply = {
-          ...inserted,
-          author: inserted.author || { ...fallbackAuthor, id: userId }
-        };
-        
-        // Optimistic UI update
-        setPosts(prev =>
-          prev.map(p =>
-            p.id === postId
-              ? { ...p, post_replies: [...p.post_replies, processedReply] }
-              : p
-          ) as Post[]
-        );
+        const { data: postData } = await supabase
+          .from('posts')
+          .select(POST_SELECT)
+          .eq('id', postId)
+          .single();
+          
+        if (postData) {
+          // Update posts array with the updated post
+          setPosts(prev => 
+            prev.map(p => p.id === postId ? postData as Post : p)
+          );
+        }
       }
       
     } catch (error) {
@@ -513,11 +486,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
         return;
       }
       
-      // Optimistic UI update
-      setPosts(prev => prev.map(post => ({
-        ...post,
-        post_replies: post.post_replies.filter(reply => reply.id !== replyId)
-      })));
+      // Update will happen through realtime subscription
       
     } catch (error) {
       console.error("Error deleting reply:", error);
@@ -540,12 +509,29 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       return;
     }
 
-    setPosts(p => p.map(x => x.id === postId ? { ...x, ...patch } : x) as Post[]);
+    // Fetch the updated post
+    const { data: postData } = await supabase
+      .from('posts')
+      .select(POST_SELECT)
+      .eq('id', postId)
+      .single();
+      
+    if (postData) {
+      setPosts(p => p.map(x => x.id === postId ? postData as Post : x));
+    }
   };
 
   const updateReply = async (replyId: string, content: string): Promise<void> => {
     if (!content.trim()) return;
     const patch = { content: content.trim() };
+    
+    // First find which post this reply belongs to
+    const postWithReply = posts.find(post => 
+      post.post_replies.some(reply => reply.id === replyId)
+    );
+    
+    if (!postWithReply) return;
+    
     const { error } = await supabase.from("post_replies")
       .update(patch).eq("id", replyId).select("content").single();
     if (error) {
@@ -553,12 +539,18 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
       return;
     }
 
-    setPosts(p => p.map(post => ({
-      ...post,
-      post_replies: post.post_replies.map(r =>
-        r.id === replyId ? { ...r, ...patch } : r
-      )
-    })) as Post[]);
+    // Fetch the updated post with the edited reply
+    const { data: postData } = await supabase
+      .from('posts')
+      .select(POST_SELECT)
+      .eq('id', postWithReply.id)
+      .single();
+      
+    if (postData) {
+      setPosts(p => p.map(post => 
+        post.id === postWithReply.id ? postData as Post : post
+      ));
+    }
   };
 
   return {
