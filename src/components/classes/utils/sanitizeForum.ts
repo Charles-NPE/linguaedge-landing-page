@@ -11,16 +11,16 @@ const fallbackAuthor: Author = {
 /* ---------- helpers ---------- */
 
 export function sanitizeAuthor(raw: unknown, id: string): Author {
-  if (!raw || isQueryError(raw) || typeof raw !== "object") {
+  if (!raw || isQueryError(raw) || typeof raw !== "object" || !("user_id" in raw)) {
     return { ...fallbackAuthor, id };
   }
   
-  // Map the author data from profiles
+  // Map the user_id from academy_profiles to id in our Author type
   const author = raw as any;
   return {
-    id: id,
-    admin_name: author.role === 'teacher' ? 'Teacher' : 'Student',
-    academy_name: `User ${id.substring(0, 6)}`,
+    id: author.user_id || id,
+    admin_name: author.admin_name,
+    academy_name: author.academy_name,
   };
 }
 

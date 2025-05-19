@@ -1,15 +1,17 @@
 
 export const POST_SELECT = `
   id, content, created_at, author_id,
-  author:profiles (
-    id,
-    role
+  author:academy_profiles (
+    user_id,
+    admin_name,
+    academy_name
   ),
   post_replies (
     id, content, created_at, author_id,
-    author:profiles (
-      id,
-      role
+    author:academy_profiles (
+      user_id,
+      admin_name,
+      academy_name
     )
   )
 `;

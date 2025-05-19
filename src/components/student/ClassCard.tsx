@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen } from "lucide-react";
+import { BookOpen, MessageSquare } from "lucide-react";
 
 interface ClassCardProps {
   classId: string;
@@ -31,6 +31,14 @@ export function ClassCard({ classId, name, code, teacherName }: ClassCardProps) 
           >
             <BookOpen className="mr-2 h-4 w-4" />
             Open Class
+          </Button>
+          <Button 
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/student/classes/${classId}/forum`)}
+          >
+            <MessageSquare className="h-4 w-4 mr-1" />
+            Forum
           </Button>
         </div>
       </CardContent>
