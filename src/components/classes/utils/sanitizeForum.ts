@@ -19,8 +19,8 @@ export function sanitizeAuthor(raw: unknown, id: string): Author {
   const author = raw as any;
   return {
     id: id,
-    admin_name: author.email?.split('@')[0] || "Unknown",
-    academy_name: author.email || "Unknown",
+    admin_name: author.role === 'teacher' ? 'Teacher' : 'Student',
+    academy_name: `User ${id.substring(0, 6)}`,
   };
 }
 
