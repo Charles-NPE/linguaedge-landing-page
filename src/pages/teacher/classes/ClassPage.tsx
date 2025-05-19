@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StudentsList } from "@/components/classes/StudentsList";
-import { ClassHeader } from "@/components/classes/ClassHeader";
+import ClassHeader from "@/components/classes/ClassHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { DeleteClassDialog } from "@/components/classes/DeleteClassDialog";
-import { InviteStudentDialog } from "@/components/classes/InviteStudentDialog";
+import DeleteClassDialog from "@/components/classes/DeleteClassDialog";
+import InviteStudentDialog from "@/components/classes/InviteStudentDialog";
 
 export default function ClassPage() {
   const { id } = useParams<{ id: string }>();
