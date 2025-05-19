@@ -13,6 +13,12 @@ import {
 
 interface StudentsListProps {
   students: any[];
+  /** present when page is rendered by a teacher */
+  isTeacher?: boolean;
+  /** click handler supplied by page (optional) */
+  onInviteClick?: () => void;
+  /** removal handler supplied by page (optional) */
+  onRemoveStudent?: (studentId: string) => Promise<void>;
 }
 
 export function StudentsList({ students }: StudentsListProps) {
