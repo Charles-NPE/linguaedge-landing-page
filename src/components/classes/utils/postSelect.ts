@@ -4,7 +4,7 @@ export const POST_SELECT = `
   content,
   created_at,
   author_id,
-  author:profiles!posts_author_fk (          -- 👈 usa FK explícito
+  author:profiles!posts_author_fk (
     id,
     full_name
   ),
@@ -13,7 +13,7 @@ export const POST_SELECT = `
     content,
     created_at,
     author_id,
-    author:profiles!post_replies_author_fk (  -- idem para replies
+    author:profiles!post_replies_author_fk (
       id,
       full_name
     )
