@@ -17,8 +17,8 @@ export interface Student {
 
 export interface Author {
   id: string;
-  full_name?: string | null;
-  role?: string | null;
+  full_name: string;   // nombre a mostrar (Teacher, Charles, Unknown…)
+  role: "teacher" | "student" | null;
 }
 
 export interface Reply {

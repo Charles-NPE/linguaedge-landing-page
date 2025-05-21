@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +12,7 @@ import { sanitizePost } from "../utils/sanitizeForum";
 const ensureAuthor = (raw: unknown, id: string): Author => {
   return raw && typeof raw === "object" && "id" in raw
     ? (raw as Author)
-    : { ...fallbackAuthor, id };
+    : createDefaultAuthor(id);
 };
 
 interface UseClassDataProps {
@@ -25,8 +24,8 @@ interface UseClassDataProps {
 // Define fallback author to use when author data is null
 const fallbackAuthor: Author = {
   id: "unknown",
-  academy_name: "Unknown",
-  admin_name: "Unknown"
+  full_name: "Unknown",
+  role: null
 };
 
 export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) => {

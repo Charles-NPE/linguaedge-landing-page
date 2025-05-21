@@ -4,14 +4,14 @@ import { Author, Post, Reply, StudentProfile } from "@/types/class.types";
 // Helper function to create a default author when data is missing
 export const createDefaultAuthor = (authorId: string): Author => ({
   id: authorId,
-  academy_name: "Unknown",
-  admin_name: "Unknown"
+  full_name: "Unknown",
+  role: null
 });
 
 // Helper function to get author name
 export const authorName = (author?: Author | null): string => {
   if (!author) return 'Anonymous';
-  return author.admin_name?.trim() ?? author.academy_name?.trim() ?? 'Anonymous';
+  return author.full_name || 'Unknown';
 };
 
 // Helper function to format date
@@ -43,4 +43,3 @@ export const processStudentProfile = (student: any): StudentProfile | null => {
   
   return processedProfile;
 };
-
