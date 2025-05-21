@@ -31,8 +31,16 @@ export const processStudentProfile = (student: any): StudentProfile | null => {
   // Handle the case where profile is a SelectQueryError
   let processedProfile: StudentProfile | null = null;
   if (student.profiles && typeof student.profiles === 'object' && 'id' in student.profiles) {
-    processedProfile = student.profiles as StudentProfile;
+    const p = student.profiles;
+    processedProfile = {
+      id: p.id || student.student_id,
+      full_name: p.full_name ?? null,
+      phone: p.phone ?? null,
+      email: p.email,
+      avatar_url: p.avatar_url
+    };
   }
   
   return processedProfile;
 };
+
