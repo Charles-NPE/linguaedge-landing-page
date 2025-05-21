@@ -68,19 +68,21 @@ const ClassDetail = () => {
       
       <Tabs defaultValue={defaultTab} className="mt-4">
         <TabsList>
-          <TabsTrigger value="students">Students</TabsTrigger>
+          {isTeacher && <TabsTrigger value="students">Students</TabsTrigger>}
           <TabsTrigger value="forum">Forum</TabsTrigger>
         </TabsList>
 
-        {/* Students tab */}
-        <TabsContent value="students">
-          <StudentsList 
-            students={students} 
-            isTeacher={profile?.role === 'teacher'} 
-            onInviteClick={() => setIsInviteDialogOpen(true)} 
-            onRemoveStudent={removeStudent} 
-          />
-        </TabsContent>
+        {/* Students tab - only visible to teachers */}
+        {isTeacher && (
+          <TabsContent value="students">
+            <StudentsList 
+              students={students} 
+              isTeacher={true} 
+              onInviteClick={() => setIsInviteDialogOpen(true)} 
+              onRemoveStudent={removeStudent} 
+            />
+          </TabsContent>
+        )}
 
         {/* Forum tab */}
         <TabsContent value="forum">
