@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChevronDown, CreditCard, LogOut, Settings, User } from "lucide-react";
 
 const UserDropdown: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isTeacher } = useAuth();
 
   if (!user) return null;
 
@@ -51,12 +51,14 @@ const UserDropdown: React.FC = () => {
             <span>Settings</span>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer" asChild>
-          <Link to="/billing" className="flex w-full items-center">
-            <CreditCard className="mr-2 h-4 w-4" />
-            <span>Billing</span>
-          </Link>
-        </DropdownMenuItem>
+        {isTeacher && (
+          <DropdownMenuItem className="cursor-pointer" asChild>
+            <Link to="/billing" className="flex w-full items-center">
+              <CreditCard className="mr-2 h-4 w-4" />
+              <span>Billing</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer text-red-500 focus:text-red-500">
           <LogOut className="mr-2 h-4 w-4" />
