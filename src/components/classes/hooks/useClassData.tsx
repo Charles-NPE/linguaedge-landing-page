@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -130,7 +129,7 @@ export const useClassData = ({ classId, userId, userRole }: UseClassDataProps) =
   const fetchStudents = async (classId: string) => {
     const { data: studentsData, error: studentsError } = await supabase
       .from('class_students')
-      .select('student_id, profiles:student_id(id)')
+      .select('student_id, profiles:student_id(id, full_name, phone)')
       .eq('class_id', classId);
       
     if (studentsError) {
