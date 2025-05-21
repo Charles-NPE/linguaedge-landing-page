@@ -1,3 +1,4 @@
+
 export interface StudentProfile {
   id: string;
   avatar_url?: string;
@@ -16,8 +17,8 @@ export interface Student {
 
 export interface Author {
   id: string;
-  academy_name?: string | null;
-  admin_name?: string | null;
+  full_name?: string | null;
+  role?: string | null;
 }
 
 export interface Reply {

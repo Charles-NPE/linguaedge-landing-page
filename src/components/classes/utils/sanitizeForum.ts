@@ -4,8 +4,8 @@ import { isQueryError } from "./queryUtils";
 
 const fallbackAuthor: Author = {
   id: "unknown",
-  admin_name: "Unknown",
-  academy_name: "Unknown",
+  full_name: "Unknown",
+  role: null,
 };
 
 /* ---------- helpers ---------- */
@@ -17,10 +17,19 @@ export function sanitizeAuthor(raw: unknown, id: string): Author {
   
   // Map the author data from profiles
   const a = raw as any;
+  
+  // Display name logic:
+  const displayName = 
+    a.full_name && a.full_name.trim() !== ""
+      ? a.full_name                      // Use full_name if it exists
+      : a.role === "teacher"
+          ? "Teacher"                    // Fallback for teachers
+          : "Unknown";                   // General fallback
+  
   return {
     id: id,
-    admin_name: a.full_name ?? "Unknown",
-    academy_name: a.full_name ?? "Unknown",
+    full_name: displayName,
+    role: a.role ?? null,
   };
 }
 

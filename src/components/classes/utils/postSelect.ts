@@ -6,7 +6,8 @@ export const POST_SELECT = `
   author_id,
   author:profiles!posts_author_fk (
     id,
-    full_name
+    full_name,
+    role
   ),
   post_replies (
     id,
@@ -15,7 +16,8 @@ export const POST_SELECT = `
     author_id,
     author:profiles!post_replies_author_fk (
       id,
-      full_name
+      full_name,
+      role
     )
   )
 `;
