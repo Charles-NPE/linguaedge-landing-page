@@ -16,11 +16,11 @@ export function sanitizeAuthor(raw: unknown, id: string): Author {
   }
   
   // Map the author data from profiles
-  const author = raw as any;
+  const a = raw as any;
   return {
     id: id,
-    admin_name: author.role === 'teacher' ? 'Teacher' : 'Student',
-    academy_name: `User ${id.substring(0, 6)}`,
+    admin_name: a.full_name ?? "Unknown",
+    academy_name: a.full_name ?? "Unknown",
   };
 }
 
