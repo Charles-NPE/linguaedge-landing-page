@@ -1,9 +1,10 @@
-
 export interface StudentProfile {
   id: string;
   avatar_url?: string;
   academy_name?: string;
-  full_name?: string;
+  full_name?: string | null;
+  phone?: string | null;
+  email?: string;
 }
 
 export interface Student {
