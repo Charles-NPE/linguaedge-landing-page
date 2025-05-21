@@ -188,8 +188,8 @@ export type Database = {
             foreignKeyName: "post_replies_author_fk"
             columns: ["author_id"]
             isOneToOne: false
-            referencedRelation: "academy_profiles"
-            referencedColumns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "post_replies_author_id_fkey"
@@ -234,8 +234,8 @@ export type Database = {
             foreignKeyName: "posts_author_fk"
             columns: ["author_id"]
             isOneToOne: false
-            referencedRelation: "academy_profiles"
-            referencedColumns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "posts_author_id_fkey"
