@@ -14,14 +14,12 @@ interface InviteStudentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onInvite: (email: string) => Promise<void>;
-  classId?: string;
 }
 
 const InviteStudentDialog: React.FC<InviteStudentDialogProps> = ({
   open,
   onOpenChange,
   onInvite,
-  classId,
 }) => {
   const [inviteEmail, setInviteEmail] = useState("");
 

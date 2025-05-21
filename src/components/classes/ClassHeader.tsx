@@ -12,25 +12,17 @@ import {
 import { ClassRow } from "@/types/class.types";
 
 interface ClassHeaderProps {
-  /** EITHER pass one object ... */
-  classRow?: ClassRow;
-  /** ... OR pass the individual pieces below */
-  name?: string;
-  code?: string;
-  studentCount?: number;
+  classRow: ClassRow;
   userRole?: string;
-  isTeacher?: boolean;
-  onDeleteClick?: () => void;
+  isTeacher: boolean;
+  onDeleteClick: () => void;
 }
 
 const ClassHeader: React.FC<ClassHeaderProps> = ({ 
   classRow, 
   userRole, 
   isTeacher, 
-  onDeleteClick,
-  name,
-  code,
-  studentCount
+  onDeleteClick 
 }) => {
   return (
     <div className="flex justify-between items-center mb-4">
@@ -43,7 +35,7 @@ const ClassHeader: React.FC<ClassHeaderProps> = ({
         </Link>
         <div>
           <span className="text-sm font-medium text-muted-foreground mr-2">Class Code:</span>
-          <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-sm">{classRow?.code || code}</span>
+          <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-sm">{classRow.code}</span>
         </div>
       </div>
       

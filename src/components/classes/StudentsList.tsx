@@ -1,83 +1,110 @@
 
 import React from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MoreHorizontal, UserIcon } from "lucide-react";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+import { Trash2 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-interface StudentsListProps {
-  students: any[];
-  /** present when page is rendered by a teacher */
-  isTeacher?: boolean;
-  /** click handler supplied by page (optional) */
-  onInviteClick?: () => void;
-  /** removal handler supplied by page (optional) */
-  onRemoveStudent?: (studentId: string) => Promise<void>;
+interface StudentProfile {
+  id: string;
+  email?: string;
+  avatar_url?: string;
 }
 
-export function StudentsList({ students }: StudentsListProps) {
+export interface Student {
+  student_id?: string;
+  status?: string;
+  profiles?: StudentProfile | null;
+  // For handling invited students who aren't registered yet
+  invited_email?: string;
+}
+
+interface StudentsListProps {
+  students: Student[];
+  isTeacher: boolean;
+  onInviteClick: () => void;
+  onRemoveStudent: (studentId: string) => void;
+}
+
+const StudentsList: React.FC<StudentsListProps> = ({
+  students,
+  isTeacher,
+  onInviteClick,
+  onRemoveStudent,
+}) => {
   return (
-    <div className="rounded-md border">
+    <>
+      {isTeacher && (
+        <Button className="mb-4" onClick={onInviteClick}>
+          Invite Student
+        </Button>
+      )}
+
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Student</TableHead>
+            <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
+            {isTeacher && <TableHead className="w-[100px]">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {students.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={3} className="text-center py-8">
-                No students found. Invite students to join this class.
+              <TableCell colSpan={isTeacher ? 4 : 3} className="text-center text-muted-foreground py-8">
+                No students enrolled yet
               </TableCell>
             </TableRow>
           ) : (
-            students.map((student, index) => (
-              <TableRow key={index}>
-                <TableCell className="flex items-center gap-3">
+            students.map((s) => (
+              <TableRow key={s.student_id || s.invited_email || 'pending'}>
+                <TableCell className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                      <UserIcon className="h-4 w-4" />
+                      {s.profiles && s.profiles.email 
+                        ? s.profiles.email.charAt(0).toUpperCase()
+                        : s.invited_email 
+                          ? s.invited_email.charAt(0).toUpperCase() 
+                          : 'S'}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <div className="font-medium">Student {student.student_id.substring(0, 6)}</div>
-                    <div className="text-sm text-gray-500">ID: {student.student_id.substring(0, 8)}...</div>
-                  </div>
+                  {s.profiles ? s.profiles.email : s.invited_email || 'Pending Invitation'}
                 </TableCell>
+                <TableCell>{s.profiles ? s.profiles.email : s.invited_email || 'Pending'}</TableCell>
                 <TableCell>
-                  <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
-                    Active
-                  </span>
+                  {s.status === 'invited' ? 
+                    <span className="text-amber-600 dark:text-amber-500">Invited</span> : 
+                    <span className="text-green-600 dark:text-green-500">Enrolled</span>
+                  }
                 </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Action</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View Profile</DropdownMenuItem>
-                      <DropdownMenuItem>Send Message</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">Remove from Class</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                {isTeacher && (
+                  <TableCell>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      onClick={() => s.student_id ? onRemoveStudent(s.student_id) : null}
+                      aria-label="Remove student"
+                      disabled={!s.student_id}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))
           )}
         </TableBody>
       </Table>
-    </div>
+    </>
   );
-}
+};
+
+export default StudentsList;

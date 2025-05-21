@@ -14,20 +14,16 @@ interface DeleteClassDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirmDelete: () => Promise<void>;
-  classId?: string;
-  className?: string; // Adding className to handle the className prop passed in ClassPage.tsx
 }
 
 const DeleteClassDialog: React.FC<DeleteClassDialogProps> = ({
   open,
   onOpenChange,
   onConfirmDelete,
-  classId,
-  className,
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={className}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete Class</DialogTitle>
           <DialogDescription>

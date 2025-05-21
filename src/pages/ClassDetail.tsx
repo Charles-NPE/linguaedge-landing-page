@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // Import the components and hooks
 import { useClassData } from "@/components/classes/hooks/useClassData";
 import ClassHeader from "@/components/classes/ClassHeader";
-import { StudentsList } from "@/components/classes/StudentsList";
+import StudentsList from "@/components/classes/StudentsList";
 import ClassForum from "@/components/classes/ClassForum";
 import InviteStudentDialog from "@/components/classes/InviteStudentDialog";
 import DeleteClassDialog from "@/components/classes/DeleteClassDialog";
