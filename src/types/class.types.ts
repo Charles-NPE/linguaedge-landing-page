@@ -1,4 +1,5 @@
 
+
 export interface StudentProfile {
   id: string;
   avatar_url?: string;
