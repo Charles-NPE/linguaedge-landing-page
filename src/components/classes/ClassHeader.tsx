@@ -27,7 +27,7 @@ const ClassHeader: React.FC<ClassHeaderProps> = ({
   return (
     <div className="flex justify-between items-center mb-4">
       <div className="flex items-center space-x-4">
-        <Link to={userRole === "teacher" ? "/teacher/classes" : "/student/dashboard"}>
+        <Link to={userRole === "teacher" ? "/teacher/classes" : "/student"}>
           <Button variant="ghost" size="sm" className="flex items-center gap-2">
             <ArrowLeft size={16} />
             Back to Dashboard
