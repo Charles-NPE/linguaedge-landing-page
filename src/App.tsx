@@ -20,6 +20,7 @@ import TeacherRegisterPage from "./pages/TeacherRegisterPage";
 import StudentRegisterPage from "./pages/StudentRegisterPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
+import StudentAssignments from "./pages/StudentAssignments";
 import RoleRoute from "./components/RoleRoute";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -85,6 +86,16 @@ const AppRoutes = () => (
       element={
         <RoleRoute allowed={['student']}>
           <StudentDashboard />
+        </RoleRoute>
+      } 
+    />
+    
+    {/* Student Assignments Route */}
+    <Route 
+      path="/student/assignments" 
+      element={
+        <RoleRoute allowed={['student']}>
+          <StudentAssignments />
         </RoleRoute>
       } 
     />

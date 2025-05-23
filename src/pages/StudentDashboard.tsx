@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import FeatureCard from "@/components/dashboards/FeatureCard";
 import { PenTool, FileCheck, LineChart, BookOpen } from "lucide-react";
@@ -10,19 +10,20 @@ import { Button } from "@/components/ui/button";
 import { JoinClassDialog } from "@/components/student";
 import { joinClass } from "@/hooks/useJoinClass";
 import { toast } from "@/lib/toastShim";
+
 interface ClassInfo {
   id: string;
   name: string;
   code: string;
 }
+
 const StudentDashboard: React.FC = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
+
   const fetchClasses = async () => {
     if (!user) return;
     try {
@@ -31,14 +32,17 @@ const StudentDashboard: React.FC = () => {
         data,
         error
       } = await supabase.from('class_students').select('class_id, classes(id, name, code)').eq('student_id', user.id);
+
       if (error) throw error;
+
       if (data) {
-        const classesData = data.filter(item => item.classes) // Filter out any null values
-        .map(item => ({
-          id: item.classes.id,
-          name: item.classes.name,
-          code: item.classes.code
-        }));
+        const classesData = data
+          .filter(item => item.classes) // Filter out any null values
+          .map(item => ({
+            id: item.classes.id,
+            name: item.classes.name,
+            code: item.classes.code
+          }));
         setClasses(classesData);
       }
     } catch (error) {
@@ -47,9 +51,11 @@ const StudentDashboard: React.FC = () => {
       setIsLoading(false);
     }
   };
+
   useEffect(() => {
     fetchClasses();
   }, [user]);
+
   const handleJoinClass = async (code: string) => {
     if (!user) return;
     try {
@@ -68,7 +74,9 @@ const StudentDashboard: React.FC = () => {
       });
     }
   };
-  return <DashboardLayout title="Student Dashboard">
+
+  return (
+    <DashboardLayout title="Student Dashboard">
       <div className="mb-8">
         <h2 className="text-lg text-slate-900 dark:text-white">
           Welcome back, {user?.email?.split('@')[0] || 'Student'}
@@ -84,15 +92,21 @@ const StudentDashboard: React.FC = () => {
           </Button>
         </div>
         
-        {isLoading ? <div className="flex justify-center py-8">
+        {isLoading ? (
+          <div className="flex justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          </div> : classes.length === 0 ? <Card>
+          </div>
+        ) : classes.length === 0 ? (
+          <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-muted-foreground">You're not enrolled in any classes yet.</p>
               <p className="text-sm mt-1 mb-4">Ask your teacher for a class code to join.</p>
             </CardContent>
-          </Card> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {classes.map(cls => <Card key={cls.id} className="overflow-hidden">
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {classes.map(cls => (
+              <Card key={cls.id} className="overflow-hidden">
                 <CardHeader className="pb-2">
                   <CardTitle>{cls.name}</CardTitle>
                   <CardDescription>Class Code: {cls.code}</CardDescription>
@@ -103,27 +117,46 @@ const StudentDashboard: React.FC = () => {
                       <BookOpen className="mr-2 h-4 w-4" />
                       Open Class
                     </Button>
-                    
                   </div>
                 </CardContent>
-              </Card>)}
-          </div>}
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <h3 className="text-lg font-medium mb-4">Tools</h3>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Link to="/student/assignments" className="block">
+          <FeatureCard 
+            title="Submit Essay" 
+            description="Write and submit a new essay for AI and teacher feedback." 
+            icon={PenTool} 
+          />
+        </Link>
         <div className="card">
-          <FeatureCard title="Submit Essay" description="Write and submit a new essay for AI and teacher feedback." icon={PenTool} />
+          <FeatureCard 
+            title="My Corrections" 
+            description="Review feedback and corrections on your submitted essays." 
+            icon={FileCheck} 
+          />
         </div>
         <div className="card">
-          <FeatureCard title="My Corrections" description="Review feedback and corrections on your submitted essays." icon={FileCheck} />
-        </div>
-        <div className="card">
-          <FeatureCard title="Progress" description="Track your improvement over time and identify areas to focus on." icon={LineChart} />
+          <FeatureCard 
+            title="Progress" 
+            description="Track your improvement over time and identify areas to focus on." 
+            icon={LineChart} 
+          />
         </div>
       </div>
 
-      <JoinClassDialog isOpen={showJoinDialog} onOpenChange={setShowJoinDialog} onJoin={handleJoinClass} />
-    </DashboardLayout>;
+      <JoinClassDialog 
+        isOpen={showJoinDialog} 
+        onOpenChange={setShowJoinDialog} 
+        onJoin={handleJoinClass} 
+      />
+    </DashboardLayout>
+  );
 };
+
 export default StudentDashboard;
