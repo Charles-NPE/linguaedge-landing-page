@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Navigate, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,13 +50,26 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
     return <Navigate to={redirectPath} replace />;
   }
 
-  // Redirect to pricing only if teacher doesn't have active or trialing subscription
-  if (
-    userRole === 'teacher' &&
-    profile?.stripe_status !== 'active' &&
-    profile?.stripe_status !== 'trialing'
-  ) {
-    return <Navigate to="/pricing?subscription=inactive" replace />;
+  // ───────────────────────────────
+  //  NO redirect until we have a status
+  // ───────────────────────────────
+  if (userRole === 'teacher') {
+    // If stripe_status is still undefined, keep loading
+    if (profile?.stripe_status === undefined) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      );
+    }
+
+    // Redirect only when status is neither active nor trialing
+    if (
+      profile.stripe_status !== 'active' &&
+      profile.stripe_status !== 'trialing'
+    ) {
+      return <Navigate to="/pricing?subscription=inactive" replace />;
+    }
   }
 
   // If there are children, render them, otherwise render an Outlet
