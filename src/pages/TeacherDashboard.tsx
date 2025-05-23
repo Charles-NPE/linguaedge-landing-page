@@ -1,13 +1,15 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import FeatureCard from "@/components/dashboards/FeatureCard";
+import AssignEssayModal from "@/components/assignments/AssignEssayModal";
 import { BookOpen, BarChart, Users, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const TeacherDashboard: React.FC = () => {
   const {
@@ -17,6 +19,18 @@ const TeacherDashboard: React.FC = () => {
     checkSubscription
   } = useAuth();
   const navigate = useNavigate();
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [classes, setClasses] = useState<{id: string; name: string}[]>([]);
+
+  // Fetch teacher's classes
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("classes")
+      .select("id, name")
+      .eq("teacher_id", user.id)
+      .then(({ data }) => setClasses(data ?? []));
+  }, [user]);
 
   useEffect(() => {
     // Check subscription when the dashboard loads
@@ -80,7 +94,7 @@ const TeacherDashboard: React.FC = () => {
             icon={Users} 
           />
         </Link>
-        <div className="card">
+        <div className="card cursor-pointer" onClick={() => setAssignModalOpen(true)}>
           <FeatureCard 
             title="Assign Essays" 
             description="Create new writing assignments for your students." 
@@ -95,6 +109,12 @@ const TeacherDashboard: React.FC = () => {
           />
         </div>
       </div>
+
+      <AssignEssayModal 
+        open={assignModalOpen} 
+        onOpenChange={setAssignModalOpen} 
+        classes={classes} 
+      />
     </DashboardLayout>;
 };
 

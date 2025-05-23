@@ -54,45 +54,69 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_targets: {
+        Row: {
+          assignment_id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          student_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          assignment_id: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          student_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          student_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_targets_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_targets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           class_id: string | null
           created_at: string | null
-          due_date: string | null
+          deadline: string | null
           id: string
-          instructions: string | null
-          remind_2d: boolean | null
-          remind_4d: boolean | null
-          remind_7d: boolean | null
-          student_id: string | null
+          instructions: string
           teacher_id: string | null
-          title: string | null
+          title: string
         }
         Insert: {
           class_id?: string | null
           created_at?: string | null
-          due_date?: string | null
+          deadline?: string | null
           id?: string
-          instructions?: string | null
-          remind_2d?: boolean | null
-          remind_4d?: boolean | null
-          remind_7d?: boolean | null
-          student_id?: string | null
+          instructions: string
           teacher_id?: string | null
-          title?: string | null
+          title: string
         }
         Update: {
           class_id?: string | null
           created_at?: string | null
-          due_date?: string | null
+          deadline?: string | null
           id?: string
-          instructions?: string | null
-          remind_2d?: boolean | null
-          remind_4d?: boolean | null
-          remind_7d?: boolean | null
-          student_id?: string | null
+          instructions?: string
           teacher_id?: string | null
-          title?: string | null
+          title?: string
         }
         Relationships: []
       }
@@ -407,6 +431,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      assignment_status: "pending" | "submitted" | "late"
       user_role: "teacher" | "student"
     }
     CompositeTypes: {
@@ -523,6 +548,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      assignment_status: ["pending", "submitted", "late"],
       user_role: ["teacher", "student"],
     },
   },
