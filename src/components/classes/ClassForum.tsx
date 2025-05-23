@@ -3,13 +3,11 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { formatDistanceToNowStrict } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
 import { Trash2, Pencil } from "lucide-react";
 import ReplyBox from "./ReplyBox";
+import RelativeTime from "@/components/common/RelativeTime";
 import { Post, Reply, Author } from "@/types/class.types";
 import { authorName } from "./utils/classUtils";
-import { useRelativeTime } from "@/hooks/useRelativeTime";
 
 interface ClassForumProps {
   posts: Post[];
@@ -51,7 +49,7 @@ const ClassForum: React.FC<ClassForumProps> = ({
               <div className="font-semibold">{authorName(p.author)}</div>
               <div className="flex items-center space-x-2">
                 <div className="text-xs text-muted-foreground">
-                  {useRelativeTime(p.created_at)}
+                  <RelativeTime date={p.created_at} />
                 </div>
                 {canDeleteItem(p.author_id) && onEditPost && (
                   <Button 
@@ -91,7 +89,7 @@ const ClassForum: React.FC<ClassForumProps> = ({
                           <span className="font-medium">{authorName(r.author)}</span>
                           <div className="flex items-center space-x-2">
                             <span className="text-xs text-muted-foreground">
-                              {useRelativeTime(r.created_at)}
+                              <RelativeTime date={r.created_at} />
                             </span>
                             {canDeleteItem(r.author_id) && onEditReply && (
                               <Button 
