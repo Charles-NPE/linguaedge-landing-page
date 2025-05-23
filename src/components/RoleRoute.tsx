@@ -20,12 +20,12 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
   const { user, isLoading, profile, isSubscriptionActive, checkSubscription } = useAuth();
   const navigate = useNavigate();
 
-  // Check subscription status when component mounts if access requires subscription
+  // Check subscription status when component mounts if user is a teacher
   useEffect(() => {
-    if (user && profile?.role === 'teacher' && requireSubscription) {
+    if (user && profile?.role === 'teacher') {
       checkSubscription();
     }
-  }, [user, profile, requireSubscription, checkSubscription]);
+  }, [user, profile, checkSubscription]);
 
   if (isLoading) {
     // Show loading state
@@ -51,9 +51,12 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
     return <Navigate to={redirectPath} replace />;
   }
 
-  // Always enforce subscription check for teachers
-  // Even if the route doesn't explicitly require subscription
-  if (userRole === 'teacher' && !isSubscriptionActive) {
+  // Redirect to pricing only if teacher doesn't have active or trialing subscription
+  if (
+    userRole === 'teacher' &&
+    profile?.stripe_status !== 'active' &&
+    profile?.stripe_status !== 'trialing'
+  ) {
     return <Navigate to="/pricing?subscription=inactive" replace />;
   }
 
