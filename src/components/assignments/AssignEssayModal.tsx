@@ -6,9 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { createAssignmentWithTargets } from "@/utils/assignments";
 
 interface Props {
   open: boolean;
@@ -38,36 +38,13 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
     if (!title.trim() || !instructions.trim() || !classId || !user) return;
     setIsLoading(true);
     try {
-      // insert into assignments
-      const { data: assn, error } = await supabase
-        .from("assignments")
-        .insert({
-          class_id: classId,
-          teacher_id: user.id,
-          title: title.trim(),
-          instructions: instructions.trim(),
-          deadline: deadline ? new Date(deadline).toISOString() : null
-        })
-        .select("id")
-        .single();
-
-      if (error) throw error;
-
-      // fetch students of that class
-      const { data: students } = await supabase
-        .from("class_students")
-        .select("student_id")
-        .eq("class_id", classId);
-
-      // bulk insert targets
-      if (students && students.length) {
-        const targets = students.map((s) => ({
-          assignment_id: assn.id,
-          student_id: s.student_id,
-          status: "pending"
-        }));
-        await supabase.from("assignment_targets").insert(targets);
-      }
+      await createAssignmentWithTargets({
+        class_id: classId,
+        teacher_id: user.id,
+        title: title.trim(),
+        instructions: instructions.trim(),
+        deadline: deadline ? new Date(deadline).toISOString() : null
+      });
 
       toast({ title: "Essay assigned!", description: "Students have been notified." });
       onOpenChange(false);
