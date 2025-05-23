@@ -188,7 +188,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { success, profile } = await signInUser(email, password);
       
       if (success && profile) {
-        navigate(getRedirectPathForRole(profile.role));
+        // -------- new redirect logic --------
+        if (profile.role === "teacher") {
+          navigate("/teacher", { replace: true });
+        } else if (profile.role === "student") {
+          navigate("/student", { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+        // ------------------------------------
       }
     } finally {
       setIsLoading(false);
