@@ -6,9 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { createAssignmentWithTargets } from "@/utils/assignments";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   open: boolean;
@@ -22,20 +24,57 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
   const [instructions, setInstructions] = useState("");
   const [deadline, setDeadline] = useState<string>("");
   const [classId, setClassId] = useState<string>(classes[0]?.id ?? "");
+  const [scope, setScope] = useState<"class" | "student">("class");
+  const [students, setStudents] = useState<{id: string; name: string}[]>([]);
+  const [studentId, setStudentId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // reset when modal opens
+  // Reset form when modal opens
   useEffect(() => {
     if (open) {
       setTitle("");
       setInstructions("");
       setDeadline("");
+      setScope("class");
+      setStudentId("");
       if (classes.length) setClassId(classes[0].id);
     }
   }, [open, classes]);
 
+  // Fetch students when modal opens or class changes
+  useEffect(() => {
+    if (!open || !user || !classId) return;
+    
+    const fetchStudents = async () => {
+      const { data, error } = await supabase
+        .from("class_students")
+        .select(`
+          student_id,
+          profiles:student_id (full_name)
+        `)
+        .eq("class_id", classId);
+
+      if (error) {
+        console.error("Error fetching students:", error);
+        return;
+      }
+
+      const studentList = (data ?? []).map((r: any) => ({
+        id: r.student_id,
+        name: r.profiles?.full_name ?? `Student ${r.student_id.slice(0, 6)}`
+      }));
+      
+      setStudents(studentList);
+      setStudentId(studentList[0]?.id ?? "");
+    };
+
+    fetchStudents();
+  }, [open, user, classId]);
+
   const handleSubmit = async () => {
     if (!title.trim() || !instructions.trim() || !classId || !user) return;
+    if (scope === "student" && !studentId) return;
+    
     setIsLoading(true);
     try {
       await createAssignmentWithTargets({
@@ -43,10 +82,16 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
         teacher_id: user.id,
         title: title.trim(),
         instructions: instructions.trim(),
-        deadline: deadline ? new Date(deadline).toISOString() : null
+        deadline: deadline ? new Date(deadline).toISOString() : null,
+        student_ids: scope === "student" ? [studentId] : undefined
       });
 
-      toast({ title: "Essay assigned!", description: "Students have been notified." });
+      toast({ 
+        title: "Essay assigned!", 
+        description: scope === "student" 
+          ? "Student has been notified." 
+          : "Students have been notified." 
+      });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -107,12 +152,50 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
               <p className="text-sm text-muted-foreground">No classes available. Create a class first.</p>
             )}
           </div>
+
+          <div>
+            <Label>Send to</Label>
+            <RadioGroup value={scope} onValueChange={(v) => setScope(v as "class" | "student")} className="flex gap-6 mt-2">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="class" id="scope-class" />
+                <Label htmlFor="scope-class">Entire class</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="student" id="scope-student" />
+                <Label htmlFor="scope-student">Specific student</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {scope === "student" && (
+            <div>
+              <Label>Choose student</Label>
+              <Select value={studentId} onValueChange={setStudentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select student" />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2 mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button 
-            disabled={isLoading || !title.trim() || !instructions.trim() || !classId} 
+            disabled={
+              isLoading || 
+              !title.trim() || 
+              !instructions.trim() || 
+              !classId || 
+              (scope === "student" && !studentId)
+            } 
             onClick={handleSubmit}
           >
             {isLoading ? "Saving…" : "Assign"}
