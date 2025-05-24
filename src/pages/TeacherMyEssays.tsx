@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
-import { Clock, Users, CheckCircle, AlertCircle } from "lucide-react";
+import { Clock, Users, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import StudentStatusRow from "@/components/assignments/StudentStatusRow";
 
 type StatObj = { pending: number; submitted: number; late: number };
 
@@ -29,10 +29,21 @@ type AssignmentRow = {
   stats: StatObj;
 };
 
+interface DetailCache {
+  [assignmentId: string]: {
+    rows: {
+      student: { id: string; full_name: string | null };
+      status: "pending" | "submitted" | "late";
+    }[];
+  };
+}
+
 const TeacherMyEssays: React.FC = () => {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<DetailCache>({});
 
   useEffect(() => {
     if (!user) return;
@@ -59,6 +70,58 @@ const TeacherMyEssays: React.FC = () => {
       toast({ title: "Error", description: "Failed to load assignments", variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleDetail = async (id: string) => {
+    if (openId === id) { 
+      setOpenId(null); 
+      return; 
+    }
+    setOpenId(id);
+    
+    if (detail[id]) return; // already cached
+    
+    const { data, error } = await supabase
+      .from("assignment_targets")
+      .select(`
+        status, student_id,
+        profiles:student_id ( id, full_name )
+      `)
+      .eq("assignment_id", id);
+
+    if (error) {
+      console.error("Error fetching student details:", error);
+      toast({ title: "Error", description: "Failed to load student details", variant: "destructive" });
+      return;
+    }
+
+    const rows = (data ?? []).map((r: any) => ({
+      student: { id: r.profiles.id, full_name: r.profiles.full_name },
+      status: r.status
+    }));
+    
+    setDetail(prev => ({ ...prev, [id]: { rows } }));
+  };
+
+  const remindOne = async (assignmentId: string, studentId: string, name: string | null) => {
+    const delay = prompt(`Minutes from now to remind ${name ?? "student"}:`, "120");
+    if (!delay) return;
+    
+    const minutes = parseInt(delay) || 0;
+    const run_at = new Date(Date.now() + minutes * 60000).toISOString();
+    
+    const { error } = await supabase.from("reminders").insert({ 
+      assignment_id: assignmentId, 
+      student_id: studentId, 
+      run_at 
+    });
+    
+    if (error) {
+      console.error("Error scheduling reminder:", error);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Reminder scheduled", description: `Will remind ${name ?? "student"} in ${minutes} minutes` });
     }
   };
 
@@ -139,16 +202,24 @@ const TeacherMyEssays: React.FC = () => {
                       {getStatusIcon(assignment.stats)}
                       <CardTitle className="text-lg">{assignment.title}</CardTitle>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">
-                        {assignment.deadline 
-                          ? `Due • ${format(new Date(assignment.deadline), "PPp")}` 
-                          : "No deadline"
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Created {format(new Date(assignment.created_at), "PP")}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          {assignment.deadline 
+                            ? `Due • ${format(new Date(assignment.deadline), "PPp")}` 
+                            : "No deadline"
+                          }
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Created {format(new Date(assignment.created_at), "PP")}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => toggleDetail(assignment.id)} 
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {openId === assignment.id ? <ChevronUp size={18}/> : <ChevronDown size={18}/> }
+                      </button>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -181,6 +252,20 @@ const TeacherMyEssays: React.FC = () => {
                       Schedule reminder
                     </Button>
                   </div>
+                  
+                  {openId === assignment.id && detail[assignment.id] && (
+                    <div className="mt-3 bg-slate-50 dark:bg-slate-800/30 rounded p-3">
+                      <h4 className="text-sm font-medium mb-2">Student Status</h4>
+                      {detail[assignment.id].rows.map(sr => (
+                        <StudentStatusRow
+                          key={sr.student.id}
+                          student={sr.student}
+                          status={sr.status}
+                          onReminder={(sid, name) => remindOne(assignment.id, sid, name)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
