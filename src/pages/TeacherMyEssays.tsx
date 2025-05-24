@@ -9,17 +9,24 @@ import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { Clock, Users, CheckCircle, AlertCircle } from "lucide-react";
 
+type StatObj = { pending: number; submitted: number; late: number };
+
+function toStats(j: any): StatObj {
+  try {
+    if (typeof j === "object") return j as StatObj;
+    return JSON.parse(j) as StatObj;       // handle json string
+  } catch {
+    return { pending: 0, submitted: 0, late: 0 };
+  }
+}
+
 type AssignmentRow = {
   id: string;
   title: string;
   deadline: string | null;
   created_at: string;
   class_name: string;
-  stats: {
-    pending: number;
-    submitted: number;
-    late: number;
-  };
+  stats: StatObj;
 };
 
 const TeacherMyEssays: React.FC = () => {
@@ -42,7 +49,11 @@ const TeacherMyEssays: React.FC = () => {
         return;
       }
 
-      setAssignments(data || []);
+      const list = (data ?? []).map((r: any) => ({
+        ...r,
+        stats: toStats(r.stats)   // <── cast here
+      }));
+      setAssignments(list);
     } catch (error) {
       console.error("Error:", error);
       toast({ title: "Error", description: "Failed to load assignments", variant: "destructive" });
@@ -51,14 +62,14 @@ const TeacherMyEssays: React.FC = () => {
     }
   };
 
-  const getCardColor = (stats: AssignmentRow["stats"]) => {
+  const getCardColor = (stats: StatObj) => {
     if (stats.late > 0) return "border-red-200 bg-red-50";
     if (stats.pending > 0) return "border-yellow-200 bg-yellow-50";
     if (stats.submitted === 0) return "border-blue-200 bg-blue-50";
     return "border-green-200 bg-green-50";
   };
 
-  const getStatusIcon = (stats: AssignmentRow["stats"]) => {
+  const getStatusIcon = (stats: StatObj) => {
     if (stats.late > 0) return <AlertCircle className="h-4 w-4 text-red-600" />;
     if (stats.pending > 0) return <Clock className="h-4 w-4 text-yellow-600" />;
     return <CheckCircle className="h-4 w-4 text-green-600" />;
