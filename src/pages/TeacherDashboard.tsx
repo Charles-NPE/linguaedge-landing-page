@@ -1,11 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import FeatureCard from "@/components/dashboards/FeatureCard";
 import AssignEssayModal from "@/components/assignments/AssignEssayModal";
-import { BookOpen, BarChart, Users, CreditCard } from "lucide-react";
+import { BookOpen, BarChart, Users, CreditCard, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
@@ -101,6 +100,13 @@ const TeacherDashboard: React.FC = () => {
             icon={BookOpen} 
           />
         </div>
+        <Link to="/teacher/essays" className="block">
+          <FeatureCard 
+            title="My Essays" 
+            description="View all assignments with delivery stats and schedule reminders." 
+            icon={FileText} 
+          />
+        </Link>
         <div className="card">
           <FeatureCard 
             title="View Analytics" 

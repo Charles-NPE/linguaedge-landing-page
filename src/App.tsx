@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,6 +29,7 @@ import BillingPage from "./pages/BillingPage";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import TeacherClassesPage from "./pages/TeacherClassesPage";
 import ClassDetail from "./pages/ClassDetail";
+import TeacherMyEssays from "./pages/TeacherMyEssays";
 
 const queryClient = new QueryClient();
 
@@ -133,6 +133,16 @@ const AppRoutes = () => (
     <Route path="/pricing" element={<Pricing />} />
     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
     <Route path="/terms-of-service" element={<TermsOfService />} />
+    
+    {/* New Teacher Essays Route */}
+    <Route 
+      path="/teacher/essays" 
+      element={
+        <RoleRoute allowed={['teacher']} requireSubscription={true}>
+          <TeacherMyEssays />
+        </RoleRoute>
+      } 
+    />
     
     {/* Catch-all Route */}
     <Route path="*" element={<NotFound />} />

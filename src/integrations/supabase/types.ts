@@ -307,6 +307,48 @@ export type Database = {
         }
         Relationships: []
       }
+      reminders: {
+        Row: {
+          assignment_id: string | null
+          created_at: string
+          id: string
+          run_at: string
+          sent: boolean
+          student_id: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string
+          id?: string
+          run_at: string
+          sent?: boolean
+          student_id?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string
+          id?: string
+          run_at?: string
+          sent?: boolean
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submissions: {
         Row: {
           ai_flags: Json | null
@@ -428,7 +470,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      teacher_assignment_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          title: string
+          deadline: string
+          created_at: string
+          class_name: string
+          stats: Json
+        }[]
+      }
     }
     Enums: {
       assignment_status: "pending" | "submitted" | "late"
