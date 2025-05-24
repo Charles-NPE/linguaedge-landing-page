@@ -1,4 +1,6 @@
+
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -183,6 +185,10 @@ const TeacherMyEssays: React.FC = () => {
 
   return (
     <DashboardLayout title="My Essays">
+      <Link to="/teacher" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline">
+        ← Back to Dashboard
+      </Link>
+      
       <div className="space-y-4">
         {assignments.length === 0 ? (
           <Card>
