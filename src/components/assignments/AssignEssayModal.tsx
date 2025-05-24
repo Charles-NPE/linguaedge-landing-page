@@ -25,7 +25,7 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
   const [deadline, setDeadline] = useState<string>("");
   const [classId, setClassId] = useState<string>(classes[0]?.id ?? "");
   const [scope, setScope] = useState<"class" | "student">("class");
-  const [students, setStudents] = useState<{id: string; name: string}[]>([]);
+  const [students, setStudents] = useState<{id: string; name: string; className: string}[]>([]);
   const [studentId, setStudentId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,18 +41,20 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
     }
   }, [open, classes]);
 
-  // Fetch students when modal opens or class changes
+  // Fetch students when modal opens or classes change
   useEffect(() => {
-    if (!open || !user || !classId) return;
+    if (!open || !user || !classes.length) return;
     
     const fetchStudents = async () => {
       const { data, error } = await supabase
         .from("class_students")
         .select(`
           student_id,
+          class_id,
+          classes(name),
           profiles:student_id (full_name)
         `)
-        .eq("class_id", classId);
+        .in("class_id", classes.map(c => c.id));
 
       if (error) {
         console.error("Error fetching students:", error);
@@ -61,7 +63,8 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
 
       const studentList = (data ?? []).map((r: any) => ({
         id: r.student_id,
-        name: r.profiles?.full_name ?? `Student ${r.student_id.slice(0, 6)}`
+        name: r.profiles?.full_name ?? `Student ${r.student_id.slice(0, 6)}`,
+        className: r.classes?.name ?? "Unknown Class"
       }));
       
       setStudents(studentList);
@@ -69,16 +72,17 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
     };
 
     fetchStudents();
-  }, [open, user, classId]);
+  }, [open, user, classes]);
 
   const handleSubmit = async () => {
-    if (!title.trim() || !instructions.trim() || !classId || !user) return;
+    if (!title.trim() || !instructions.trim() || !user) return;
+    if (scope === "class" && !classId) return;
     if (scope === "student" && !studentId) return;
     
     setIsLoading(true);
     try {
       await createAssignmentWithTargets({
-        class_id: classId,
+        class_id: scope === "class" ? classId : students.find(s => s.id === studentId)?.id ? classId : classes[0]?.id,
         teacher_id: user.id,
         title: title.trim(),
         instructions: instructions.trim(),
@@ -138,22 +142,6 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
           </div>
 
           <div>
-            <Label>Class</Label>
-            {classes.length > 0 ? (
-              <RadioGroup value={classId} onValueChange={setClassId}>
-                {classes.map((c) => (
-                  <div key={c.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={c.id} id={c.id} />
-                    <Label htmlFor={c.id}>{c.name}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            ) : (
-              <p className="text-sm text-muted-foreground">No classes available. Create a class first.</p>
-            )}
-          </div>
-
-          <div>
             <Label>Send to</Label>
             <RadioGroup value={scope} onValueChange={(v) => setScope(v as "class" | "student")} className="flex gap-6 mt-2">
               <div className="flex items-center space-x-2">
@@ -167,6 +155,24 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
             </RadioGroup>
           </div>
 
+          {scope === "class" && (
+            <div>
+              <Label>Class</Label>
+              {classes.length > 0 ? (
+                <RadioGroup value={classId} onValueChange={setClassId}>
+                  {classes.map((c) => (
+                    <div key={c.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={c.id} id={c.id} />
+                      <Label htmlFor={c.id}>{c.name}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              ) : (
+                <p className="text-sm text-muted-foreground">No classes available. Create a class first.</p>
+              )}
+            </div>
+          )}
+
           {scope === "student" && (
             <div>
               <Label>Choose student</Label>
@@ -177,7 +183,7 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
                 <SelectContent>
                   {students.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.name}
+                      {s.className} • {s.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -193,7 +199,7 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
               isLoading || 
               !title.trim() || 
               !instructions.trim() || 
-              !classId || 
+              (scope === "class" && !classId) ||
               (scope === "student" && !studentId)
             } 
             onClick={handleSubmit}
