@@ -35,8 +35,17 @@ const StudentAssignments: React.FC = () => {
         assignments ( title, instructions, deadline )
       `)
       .eq("student_id", user.id)
-      .order("assignments.deadline", { ascending: true })
-      .then(({ data }) => setTargets(data as TargetRow[] ?? []));
+      .then(({ data }) => {
+        const list = (data as TargetRow[] ?? []);
+        list.sort((a, b) => {
+          const da = a.assignments.deadline;
+          const db = b.assignments.deadline;
+          if (!da) return 1;          // tareas sin deadline al final
+          if (!db) return -1;
+          return da.localeCompare(db);
+        });
+        setTargets(list);
+      });
   }, [user]);
 
   const handleSend = async () => {
@@ -57,7 +66,16 @@ const StudentAssignments: React.FC = () => {
           assignments ( title, instructions, deadline )
         `)
         .eq("student_id", user.id);
-      setTargets(data as TargetRow[] ?? []);
+      
+      const list = (data as TargetRow[] ?? []);
+      list.sort((a, b) => {
+        const da = a.assignments.deadline;
+        const db = b.assignments.deadline;
+        if (!da) return 1;          // tareas sin deadline al final
+        if (!db) return -1;
+        return da.localeCompare(db);
+      });
+      setTargets(list);
       setActiveId(null);
       setText("");
     } catch (err: any) {
