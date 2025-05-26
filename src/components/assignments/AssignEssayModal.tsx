@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { createAssignmentWithTargets } from "@/utils/assignments";
@@ -28,6 +28,7 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
   const [students, setStudents] = useState<{id: string; name: string; className: string}[]>([]);
   const [studentId, setStudentId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -112,12 +113,51 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
         <div className="space-y-4">
           <div>
             <Label htmlFor="title">Title</Label>
-            <Input 
-              id="title"
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)} 
-              placeholder="Essay title..."
-            />
+            <div className="flex items-center gap-2">
+              <Input 
+                id="title"
+                value={title} 
+                onChange={(e) => setTitle(e.target.value)} 
+                placeholder="Essay title..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                disabled={aiLoading}
+                title="Help with AI"
+                onClick={async () => {
+                  const q = prompt("What kind of writing do you need?");
+                  if (!q) return;
+                  setAiLoading(true);
+                  try {
+                    const res = await fetch(
+                      "https://n8n-railway-custom-production-c110.up.railway.app/webhook-test/e256533a-c488-4ca7-a98c-b4b9fc27bb1e",
+                      {
+                        method: "POST",
+                        headers: { "Content-Type":"application/json" },
+                        body: JSON.stringify({ query: q })
+                      }
+                    );
+                    if (!res.ok) throw new Error("Webhook error");
+                    const json = await res.json();
+                    setTitle(json.title ?? "");
+                    setInstructions(json.instructions ?? "");
+                  } catch (err:any) {
+                    toast({ title:"AI helper failed", description: err.message, variant:"destructive" });
+                  } finally {
+                    setAiLoading(false);
+                  }
+                }}
+              >
+                {aiLoading ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"/>
+                ) : (
+                  <Sparkles size={16}/>
+                )}
+              </Button>
+            </div>
           </div>
 
           <div>
