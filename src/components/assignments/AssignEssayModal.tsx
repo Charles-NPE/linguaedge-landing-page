@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +29,8 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
   const [students, setStudents] = useState<{id: string; name: string; className: string}[]>([]);
   const [studentId, setStudentId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiQuery, setAiQuery] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
 
   // Reset form when modal opens
@@ -38,6 +41,7 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
       setDeadline("");
       setScope("class");
       setStudentId("");
+      setAiQuery("");
       if (classes.length) setClassId(classes[0].id);
     }
   }, [open, classes]);
@@ -121,42 +125,52 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
                 placeholder="Essay title..."
                 className="flex-1"
               />
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                disabled={aiLoading}
-                title="Help with AI"
-                onClick={async () => {
-                  const q = prompt("What kind of writing do you need?");
-                  if (!q) return;
-                  setAiLoading(true);
-                  try {
-                    const res = await fetch(
-                      "https://n8n-railway-custom-production-c110.up.railway.app/webhook-test/e256533a-c488-4ca7-a98c-b4b9fc27bb1e",
-                      {
-                        method: "POST",
-                        headers: { "Content-Type":"application/json" },
-                        body: JSON.stringify({ query: q })
+
+              <Popover open={aiOpen} onOpenChange={setAiOpen}>
+                <PopoverTrigger asChild>
+                  <Button type="button" size="icon" variant="outline" title="Help with AI">
+                    <Sparkles size={16} className={aiLoading ? "animate-spin" : ""}/>
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent className="w-72 space-y-2">
+                  <Label>What kind of writing do you need?</Label>
+                  <Textarea
+                    rows={3}
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    placeholder="e.g. B2 opinion essay on renewable energy (teens)…"
+                  />
+                  <Button
+                    className="w-full"
+                    disabled={aiLoading || !aiQuery.trim()}
+                    onClick={async () => {
+                      setAiLoading(true);
+                      try {
+                        const res = await fetch(
+                          "https://n8n-railway-custom-production-c110.up.railway.app/webhook/e256533a-c488-4ca7-a98c-b4b9fc27bb1e",
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ query: aiQuery.trim() })
+                          }
+                        );
+                        if (!res.ok) throw new Error("Webhook error");
+                        const json = await res.json();
+                        setTitle(json.title ?? "");
+                        setInstructions(json.instructions ?? "");
+                        setAiOpen(false);
+                      } catch (err: any) {
+                        toast({ title: "AI helper failed", description: err.message, variant: "destructive" });
+                      } finally {
+                        setAiLoading(false);
                       }
-                    );
-                    if (!res.ok) throw new Error("Webhook error");
-                    const json = await res.json();
-                    setTitle(json.title ?? "");
-                    setInstructions(json.instructions ?? "");
-                  } catch (err:any) {
-                    toast({ title:"AI helper failed", description: err.message, variant:"destructive" });
-                  } finally {
-                    setAiLoading(false);
-                  }
-                }}
-              >
-                {aiLoading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"/>
-                ) : (
-                  <Sparkles size={16}/>
-                )}
-              </Button>
+                    }}
+                  >
+                    {aiLoading ? "Generating…" : "Generate"}
+                  </Button>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
