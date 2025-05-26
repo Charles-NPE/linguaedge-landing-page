@@ -1,9 +1,10 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTeacherEssays } from "@/hooks/useTeacherEssays";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
@@ -42,38 +43,14 @@ interface DetailCache {
 
 const TeacherMyEssays: React.FC = () => {
   const { user } = useAuth();
-  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: rows = [], isLoading } = useTeacherEssays(user?.id);
   const [openId, setOpenId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailCache>({});
 
-  useEffect(() => {
-    if (!user) return;
-    fetchAssignments();
-  }, [user]);
-
-  const fetchAssignments = async () => {
-    try {
-      const { data, error } = await supabase.rpc("teacher_assignment_stats");
-      
-      if (error) {
-        console.error("Error fetching assignments:", error);
-        toast({ title: "Error", description: "Failed to load assignments", variant: "destructive" });
-        return;
-      }
-
-      const list = (data ?? []).map((r: any) => ({
-        ...r,
-        stats: toStats(r.stats)   // <── cast here
-      }));
-      setAssignments(list);
-    } catch (error) {
-      console.error("Error:", error);
-      toast({ title: "Error", description: "Failed to load assignments", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const assignments = rows.map((r: any) => ({
+    ...r,
+    stats: toStats(r.stats)
+  }));
 
   const toggleDetail = async (id: string) => {
     if (openId === id) { 
@@ -173,7 +150,7 @@ const TeacherMyEssays: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <DashboardLayout title="My Essays">
         <div className="flex justify-center py-8">

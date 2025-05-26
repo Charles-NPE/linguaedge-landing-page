@@ -12,7 +12,14 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { allRoutes } from "@/routes";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,   // 5 min por defecto
+      refetchOnWindowFocus: false
+    }
+  }
+});
 
 const App: React.FC = () => (
   <QueryClientProvider client={queryClient}>

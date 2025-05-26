@@ -1,6 +1,8 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useClasses } from "@/hooks/useClasses";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import FeatureCard from "@/components/dashboards/FeatureCard";
 import AssignEssayModal from "@/components/assignments/AssignEssayModal";
@@ -8,7 +10,6 @@ import { BookOpen, BarChart, Users, CreditCard, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const TeacherDashboard: React.FC = () => {
   const {
@@ -19,17 +20,7 @@ const TeacherDashboard: React.FC = () => {
   } = useAuth();
   const navigate = useNavigate();
   const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [classes, setClasses] = useState<{id: string; name: string}[]>([]);
-
-  // Fetch teacher's classes
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("classes")
-      .select("id, name")
-      .eq("teacher_id", user.id)
-      .then(({ data }) => setClasses(data ?? []));
-  }, [user]);
+  const { data: classes = [], isLoading: classesLoading } = useClasses(user?.id);
 
   useEffect(() => {
     // Check subscription when the dashboard loads
