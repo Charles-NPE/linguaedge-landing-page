@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseRT as supabase } from "@/integrations/supabase/realtime";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toastShim";
 import { ClassRow, Student, Post, Author, Reply } from "@/types/class.types";
