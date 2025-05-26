@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface CreateAssignmentData {
@@ -21,48 +20,20 @@ export interface AssignmentTarget {
  * or for specific students if student_ids is provided
  */
 export async function createAssignmentWithTargets(assignmentData: CreateAssignmentData) {
-  const { student_ids, ...assnData } = assignmentData;
+  const { error, data: assignmentId } = await supabase.rpc(
+    "create_assignment_with_targets",
+    {
+      _class_id: assignmentData.class_id,
+      _teacher_id: assignmentData.teacher_id,
+      _title: assignmentData.title,
+      _instructions: assignmentData.instructions,
+      _deadline: assignmentData.deadline,
+      _student_ids: assignmentData.student_ids ?? null
+    }
+  );
 
-  // Insert the assignment
-  const { data: assignment, error: assignmentError } = await supabase
-    .from("assignments")
-    .insert(assnData)
-    .select("id, class_id")
-    .single();
-
-  if (assignmentError) throw assignmentError;
-
-  // Get recipients - either specific students or all students in class
-  let recipients: string[] = [];
-  if (student_ids && student_ids.length > 0) {
-    recipients = student_ids;
-  } else {
-    // Fetch all students in the class
-    const { data: students, error: studentsError } = await supabase
-      .from("class_students")
-      .select("student_id")
-      .eq("class_id", assignment.class_id);
-
-    if (studentsError) throw studentsError;
-    recipients = (students ?? []).map((s) => s.student_id);
-  }
-
-  // Create assignment targets for selected recipients
-  if (recipients.length > 0) {
-    const targets = recipients.map((studentId) => ({
-      assignment_id: assignment.id,
-      student_id: studentId,
-      status: 'pending' as const
-    }));
-
-    const { error: targetsError } = await supabase
-      .from("assignment_targets")
-      .insert(targets);
-
-    if (targetsError) throw targetsError;
-  }
-
-  return assignment;
+  if (error) throw error;
+  return { id: assignmentId };
 }
 
 /**

@@ -470,6 +470,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_assignment_with_targets: {
+        Args: {
+          _class_id: string
+          _teacher_id: string
+          _title: string
+          _instructions: string
+          _deadline?: string
+          _student_ids?: string[]
+        }
+        Returns: string
+      }
       teacher_assignment_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
