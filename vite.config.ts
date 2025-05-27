@@ -18,10 +18,10 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "pdfjs-dist/build/pdf": "pdfjs-dist/build/pdf.js"
+      "pdfjs-dist/build/pdf": "pdfjs-dist/build/pdf.mjs"
     },
   },
   optimizeDeps: {
-    include: ["pdfjs-dist/build/pdf.js", "mammoth/mammoth.browser"]
+    include: ["pdfjs-dist/build/pdf.mjs", "mammoth/mammoth.browser"]
   }
 }));
