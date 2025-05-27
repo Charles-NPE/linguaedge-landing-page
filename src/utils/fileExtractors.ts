@@ -1,7 +1,7 @@
 
 // @ts-nocheck
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
-import mammoth from "mammoth";
+import * as pdfjsLib from "pdfjs-dist/build/pdf";
+import mammoth from "mammoth/mammoth.browser";
 
 // Load pdfjs worker (vite)
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.worker.min.js";

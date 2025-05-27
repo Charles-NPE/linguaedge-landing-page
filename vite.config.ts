@@ -18,6 +18,12 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Alias for pdfjs-dist to resolve build issues
+      "pdfjs-dist/build/pdf": "pdfjs-dist/legacy/build/pdf.js",
+      "pdfjs-dist": path.resolve(__dirname, "node_modules/pdfjs-dist")
     },
   },
+  optimizeDeps: {
+    include: ["pdfjs-dist/legacy/build/pdf.js", "mammoth/mammoth.browser"]
+  }
 }));
