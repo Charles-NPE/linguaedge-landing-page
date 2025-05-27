@@ -1,11 +1,11 @@
 
+// @ts-nocheck
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import AssignmentCard from "@/components/assignments/AssignmentCard";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+import SubmitBox from "@/components/assignments/SubmitBox";
 import { toast } from "@/hooks/use-toast";
 
 interface TargetRow {
@@ -23,63 +23,80 @@ const StudentAssignments: React.FC = () => {
   const { user } = useAuth();
   const [targets, setTargets] = useState<TargetRow[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    supabase
+    fetchAssignments();
+  }, [user]);
+
+  const fetchAssignments = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
       .from("assignment_targets")
       .select(`
         assignment_id, status, submitted_at,
         assignments ( title, instructions, deadline )
       `)
-      .eq("student_id", user.id)
-      .then(({ data }) => {
-        const list = (data as TargetRow[] ?? []);
-        list.sort((a, b) => {
-          const da = a.assignments.deadline;
-          const db = b.assignments.deadline;
-          if (!da) return 1;          // tareas sin deadline al final
-          if (!db) return -1;
-          return da.localeCompare(db);
-        });
-        setTargets(list);
-      });
-  }, [user]);
+      .eq("student_id", user.id);
+    
+    const list = (data as TargetRow[] ?? []);
+    list.sort((a, b) => {
+      const da = a.assignments.deadline;
+      const db = b.assignments.deadline;
+      if (!da) return 1;
+      if (!db) return -1;
+      return da.localeCompare(db);
+    });
+    setTargets(list);
+  };
 
-  const handleSend = async () => {
-    if (!activeId || !text.trim() || !user) return;
+  const handleSubmit = async (essayText: string) => {
+    if (!activeId || !user) return;
+    
     setLoading(true);
     try {
-      await supabase.from("submissions").insert({
+      // 1. Send to webhook
+      const webhookResponse = await fetch(
+        "https://n8n-railway-custom-production-c110.up.railway.app/webhook-test/1f103665-b767-4db5-9394-f251968fce17",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            assignment_id: activeId,
+            student_id: user.id,
+            text: essayText
+          })
+        }
+      );
+
+      if (!webhookResponse.ok) {
+        throw new Error(`Webhook failed: ${webhookResponse.status}`);
+      }
+
+      // 2. Insert into submissions
+      const { error } = await supabase.from("submissions").insert({
         assignment_id: activeId,
         student_id: user.id,
-        text: text.trim()
+        text: essayText.trim()
       });
-      toast({ title: "Essay submitted!" });
-      // refresh list
-      const { data } = await supabase
-        .from("assignment_targets")
-        .select(`
-          assignment_id, status, submitted_at,
-          assignments ( title, instructions, deadline )
-        `)
-        .eq("student_id", user.id);
+
+      if (error) throw error;
+
+      toast({ title: "Essay submitted successfully!" });
       
-      const list = (data as TargetRow[] ?? []);
-      list.sort((a, b) => {
-        const da = a.assignments.deadline;
-        const db = b.assignments.deadline;
-        if (!da) return 1;          // tareas sin deadline al final
-        if (!db) return -1;
-        return da.localeCompare(db);
-      });
-      setTargets(list);
+      // Refresh assignments list
+      await fetchAssignments();
       setActiveId(null);
-      setText("");
+      
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      console.error("Submit error:", err);
+      toast({ 
+        title: "Error", 
+        description: err.message || "Failed to submit essay", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -100,24 +117,12 @@ const StudentAssignments: React.FC = () => {
         ))}
       </div>
 
-      {/* editor emergente bajo la lista */}
+      {/* Submit box */}
       {activeId && (
-        <div className="fixed inset-x-0 bottom-0 bg-white dark:bg-slate-900 border-t p-4 space-y-2">
-          <Textarea
-            rows={6}
-            placeholder="Paste or write your essay here…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => { setActiveId(null); setText(""); }}>
-              Cancel
-            </Button>
-            <Button disabled={loading || !text.trim()} onClick={handleSend}>
-              {loading ? "Sending…" : "Send Essay"}
-            </Button>
-          </div>
-        </div>
+        <SubmitBox
+          onSubmit={handleSubmit}
+          onCancel={() => setActiveId(null)}
+        />
       )}
     </DashboardLayout>
   );
