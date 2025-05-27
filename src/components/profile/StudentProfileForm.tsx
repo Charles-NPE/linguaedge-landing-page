@@ -49,7 +49,7 @@ const StudentProfileForm: React.FC = () => {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', user.id as unknown as string)
           .maybeSingle();
 
         if (error) throw error;

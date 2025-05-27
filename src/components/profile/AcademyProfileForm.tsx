@@ -75,14 +75,14 @@ const AcademyProfileForm = () => {
       if (!user?.id) return;
       setIsLoading(true);
       try {
-        // Select all columns from academy_profiles table
         const { data, error } = await supabase
           .from('academy_profiles')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id as unknown as string)
           .maybeSingle();
           
         if (error) throw error;
+        
         if (data) {
           // Populate the form with ALL retrieved data
           form.reset({
@@ -175,7 +175,7 @@ const AcademyProfileForm = () => {
 
       // Prepare data for upsert
       const upsertData = {
-        id: profileId || undefined, // Use existing ID if available
+        id: profileId || undefined,
         user_id: user.id,
         academy_name: values.academyName,
         admin_name: values.adminName,
@@ -186,7 +186,7 @@ const AcademyProfileForm = () => {
         default_language: values.defaultLanguage,
         logo_url: logoUrl,
         updated_at: new Date().toISOString()
-      };
+      } as any;
 
       // Perform upsert operation
       const { error } = await supabase.from('academy_profiles').upsert(upsertData, {
