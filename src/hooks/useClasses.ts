@@ -11,7 +11,7 @@ export const useClasses = (teacherId?: string) =>
       const { data, error } = await supabase
         .from("classes")
         .select("id, name")
-        .eq("teacher_id", teacherId);
+        .eq("teacher_id", teacherId as any);
       if (error) throw error;
       return data ?? [];
     }

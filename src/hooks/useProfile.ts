@@ -10,7 +10,7 @@ export const useProfileQuery = (userId?: string) =>
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", userId)
+        .eq("id", userId as any)
         .single();
       if (error) throw error;
       return data;
