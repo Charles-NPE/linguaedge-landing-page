@@ -1,6 +1,6 @@
 
 // @ts-nocheck
-import * as pdfjsLib from "pdfjs-dist/build/pdf";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
 import mammoth from "mammoth/mammoth.browser";
 
 // Load pdfjs worker (vite)
