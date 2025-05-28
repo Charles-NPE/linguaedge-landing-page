@@ -10,6 +10,16 @@ import { FileCheck, Calendar, BookOpen, AlertCircle, Lightbulb } from "lucide-re
 import { formatDistanceToNow } from "date-fns";
 import { Correction } from "@/types/correction.types";
 
+// Helper types for parsing JSON fields
+type ParsedErrors = {
+  grammar?: string[];
+  vocabulary?: string[];
+  cohesion?: string[];
+  other?: string[];
+};
+
+type ParsedRecs = string[];
+
 const StudentCorrections: React.FC = () => {
   const { user } = useAuth();
   const [corrections, setCorrections] = useState<Correction[]>([]);
@@ -66,7 +76,8 @@ const StudentCorrections: React.FC = () => {
 
   const getErrorCount = (errors: any) => {
     if (!errors || typeof errors !== 'object') return 0;
-    return Object.values(errors).reduce((total: number, errorArray: any) => {
+    const parsedErrors = errors as ParsedErrors;
+    return Object.values(parsedErrors).reduce((total: number, errorArray: any) => {
       return total + (Array.isArray(errorArray) ? errorArray.length : 0);
     }, 0);
   };
@@ -74,7 +85,9 @@ const StudentCorrections: React.FC = () => {
   const renderErrors = (errors: any) => {
     if (!errors || typeof errors !== 'object') return null;
     
-    return Object.entries(errors).map(([category, errorList]) => {
+    const parsedErrors = errors as ParsedErrors;
+    
+    return Object.entries(parsedErrors).map(([category, errorList]) => {
       if (!Array.isArray(errorList) || errorList.length === 0) return null;
       
       return (
@@ -95,11 +108,12 @@ const StudentCorrections: React.FC = () => {
   };
 
   const renderRecommendations = (recommendations: any) => {
-    if (!Array.isArray(recommendations)) return null;
+    const recs = recommendations as ParsedRecs;
+    if (!Array.isArray(recs)) return null;
     
     return (
       <ul className="space-y-2">
-        {recommendations.map((recommendation: string, index: number) => (
+        {recs.map((recommendation: string, index: number) => (
           <li key={index} className="text-sm bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border-l-2 border-yellow-200 dark:border-yellow-800">
             {recommendation}
           </li>
@@ -179,7 +193,7 @@ const StudentCorrections: React.FC = () => {
                 )}
 
                 {/* Recommendations Section */}
-                {Array.isArray(correction.recommendations) && correction.recommendations.length > 0 && (
+                {Array.isArray(correction.recommendations as ParsedRecs) && (correction.recommendations as ParsedRecs).length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-medium flex items-center gap-2">
                       <Lightbulb className="h-4 w-4 text-yellow-500" />
