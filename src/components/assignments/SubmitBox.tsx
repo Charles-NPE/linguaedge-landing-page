@@ -19,12 +19,11 @@ interface Props {
 }
 
 interface WebhookResponse {
-  assignment_id: string;
-  student_id: string;
   level: string;
   errors: any;
   recommendations: any;
   teacher_feedback: string;
+  wordCount?: number;
 }
 
 const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
@@ -115,8 +114,9 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
       const payload = {
         assignment_id: recentSubmission.assignment_id,
         student_id: user.id,
-        submission_id: recentSubmission.id,
-        text: text.trim()
+        text: text.trim(),
+        file_url: null,
+        submitted_at: new Date().toISOString()
       };
 
       // Send to webhook for AI analysis
@@ -126,7 +126,7 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
           "Content-Type": "application/json",
           ...authHeader,
         },
-        body: JSON.stringify(payload as Record<string, unknown>)
+        body: JSON.stringify(payload)
       });
 
       if (!webhookResponse.ok) {
@@ -135,29 +135,19 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
 
       const correctionData: WebhookResponse = await webhookResponse.json();
 
-      // Use the edge function to save the correction
-      const saveResponse = await fetch(
-        `https://amityhneeclqenbiyixl.supabase.co/functions/v1/save-correction`,
-        {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            ...(session?.access_token && {
-              Authorization: `Bearer ${session.access_token}`
-            }),
-          },
-          body: JSON.stringify({
-            submission_id: recentSubmission.id,
-            level: correctionData.level,
-            errors: correctionData.errors,
-            recommendations: correctionData.recommendations,
-            teacher_feedback: correctionData.teacher_feedback,
-            word_count: text.trim().split(/\s+/).length
-          })
-        }
-      );
+      // Save correction directly to database
+      const { error: correctionError } = await supabase
+        .from("corrections")
+        .insert({
+          submission_id: recentSubmission.id,
+          level: correctionData.level,
+          errors: correctionData.errors,
+          recommendations: correctionData.recommendations,
+          teacher_feedback: correctionData.teacher_feedback,
+          word_count: correctionData.wordCount ?? null
+        });
 
-      if (!saveResponse.ok) {
+      if (correctionError) {
         throw new Error("Failed to save correction");
       }
 

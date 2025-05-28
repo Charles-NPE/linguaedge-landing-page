@@ -11,10 +11,12 @@ export const useCorrections = (studentId: string) =>
         .from("corrections")
         .select(`
           *,
-          submissions (
+          submissions!inner (
+            student_id,
             assignments ( title )
           )
         `)
+        .eq("submissions.student_id", studentId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
