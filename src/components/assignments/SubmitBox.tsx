@@ -23,7 +23,7 @@ interface WebhookResponse {
   errors: any;
   recommendations: any;
   teacher_feedback: string;
-  wordCount?: number;
+  word_count?: number;
 }
 
 const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
@@ -144,7 +144,7 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
           errors: correctionData.errors,
           recommendations: correctionData.recommendations,
           teacher_feedback: correctionData.teacher_feedback,
-          word_count: correctionData.wordCount ?? null
+          word_count: correctionData.word_count ?? null
         });
 
       if (correctionError) {
