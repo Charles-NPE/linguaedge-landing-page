@@ -102,14 +102,6 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
         throw new Error("Failed to retrieve submission");
       }
 
-      // Get session token for authentication
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const authHeader = session?.access_token
-        ? { Authorization: `Bearer ${session.access_token}` }
-        : {};
-
       // Prepare payload for webhook
       const payload = {
         assignment_id: recentSubmission.assignment_id,
@@ -119,13 +111,11 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
         submitted_at: new Date().toISOString()
       };
 
-      // Send to webhook for AI analysis
+      // Send to webhook for AI analysis (without Authorization header)
       const webhookResponse = await fetch(N8N_WEBHOOK, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeader,
-        },
+        mode: "cors",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
@@ -148,7 +138,8 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
         });
 
       if (correctionError) {
-        throw new Error("Failed to save correction");
+        console.error("Supabase insert error:", correctionError);
+        throw new Error(correctionError.message || "Failed to save correction");
       }
 
       toast({ 
