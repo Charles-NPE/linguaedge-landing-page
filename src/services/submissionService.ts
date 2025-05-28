@@ -68,10 +68,11 @@ export const submitEssayAndCorrect = async (
     .from("corrections")
     .insert({
       submission_id: recentSubmission.id,
-      level: correctionData.level,
-      errors: correctionData.errors,
-      recommendations: correctionData.recommendations,
-      teacher_feedback: correctionData.teacher_feedback,
+      // si el webhook no manda nivel, guarda "Unknown"
+      level: correctionData.level ?? "Unknown",
+      errors: correctionData.errors ?? {},
+      recommendations: correctionData.recommendations ?? {},
+      teacher_feedback: correctionData.teacher_feedback ?? "",
       word_count: correctionData.word_count ?? null
     });
 
