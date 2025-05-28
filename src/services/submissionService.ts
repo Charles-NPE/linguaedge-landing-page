@@ -61,19 +61,32 @@ export const submitEssayAndCorrect = async (
     throw new Error(`Webhook failed: ${webhookResponse.status}`);
   }
 
-  const correctionData: WebhookResponse = await webhookResponse.json();
+  // parseamos el array y sacamos el content del primer message
+  const webhookPayload = await webhookResponse.json();
+  // puede venir un array de chunk responses + un objeto extra, así que buscamos el primer que tenga .message.content
+  const firstMsg = Array.isArray(webhookPayload)
+    ? webhookPayload.find((el) => el?.message?.content)?.message.content
+    : webhookPayload;
+
+  // si no encontramos nada válido le metemos un fallback
+  const correction = firstMsg ?? {
+    level: "Unknown",
+    errors: {},
+    recommendations: {},
+    teacher_feedback: "",
+    word_count: null,
+  };
 
   // Save correction directly to database
   const { error: correctionError } = await supabase
     .from("corrections")
     .insert({
       submission_id: recentSubmission.id,
-      // si el webhook no manda nivel, guarda "Unknown"
-      level: correctionData.level ?? "Unknown",
-      errors: correctionData.errors ?? {},
-      recommendations: correctionData.recommendations ?? {},
-      teacher_feedback: correctionData.teacher_feedback ?? "",
-      word_count: correctionData.word_count ?? null
+      level: correction.level ?? "Unknown",
+      errors: correction.errors ?? {},
+      recommendations: correction.recommendations ?? {},
+      teacher_feedback: correction.teacher_feedback ?? "",
+      word_count: correction.word_count ?? null
     });
 
   if (correctionError) {
