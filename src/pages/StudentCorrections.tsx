@@ -8,25 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { FileCheck, Calendar, BookOpen, AlertCircle, Lightbulb } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-
-interface Correction {
-  id: string;
-  level: string;
-  errors: {
-    grammar?: string[];
-    vocabulary?: string[];
-    cohesion?: string[];
-    other?: string[];
-  };
-  recommendations: string[];
-  teacher_feedback: string;
-  created_at: string;
-  submissions: {
-    assignments: {
-      title: string;
-    };
-  };
-}
+import { Correction } from "@/types/correction.types";
 
 const StudentCorrections: React.FC = () => {
   const { user } = useAuth();
@@ -68,7 +50,9 @@ const StudentCorrections: React.FC = () => {
     }
   };
 
-  const getLevelColor = (level: string) => {
+  const getLevelColor = (level: string | null) => {
+    if (!level) return 'bg-gray-100 text-gray-800';
+    
     const colors = {
       'A1': 'bg-red-100 text-red-800',
       'A2': 'bg-orange-100 text-orange-800',
@@ -80,8 +64,48 @@ const StudentCorrections: React.FC = () => {
     return colors[level as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
-  const getErrorCount = (errors: Correction['errors']) => {
-    return Object.values(errors).reduce((total, errorArray) => total + (errorArray?.length || 0), 0);
+  const getErrorCount = (errors: any) => {
+    if (!errors || typeof errors !== 'object') return 0;
+    return Object.values(errors).reduce((total: number, errorArray: any) => {
+      return total + (Array.isArray(errorArray) ? errorArray.length : 0);
+    }, 0);
+  };
+
+  const renderErrors = (errors: any) => {
+    if (!errors || typeof errors !== 'object') return null;
+    
+    return Object.entries(errors).map(([category, errorList]) => {
+      if (!Array.isArray(errorList) || errorList.length === 0) return null;
+      
+      return (
+        <div key={category} className="space-y-2">
+          <h5 className="text-sm font-medium capitalize text-muted-foreground">
+            {category}
+          </h5>
+          <ul className="space-y-1">
+            {errorList.map((error: string, index: number) => (
+              <li key={index} className="text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded border-l-2 border-red-200 dark:border-red-800">
+                {error}
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }).filter(Boolean);
+  };
+
+  const renderRecommendations = (recommendations: any) => {
+    if (!Array.isArray(recommendations)) return null;
+    
+    return (
+      <ul className="space-y-2">
+        {recommendations.map((recommendation: string, index: number) => (
+          <li key={index} className="text-sm bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border-l-2 border-yellow-200 dark:border-yellow-800">
+            {recommendation}
+          </li>
+        ))}
+      </ul>
+    );
   };
 
   if (loading) {
@@ -131,7 +155,7 @@ const StudentCorrections: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge className={getLevelColor(correction.level)}>
-                      Level: {correction.level}
+                      Level: {correction.level || 'Unknown'}
                     </Badge>
                     <Badge variant="outline">
                       {getErrorCount(correction.errors)} errors
@@ -149,40 +173,19 @@ const StudentCorrections: React.FC = () => {
                       Errors Found
                     </h4>
                     <div className="grid gap-3 md:grid-cols-2">
-                      {Object.entries(correction.errors).map(([category, errors]) => (
-                        errors && errors.length > 0 && (
-                          <div key={category} className="space-y-2">
-                            <h5 className="text-sm font-medium capitalize text-muted-foreground">
-                              {category}
-                            </h5>
-                            <ul className="space-y-1">
-                              {errors.map((error, index) => (
-                                <li key={index} className="text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded border-l-2 border-red-200 dark:border-red-800">
-                                  {error}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )
-                      ))}
+                      {renderErrors(correction.errors)}
                     </div>
                   </div>
                 )}
 
                 {/* Recommendations Section */}
-                {correction.recommendations && correction.recommendations.length > 0 && (
+                {Array.isArray(correction.recommendations) && correction.recommendations.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-medium flex items-center gap-2">
                       <Lightbulb className="h-4 w-4 text-yellow-500" />
                       Recommendations
                     </h4>
-                    <ul className="space-y-2">
-                      {correction.recommendations.map((recommendation, index) => (
-                        <li key={index} className="text-sm bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border-l-2 border-yellow-200 dark:border-yellow-800">
-                          {recommendation}
-                        </li>
-                      ))}
-                    </ul>
+                    {renderRecommendations(correction.recommendations)}
                   </div>
                 )}
 

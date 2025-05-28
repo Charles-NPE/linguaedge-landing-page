@@ -1,5 +1,4 @@
 
-// @ts-nocheck
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +12,15 @@ import { useNavigate } from "react-router-dom";
 interface Props {
   onSubmit: (text: string) => Promise<void>;
   onCancel: () => void;
+}
+
+interface WebhookResponse {
+  assignment_id: string;
+  student_id: string;
+  level: string;
+  errors: any;
+  recommendations: any;
+  teacher_feedback: string;
 }
 
 const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
@@ -109,7 +117,7 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
         throw new Error(`Webhook failed: ${webhookResponse.status}`);
       }
 
-      const correctionData = await webhookResponse.json();
+      const correctionData: WebhookResponse = await webhookResponse.json();
 
       // Save correction to database
       const { error: correctionError } = await supabase
