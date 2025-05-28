@@ -190,28 +190,34 @@ export type Database = {
           created_at: string
           errors: Json | null
           id: string
-          level: string | null
+          level: string
+          read_at: string | null
           recommendations: Json | null
           submission_id: string | null
           teacher_feedback: string | null
+          word_count: number | null
         }
         Insert: {
           created_at?: string
           errors?: Json | null
           id?: string
-          level?: string | null
+          level: string
+          read_at?: string | null
           recommendations?: Json | null
           submission_id?: string | null
           teacher_feedback?: string | null
+          word_count?: number | null
         }
         Update: {
           created_at?: string
           errors?: Json | null
           id?: string
-          level?: string | null
+          level?: string
+          read_at?: string | null
           recommendations?: Json | null
           submission_id?: string | null
           teacher_feedback?: string | null
+          word_count?: number | null
         }
         Relationships: [
           {
@@ -518,6 +524,10 @@ export type Database = {
           _student_ids?: string[]
         }
         Returns: string
+      }
+      mark_correction_read: {
+        Args: { correction_id: string }
+        Returns: undefined
       }
       teacher_assignment_stats: {
         Args: Record<PropertyKey, never>

@@ -99,7 +99,7 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
         throw new Error("Failed to retrieve submission");
       }
 
-      // Send to webhook for AI analysis
+      // Send to webhook for AI analysis - now include submission_id in the payload
       const webhookResponse = await fetch(
         "https://n8n-railway-custom-production-c110.up.railway.app/webhook-test/1f103665-b767-4db5-9394-f251968fce17",
         {
@@ -108,6 +108,7 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
           body: JSON.stringify({
             assignment_id: recentSubmission.assignment_id,
             student_id: user.id,
+            submission_id: recentSubmission.id,
             text: text.trim()
           })
         }
@@ -119,18 +120,27 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
 
       const correctionData: WebhookResponse = await webhookResponse.json();
 
-      // Save correction to database
-      const { error: correctionError } = await supabase
-        .from("corrections")
-        .insert({
-          submission_id: recentSubmission.id,
-          level: correctionData.level,
-          errors: correctionData.errors,
-          recommendations: correctionData.recommendations,
-          teacher_feedback: correctionData.teacher_feedback
-        });
+      // Use the new edge function to save the correction
+      const saveResponse = await fetch(
+        `https://amityhneeclqenbiyixl.supabase.co/functions/v1/save-correction`,
+        {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabase.supabaseKey}`,
+          },
+          body: JSON.stringify({
+            submission_id: recentSubmission.id,
+            level: correctionData.level,
+            errors: correctionData.errors,
+            recommendations: correctionData.recommendations,
+            teacher_feedback: correctionData.teacher_feedback,
+            word_count: text.trim().split(/\s+/).length
+          })
+        }
+      );
 
-      if (correctionError) {
+      if (!saveResponse.ok) {
         throw new Error("Failed to save correction");
       }
 
