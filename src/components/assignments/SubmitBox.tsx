@@ -9,6 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
+// Production webhook URL
+const N8N_WEBHOOK = 
+  "https://n8n-railway-custom-production-c110.up.railway.app/webhook/1f103665-b767-4db5-9394-f251968fce17";
+
 interface Props {
   onSubmit: (text: string) => Promise<void>;
   onCancel: () => void;
@@ -99,20 +103,31 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
         throw new Error("Failed to retrieve submission");
       }
 
-      // Send to webhook for AI analysis - now include submission_id in the payload
-      const webhookResponse = await fetch(
-        "https://n8n-railway-custom-production-c110.up.railway.app/webhook-test/1f103665-b767-4db5-9394-f251968fce17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            assignment_id: recentSubmission.assignment_id,
-            student_id: user.id,
-            submission_id: recentSubmission.id,
-            text: text.trim()
-          })
-        }
-      );
+      // Get session token for authentication
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const authHeader = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {};
+
+      // Prepare payload for webhook
+      const payload = {
+        assignment_id: recentSubmission.assignment_id,
+        student_id: user.id,
+        submission_id: recentSubmission.id,
+        text: text.trim()
+      };
+
+      // Send to webhook for AI analysis
+      const webhookResponse = await fetch(N8N_WEBHOOK, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader,
+        },
+        body: JSON.stringify(payload as Record<string, unknown>)
+      });
 
       if (!webhookResponse.ok) {
         throw new Error(`Webhook failed: ${webhookResponse.status}`);
@@ -120,14 +135,16 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
 
       const correctionData: WebhookResponse = await webhookResponse.json();
 
-      // Use the new edge function to save the correction
+      // Use the edge function to save the correction
       const saveResponse = await fetch(
         `https://amityhneeclqenbiyixl.supabase.co/functions/v1/save-correction`,
         {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabase.supabaseKey}`,
+            ...(session?.access_token && {
+              Authorization: `Bearer ${session.access_token}`
+            }),
           },
           body: JSON.stringify({
             submission_id: recentSubmission.id,
