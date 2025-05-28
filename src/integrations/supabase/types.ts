@@ -185,6 +185,44 @@ export type Database = {
           },
         ]
       }
+      corrections: {
+        Row: {
+          created_at: string
+          errors: Json | null
+          id: string
+          level: string | null
+          recommendations: Json | null
+          submission_id: string | null
+          teacher_feedback: string | null
+        }
+        Insert: {
+          created_at?: string
+          errors?: Json | null
+          id?: string
+          level?: string | null
+          recommendations?: Json | null
+          submission_id?: string | null
+          teacher_feedback?: string | null
+        }
+        Update: {
+          created_at?: string
+          errors?: Json | null
+          id?: string
+          level?: string | null
+          recommendations?: Json | null
+          submission_id?: string | null
+          teacher_feedback?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corrections_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_replies: {
         Row: {
           author_id: string | null

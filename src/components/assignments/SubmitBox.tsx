@@ -6,6 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { PdfLoader, DocxLoader } from "@/utils/fileExtractors";
 import { Upload, File as FileIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   onSubmit: (text: string) => Promise<void>;
@@ -13,10 +16,13 @@ interface Props {
 }
 
 const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const handleFile = async (f: File) => {
     setExtracting(true);
@@ -57,13 +63,89 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
   };
 
   const handleSubmit = async () => {
+    if (!user || !text.trim()) return;
+    
     setLoading(true);
+    setAnalyzing(true);
+    
     try {
+      // Call the original onSubmit to handle assignment submission
       await onSubmit(text.trim());
+      
+      // Now handle the correction workflow
+      toast({ 
+        title: "Analyzing essay...", 
+        description: "AI is reviewing your submission" 
+      });
+
+      // Get the most recent submission for this user
+      const { data: recentSubmission, error: submissionError } = await supabase
+        .from("submissions")
+        .select("id, assignment_id")
+        .eq("student_id", user.id)
+        .order("submitted_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (submissionError || !recentSubmission) {
+        throw new Error("Failed to retrieve submission");
+      }
+
+      // Send to webhook for AI analysis
+      const webhookResponse = await fetch(
+        "https://n8n-railway-custom-production-c110.up.railway.app/webhook-test/1f103665-b767-4db5-9394-f251968fce17",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            assignment_id: recentSubmission.assignment_id,
+            student_id: user.id,
+            text: text.trim()
+          })
+        }
+      );
+
+      if (!webhookResponse.ok) {
+        throw new Error(`Webhook failed: ${webhookResponse.status}`);
+      }
+
+      const correctionData = await webhookResponse.json();
+
+      // Save correction to database
+      const { error: correctionError } = await supabase
+        .from("corrections")
+        .insert({
+          submission_id: recentSubmission.id,
+          level: correctionData.level,
+          errors: correctionData.errors,
+          recommendations: correctionData.recommendations,
+          teacher_feedback: correctionData.teacher_feedback
+        });
+
+      if (correctionError) {
+        throw new Error("Failed to save correction");
+      }
+
+      toast({ 
+        title: "Analysis complete!", 
+        description: "Your essay has been analyzed and corrected" 
+      });
+
+      // Reset form and redirect to corrections page
       setText("");
       setFile(null);
+      navigate("/student/corrections");
+      
+    } catch (err: any) {
+      console.error("Submit error:", err);
+      toast({ 
+        title: "Error", 
+        description: err.message || "Failed to submit essay", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
+      setAnalyzing(false);
     }
   };
 
@@ -75,7 +157,7 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={6}
-          disabled={extracting}
+          disabled={extracting || loading}
         />
 
         <div className="flex items-center gap-4">
@@ -115,7 +197,7 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel }) => {
           disabled={loading || extracting || !text.trim()}
           onClick={handleSubmit}
         >
-          {loading ? "Sending…" : extracting ? "Processing..." : "Send Essay"}
+          {analyzing ? "Analyzing..." : loading ? "Sending…" : extracting ? "Processing..." : "Send Essay"}
         </Button>
       </div>
     </div>

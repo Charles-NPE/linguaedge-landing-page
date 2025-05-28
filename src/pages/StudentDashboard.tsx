@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
@@ -134,13 +135,13 @@ const StudentDashboard: React.FC = () => {
             icon={PenTool} 
           />
         </Link>
-        <div className="card">
+        <Link to="/student/corrections" className="block">
           <FeatureCard 
             title="My Corrections" 
-            description="Review feedback and corrections on your submitted essays." 
+            description="Review AI feedback and corrections on your submitted essays." 
             icon={FileCheck} 
           />
-        </div>
+        </Link>
         <div className="card">
           <FeatureCard 
             title="Progress" 
