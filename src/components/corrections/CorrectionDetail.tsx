@@ -45,7 +45,17 @@ const CorrectionDetail: React.FC<CorrectionDetailProps> = ({ correction }) => {
   };
 
   const renderRecommendations = () => {
-    if (!Array.isArray(correction.recommendations) || correction.recommendations.length === 0) {
+    // Handle both array and object formats from webhook
+    let recommendationsList: string[] = [];
+    
+    if (Array.isArray(correction.recommendations)) {
+      recommendationsList = correction.recommendations;
+    } else if (correction.recommendations && typeof correction.recommendations === 'object') {
+      // If it's an object, try to extract values or convert to array
+      recommendationsList = Object.values(correction.recommendations).filter(item => typeof item === 'string') as string[];
+    }
+    
+    if (recommendationsList.length === 0) {
       return null;
     }
     
@@ -56,7 +66,7 @@ const CorrectionDetail: React.FC<CorrectionDetailProps> = ({ correction }) => {
           Recommendations
         </h4>
         <div className="space-y-2">
-          {correction.recommendations.map((recommendation: string, index: number) => (
+          {recommendationsList.map((recommendation: string, index: number) => (
             <div key={index} className="text-sm bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border-l-2 border-yellow-200 dark:border-yellow-800 select-text">
               <span className="font-medium">{index + 1}.</span> {recommendation}
             </div>

@@ -33,6 +33,8 @@ const CorrectionCard: React.FC<CorrectionCardProps> = ({ correction, onClick }) 
     return colors[level as keyof typeof colors] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
   };
 
+  const errorCount = getErrorCount();
+
   return (
     <Card 
       className={`cursor-pointer transition-all hover:shadow-md ${
@@ -74,7 +76,7 @@ const CorrectionCard: React.FC<CorrectionCardProps> = ({ correction, onClick }) 
               {correction.level}
             </Badge>
             <Badge variant="outline" className="text-xs">
-              {getErrorCount()} errors
+              {errorCount} {errorCount === 1 ? 'error' : 'errors'}
             </Badge>
             {isUnread && (
               <div className="w-2 h-2 bg-primary rounded-full"></div>

@@ -102,10 +102,10 @@ export const submitEssayAndCorrect = async (
     .from("corrections")
     .insert({
       submission_id: recentSubmission.id,
-      level: mainCorrectionObject.level ?? "Unknown",
-      errors: mainCorrectionObject.errors ?? {},
-      recommendations: mainCorrectionObject.recommendations ?? {},
-      teacher_feedback: mainCorrectionObject.teacher_feedback ?? "",
+      level: mainCorrectionObject.level || "Unknown",
+      errors: mainCorrectionObject.errors || {},
+      recommendations: mainCorrectionObject.recommendations || [],
+      teacher_feedback: mainCorrectionObject.teacher_feedback || "",
       word_count: wordCount // Use the separately extracted wordCount
     });
 
