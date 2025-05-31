@@ -12,15 +12,7 @@ export const useCorrections = (studentId: string) =>
       const { data, error } = await supabase
         .from("corrections")
         .select(`
-          id,
-          submission_id,
-          level,
-          errors,
-          recommendations,
-          teacher_feedback,
-          word_count,
-          created_at,
-          read_at,
+          *,
           submissions!inner (
             id,
             text,
