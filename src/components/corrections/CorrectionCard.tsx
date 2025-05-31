@@ -57,7 +57,7 @@ const CorrectionCard: React.FC<CorrectionCardProps> = ({ correction, onClick }) 
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
                 <h3 className={`font-medium ${isUnread ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  {correction.submissions?.assignments?.title || "Unknown Assignment"}
+                  {correction.submissions?.assignments?.title || "Unnamed Assignment"}
                 </h3>
               </div>
               

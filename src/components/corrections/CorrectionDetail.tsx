@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Lightbulb, User, BarChart } from "lucide-react";
+import { AlertCircle, Lightbulb, User, BarChart, FileText } from "lucide-react";
 import { Correction } from "@/types/correction.types";
 
 interface CorrectionDetailProps {
@@ -30,13 +30,13 @@ const CorrectionDetail: React.FC<CorrectionDetailProps> = ({ correction }) => {
               <h5 className="text-sm font-medium capitalize text-muted-foreground">
                 {category}
               </h5>
-              <ul className="space-y-1">
+              <div className="space-y-1">
                 {(errorList as string[]).map((error: string, index: number) => (
-                  <li key={index} className="text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded border-l-2 border-red-200 dark:border-red-800">
+                  <div key={index} className="text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded border-l-2 border-red-200 dark:border-red-800 select-text">
                     • {error}
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           ))}
         </div>
@@ -55,13 +55,13 @@ const CorrectionDetail: React.FC<CorrectionDetailProps> = ({ correction }) => {
           <Lightbulb className="h-4 w-4 text-yellow-500" />
           Recommendations
         </h4>
-        <ol className="space-y-2">
+        <div className="space-y-2">
           {correction.recommendations.map((recommendation: string, index: number) => (
-            <li key={index} className="text-sm bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border-l-2 border-yellow-200 dark:border-yellow-800">
+            <div key={index} className="text-sm bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border-l-2 border-yellow-200 dark:border-yellow-800 select-text">
               <span className="font-medium">{index + 1}.</span> {recommendation}
-            </li>
+            </div>
           ))}
-        </ol>
+        </div>
       </div>
     );
   };
@@ -83,6 +83,21 @@ const CorrectionDetail: React.FC<CorrectionDetailProps> = ({ correction }) => {
         </div>
       </div>
 
+      {/* Original Essay Text */}
+      {correction.submissions?.text && (
+        <div className="space-y-3">
+          <h4 className="font-medium flex items-center gap-2">
+            <FileText className="h-4 w-4 text-gray-500" />
+            Original Essay Text
+          </h4>
+          <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg border">
+            <div className="text-sm leading-relaxed whitespace-pre-wrap select-text">
+              {correction.submissions.text}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Errores */}
       {renderErrors()}
 
@@ -97,9 +112,9 @@ const CorrectionDetail: React.FC<CorrectionDetailProps> = ({ correction }) => {
             Teacher Feedback
           </h4>
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border-l-4 border-blue-200 dark:border-blue-800">
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+            <div className="text-sm leading-relaxed whitespace-pre-wrap select-text">
               {correction.teacher_feedback}
-            </p>
+            </div>
           </div>
         </div>
       )}

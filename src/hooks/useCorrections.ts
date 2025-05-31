@@ -22,6 +22,8 @@ export const useCorrections = (studentId: string) =>
           created_at,
           read_at,
           submissions!inner (
+            id,
+            text,
             student_id,
             assignments (
               title

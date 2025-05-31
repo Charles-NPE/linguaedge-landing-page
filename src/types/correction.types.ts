@@ -10,6 +10,8 @@ export interface Correction {
   created_at: string;
   read_at: string | null;
   submissions?: {
+    id: string;
+    text: string | null;
     student_id: string;
     assignments: {
       title: string;
