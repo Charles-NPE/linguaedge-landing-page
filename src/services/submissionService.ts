@@ -79,15 +79,21 @@ export const submitEssayAndCorrect = async (
     ? webhookFullResponse.find((el: any) => el?.message?.content)?.message.content
     : webhookFullResponse?.message?.content || webhookFullResponse;
 
-  // Find the word count object separately
+  // Find the word count object separately - look for object with 'Wordcount' key
   const wordCountObject = Array.isArray(webhookFullResponse)
-    ? webhookFullResponse.find((el: any) => 'Wordcount' in el)
+    ? webhookFullResponse.find((el: any) => el && typeof el === 'object' && 'Wordcount' in el)
     : null;
 
-  // Extract and parse the word count
-  const wordCount = wordCountObject && typeof wordCountObject.Wordcount === 'string'
-    ? parseInt(wordCountObject.Wordcount.replace(/\n/g, '').trim()) // Remove newlines and trim
-    : null;
+  // Extract and parse the word count properly
+  let extractedWordCount = null;
+  if (wordCountObject && wordCountObject.Wordcount) {
+    const wordCountString = typeof wordCountObject.Wordcount === 'string' 
+      ? wordCountObject.Wordcount.replace(/\n/g, '').trim() // Remove newlines and trim
+      : String(wordCountObject.Wordcount).trim();
+    
+    const parsedCount = parseInt(wordCountString, 10);
+    extractedWordCount = !isNaN(parsedCount) ? parsedCount : null;
+  }
 
   if (!mainCorrectionObject) {
     console.error("Invalid webhook response format:", webhookFullResponse);
@@ -95,7 +101,7 @@ export const submitEssayAndCorrect = async (
   }
 
   console.log("Extracted correction data:", mainCorrectionObject);
-  console.log("Extracted word count:", wordCount);
+  console.log("Extracted word count:", extractedWordCount);
 
   // Save correction to database with proper fallbacks
   const { error: correctionError } = await supabase
@@ -106,7 +112,7 @@ export const submitEssayAndCorrect = async (
       errors: mainCorrectionObject.errors || {},
       recommendations: mainCorrectionObject.recommendations || [],
       teacher_feedback: mainCorrectionObject.teacher_feedback || "",
-      word_count: wordCount // Use the separately extracted wordCount
+      word_count: extractedWordCount // Use the properly extracted word count
     });
 
   if (correctionError) {
