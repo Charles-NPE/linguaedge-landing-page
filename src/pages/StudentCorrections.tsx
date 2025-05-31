@@ -20,10 +20,11 @@ const StudentCorrections: React.FC = () => {
   const [selectedCorrection, setSelectedCorrection] = useState<Correction | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
-  const { data: corrections = [], isLoading } = useCorrections(user?.id || "");
+  const { data: corrections = [], isLoading, error } = useCorrections(user?.id || "");
   const markAsReadMutation = useMarkCorrectionRead();
 
   const handleCorrectionClick = (correction: Correction) => {
+    console.log("Selected correction:", correction);
     setSelectedCorrection(correction);
     setIsDrawerOpen(true);
     
@@ -38,6 +39,19 @@ const StudentCorrections: React.FC = () => {
     setSelectedCorrection(null);
   };
 
+  if (error) {
+    console.error("Error loading corrections:", error);
+    return (
+      <DashboardLayout title="My Corrections">
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-red-500">Error loading corrections. Please try again.</p>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
   if (isLoading) {
     return (
       <DashboardLayout title="My Corrections">
@@ -47,6 +61,8 @@ const StudentCorrections: React.FC = () => {
       </DashboardLayout>
     );
   }
+
+  console.log("Rendering corrections:", corrections);
 
   return (
     <DashboardLayout title="My Corrections">

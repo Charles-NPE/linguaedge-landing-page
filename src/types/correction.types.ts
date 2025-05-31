@@ -1,12 +1,10 @@
 
-import { Json } from "@/integrations/supabase/types";
-
 export interface Correction {
   id: string;
   submission_id: string | null;
   level: string;
-  errors: Record<string, string[]>;
-  recommendations: string[];
+  errors: Record<string, any> | null;
+  recommendations: Record<string, any> | null;
   teacher_feedback: string | null;
   word_count: number | null;
   created_at: string;
@@ -15,7 +13,7 @@ export interface Correction {
     student_id: string;
     assignments: {
       title: string;
-    };
+    } | null;
   } | null;
 }
 

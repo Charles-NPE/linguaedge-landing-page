@@ -27,7 +27,7 @@ export const submitEssayAndCorrect = async (
     description: "AI is reviewing your submission" 
   });
 
-  // Get the most recent submission for this user
+  // Get the most recent submission for this user - with better error handling
   const { data: recentSubmission, error: submissionError } = await supabase
     .from("submissions")
     .select("id, assignment_id")
@@ -36,9 +36,16 @@ export const submitEssayAndCorrect = async (
     .limit(1)
     .single();
 
-  if (submissionError || !recentSubmission) {
-    throw new Error("Failed to retrieve submission");
+  if (submissionError) {
+    console.error("Supabase submission error:", submissionError);
+    throw new Error(`Failed to retrieve submission: ${submissionError.message}`);
   }
+
+  if (!recentSubmission) {
+    throw new Error("No submission found for analysis");
+  }
+
+  console.log("Found submission for correction:", recentSubmission.id);
 
   // Prepare payload for webhook
   const payload = {
@@ -49,7 +56,9 @@ export const submitEssayAndCorrect = async (
     submitted_at: new Date().toISOString()
   };
 
-  // Send to webhook for AI analysis (without Authorization header)
+  console.log("Sending to webhook:", payload);
+
+  // Send to webhook for AI analysis
   const webhookResponse = await fetch(N8N_WEBHOOK, {
     method: "POST",
     mode: "cors",
@@ -61,15 +70,11 @@ export const submitEssayAndCorrect = async (
     throw new Error(`Webhook failed: ${webhookResponse.status}`);
   }
 
-  // parseamos el array y sacamos el content del primer message
+  // Parse webhook response properly
   const webhookPayload = await webhookResponse.json();
-  // puede venir un array de chunk responses + un objeto extra, así que buscamos el primer que tenga .message.content
-  const firstMsg = Array.isArray(webhookPayload)
-    ? webhookPayload.find((el) => el?.message?.content)?.message.content
-    : webhookPayload;
-
-  // si no encontramos nada válido le metemos un fallback
-  const correction = firstMsg ?? {
+  console.log("Webhook raw response:", webhookPayload);
+  
+  let correction: any = {
     level: "Unknown",
     errors: {},
     recommendations: {},
@@ -77,22 +82,61 @@ export const submitEssayAndCorrect = async (
     word_count: null,
   };
 
-  // Save correction directly to database
+  // Handle different response formats from webhook
+  if (Array.isArray(webhookPayload)) {
+    // Look for the message content in the array
+    const messageObj = webhookPayload.find((el) => el?.message?.content);
+    if (messageObj?.message?.content) {
+      correction = {
+        level: messageObj.message.content.level || "Unknown",
+        errors: messageObj.message.content.errors || {},
+        recommendations: messageObj.message.content.recommendations || {},
+        teacher_feedback: messageObj.message.content.teacher_feedback || "",
+        word_count: messageObj.message.content.word_count || null
+      };
+    }
+    
+    // Look for separate Wordcount object if word_count wasn't in content
+    if (!correction.word_count) {
+      const wordCountObj = webhookPayload.find((el) => el?.Wordcount || el?.wordcount);
+      if (wordCountObj) {
+        const wordCountValue = wordCountObj.Wordcount || wordCountObj.wordcount;
+        correction.word_count = typeof wordCountValue === 'string' 
+          ? parseInt(wordCountValue.replace(/\n/g, '').trim()) 
+          : wordCountValue;
+      }
+    }
+  } else if (webhookPayload && typeof webhookPayload === 'object') {
+    // Handle direct object response
+    correction = {
+      level: webhookPayload.level || "Unknown",
+      errors: webhookPayload.errors || {},
+      recommendations: webhookPayload.recommendations || {},
+      teacher_feedback: webhookPayload.teacher_feedback || "",
+      word_count: webhookPayload.word_count || null
+    };
+  }
+
+  console.log("Parsed correction data:", correction);
+
+  // Save correction to database with proper fallbacks
   const { error: correctionError } = await supabase
     .from("corrections")
     .insert({
       submission_id: recentSubmission.id,
-      level: correction.level ?? "Unknown",
-      errors: correction.errors ?? {},
-      recommendations: correction.recommendations ?? {},
-      teacher_feedback: correction.teacher_feedback ?? "",
-      word_count: correction.word_count ?? null
+      level: correction.level || "Unknown",
+      errors: correction.errors || {},
+      recommendations: correction.recommendations || {},
+      teacher_feedback: correction.teacher_feedback || "",
+      word_count: correction.word_count
     });
 
   if (correctionError) {
-    console.error("Supabase insert error:", correctionError);
-    throw new Error(correctionError.message || "Failed to save correction");
+    console.error("Supabase correction insert error:", correctionError);
+    throw new Error(`Failed to save correction: ${correctionError.message}`);
   }
+
+  console.log("Correction saved successfully for submission:", recentSubmission.id);
 
   toast({ 
     title: "Analysis complete!", 

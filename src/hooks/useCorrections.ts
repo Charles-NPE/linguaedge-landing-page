@@ -7,19 +7,36 @@ export const useCorrections = (studentId: string) =>
   useQuery({
     queryKey: ["corrections", studentId],
     queryFn: async (): Promise<Correction[]> => {
+      console.log("Fetching corrections for student:", studentId);
+      
       const { data, error } = await supabase
         .from("corrections")
         .select(`
-          *,
+          id,
+          submission_id,
+          level,
+          errors,
+          recommendations,
+          teacher_feedback,
+          word_count,
+          created_at,
+          read_at,
           submissions!inner (
             student_id,
-            assignments ( title )
+            assignments (
+              title
+            )
           )
         `)
         .eq("submissions.student_id", studentId)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching corrections:", error);
+        throw error;
+      }
+
+      console.log("Fetched corrections data:", data);
       return data as Correction[];
     },
     enabled: !!studentId,
