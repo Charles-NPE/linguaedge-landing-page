@@ -71,64 +71,43 @@ export const submitEssayAndCorrect = async (
   }
 
   // Parse webhook response properly
-  const webhookPayload = await webhookResponse.json();
-  console.log("Webhook raw response:", webhookPayload);
+  const response = await webhookResponse.json();
+  console.log("Webhook raw response:", response);
   
-  let correction: any = {
-    level: "Unknown",
-    errors: {},
-    recommendations: {},
-    teacher_feedback: "",
-    word_count: null,
-  };
+  // Extract correction data from the nested structure
+  let correctionData: any = null;
 
-  // Handle different response formats from webhook
-  if (Array.isArray(webhookPayload)) {
-    // Look for the message content in the array
-    const messageObj = webhookPayload.find((el) => el?.message?.content);
+  if (Array.isArray(response)) {
+    // Look for the object with message.content structure
+    const messageObj = response.find((item) => item?.message?.content);
     if (messageObj?.message?.content) {
-      correction = {
-        level: messageObj.message.content.level || "Unknown",
-        errors: messageObj.message.content.errors || {},
-        recommendations: messageObj.message.content.recommendations || {},
-        teacher_feedback: messageObj.message.content.teacher_feedback || "",
-        word_count: messageObj.message.content.word_count || null
-      };
+      correctionData = messageObj.message.content;
     }
-    
-    // Look for separate Wordcount object if word_count wasn't in content
-    if (!correction.word_count) {
-      const wordCountObj = webhookPayload.find((el) => el?.Wordcount || el?.wordcount);
-      if (wordCountObj) {
-        const wordCountValue = wordCountObj.Wordcount || wordCountObj.wordcount;
-        correction.word_count = typeof wordCountValue === 'string' 
-          ? parseInt(wordCountValue.replace(/\n/g, '').trim()) 
-          : wordCountValue;
-      }
-    }
-  } else if (webhookPayload && typeof webhookPayload === 'object') {
-    // Handle direct object response
-    correction = {
-      level: webhookPayload.level || "Unknown",
-      errors: webhookPayload.errors || {},
-      recommendations: webhookPayload.recommendations || {},
-      teacher_feedback: webhookPayload.teacher_feedback || "",
-      word_count: webhookPayload.word_count || null
-    };
+  } else if (response?.message?.content) {
+    // Handle case where response is not an array but has the nested structure
+    correctionData = response.message.content;
+  } else if (response && typeof response === 'object') {
+    // Handle case where response is already the correction data
+    correctionData = response;
   }
 
-  console.log("Parsed correction data:", correction);
+  if (!correctionData) {
+    console.error("Invalid webhook response format:", response);
+    throw new Error("Webhook returned invalid correction data");
+  }
+
+  console.log("Extracted correction data:", correctionData);
 
   // Save correction to database with proper fallbacks
   const { error: correctionError } = await supabase
     .from("corrections")
     .insert({
       submission_id: recentSubmission.id,
-      level: correction.level || "Unknown",
-      errors: correction.errors || {},
-      recommendations: correction.recommendations || {},
-      teacher_feedback: correction.teacher_feedback || "",
-      word_count: correction.word_count
+      level: correctionData.level ?? "Unknown",
+      errors: correctionData.errors ?? {},
+      recommendations: correctionData.recommendations ?? {},
+      teacher_feedback: correctionData.teacher_feedback ?? "",
+      word_count: correctionData.word_count ?? null
     });
 
   if (correctionError) {
