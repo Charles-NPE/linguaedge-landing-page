@@ -70,44 +70,43 @@ export const submitEssayAndCorrect = async (
     throw new Error(`Webhook failed: ${webhookResponse.status}`);
   }
 
-  // Parse webhook response properly
-  const response = await webhookResponse.json();
-  console.log("Webhook raw response:", response);
+  // Parse webhook response properly - handle array with separate objects
+  const webhookFullResponse = await webhookResponse.json();
+  console.log("Webhook raw response:", webhookFullResponse);
   
-  // Extract correction data from the nested structure
-  let correctionData: any = null;
+  // Find the main correction message content
+  const mainCorrectionObject = Array.isArray(webhookFullResponse)
+    ? webhookFullResponse.find((el: any) => el?.message?.content)?.message.content
+    : webhookFullResponse?.message?.content || webhookFullResponse;
 
-  if (Array.isArray(response)) {
-    // Look for the object with message.content structure
-    const messageObj = response.find((item) => item?.message?.content);
-    if (messageObj?.message?.content) {
-      correctionData = messageObj.message.content;
-    }
-  } else if (response?.message?.content) {
-    // Handle case where response is not an array but has the nested structure
-    correctionData = response.message.content;
-  } else if (response && typeof response === 'object') {
-    // Handle case where response is already the correction data
-    correctionData = response;
-  }
+  // Find the word count object separately
+  const wordCountObject = Array.isArray(webhookFullResponse)
+    ? webhookFullResponse.find((el: any) => 'Wordcount' in el)
+    : null;
 
-  if (!correctionData) {
-    console.error("Invalid webhook response format:", response);
+  // Extract and parse the word count
+  const wordCount = wordCountObject && typeof wordCountObject.Wordcount === 'string'
+    ? parseInt(wordCountObject.Wordcount.replace(/\n/g, '').trim()) // Remove newlines and trim
+    : null;
+
+  if (!mainCorrectionObject) {
+    console.error("Invalid webhook response format:", webhookFullResponse);
     throw new Error("Webhook returned invalid correction data");
   }
 
-  console.log("Extracted correction data:", correctionData);
+  console.log("Extracted correction data:", mainCorrectionObject);
+  console.log("Extracted word count:", wordCount);
 
   // Save correction to database with proper fallbacks
   const { error: correctionError } = await supabase
     .from("corrections")
     .insert({
       submission_id: recentSubmission.id,
-      level: correctionData.level ?? "Unknown",
-      errors: correctionData.errors ?? {},
-      recommendations: correctionData.recommendations ?? {},
-      teacher_feedback: correctionData.teacher_feedback ?? "",
-      word_count: correctionData.word_count ?? null
+      level: mainCorrectionObject.level ?? "Unknown",
+      errors: mainCorrectionObject.errors ?? {},
+      recommendations: mainCorrectionObject.recommendations ?? {},
+      teacher_feedback: mainCorrectionObject.teacher_feedback ?? "",
+      word_count: wordCount // Use the separately extracted wordCount
     });
 
   if (correctionError) {
