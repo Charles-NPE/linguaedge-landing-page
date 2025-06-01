@@ -10,7 +10,8 @@ export const useRequireProfileComplete = () => {
 
   useEffect(() => {
     if (isLoading || !profile) return;
-    const needsCompletion = !profile.full_name?.trim();
+    // Extra guard: only show modal when we have profile data and it's incomplete
+    const needsCompletion = !isLoading && profile && !profile.full_name?.trim();
     setShowModal(needsCompletion);
   }, [isLoading, profile]);
 
