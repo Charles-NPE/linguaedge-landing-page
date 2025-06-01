@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import AssignmentCard from "@/components/assignments/AssignmentCard";
 import SubmitBox from "@/components/assignments/SubmitBox";
+import { BackToDashboard } from "@/components/common/BackToDashboard";
 import { toast } from "@/hooks/use-toast";
 import { submitEssayAndCorrect } from "@/services/submissionService";
 
@@ -90,6 +91,7 @@ const StudentAssignments: React.FC = () => {
 
   return (
     <DashboardLayout title="Assignments">
+      <BackToDashboard />
       <div className="grid gap-6">
         {targets.map(t => (
           <AssignmentCard

@@ -10,6 +10,7 @@ import { useProgressData } from "@/hooks/useProgressData";
 import { InfoButton } from "@/components/ui/InfoButton";
 import { DateRangeSelector } from "@/components/progress/DateRangeSelector";
 import { DateRange, RangePreset, getDateRange, formatDateRange } from "@/utils/dateRanges";
+import { BackToDashboard } from "@/components/common/BackToDashboard";
 
 const StudentProgress: React.FC = () => {
   const { user } = useAuth();
@@ -108,6 +109,7 @@ const StudentProgress: React.FC = () => {
 
   return (
     <DashboardLayout title="My Progress">
+      <BackToDashboard />
       <div className="mb-8">
         <h2 className="text-lg text-slate-900 dark:text-white">
           Track your writing improvement over time

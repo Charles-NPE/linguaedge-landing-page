@@ -8,6 +8,7 @@ import { FileCheck } from "lucide-react";
 import { Correction } from "@/types/correction.types";
 import CorrectionCard from "@/components/corrections/CorrectionCard";
 import CorrectionDetail from "@/components/corrections/CorrectionDetail";
+import { BackToDashboard } from "@/components/common/BackToDashboard";
 import {
   Drawer,
   DrawerContent,
@@ -43,6 +44,7 @@ const StudentCorrections: React.FC = () => {
     console.error("Error loading corrections:", error);
     return (
       <DashboardLayout title="My Corrections">
+        <BackToDashboard />
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-red-500">Error loading corrections. Please try again.</p>
@@ -55,6 +57,7 @@ const StudentCorrections: React.FC = () => {
   if (isLoading) {
     return (
       <DashboardLayout title="My Corrections">
+        <BackToDashboard />
         <div className="flex justify-center py-8">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
@@ -66,6 +69,7 @@ const StudentCorrections: React.FC = () => {
 
   return (
     <DashboardLayout title="My Corrections">
+      <BackToDashboard />
       <div className="mb-8">
         <h2 className="text-lg text-slate-900 dark:text-white mb-2">
           Your Essay Corrections
