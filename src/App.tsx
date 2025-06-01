@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PageLoader from "@/components/ui/PageLoader";
 import CookieConsent from "@/components/CookieConsent";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { allRoutes } from "@/routes";
 
 const queryClient = new QueryClient({
@@ -23,22 +24,24 @@ const queryClient = new QueryClient({
 const App: React.FC = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <div className="min-h-screen flex flex-col w-full">
-            <Toaster />
-            <Sonner />
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                {allRoutes.map((route) => (
-                  <Route key={route.path} path={route.path} element={route.element} />
-                ))}
-              </Routes>
-            </Suspense>
-            <CookieConsent />
-          </div>
-        </AuthProvider>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <div className="min-h-screen flex flex-col w-full">
+              <Toaster />
+              <Sonner />
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  {allRoutes.map((route) => (
+                    <Route key={route.path} path={route.path} element={route.element} />
+                  ))}
+                </Routes>
+              </Suspense>
+              <CookieConsent />
+            </div>
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

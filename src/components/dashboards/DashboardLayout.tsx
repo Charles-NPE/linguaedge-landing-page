@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import UserDropdown from "@/components/navigation/UserDropdown";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ interface DashboardLayoutProps {
   actions?: React.ReactNode;
 }
 
-const DashboardLayoutContent: React.FC<DashboardLayoutProps> = ({ children, title, actions }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, actions }) => {
   const { signOut } = useAuth();
   const { theme } = useTheme();
 
@@ -55,14 +55,6 @@ const DashboardLayoutContent: React.FC<DashboardLayoutProps> = ({ children, titl
         </main>
       </div>
     </div>
-  );
-};
-
-const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
-  return (
-    <ThemeProvider>
-      <DashboardLayoutContent {...props} />
-    </ThemeProvider>
   );
 };
 
