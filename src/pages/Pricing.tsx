@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '@/components/landing/Navbar';
@@ -64,6 +63,17 @@ const Pricing = () => {
     }
   }, [location, user, isTeacher, checkSubscription]);
 
+  // Student auto-redirect logic
+  useEffect(() => {
+    if (isStudent) {
+      const redirectTimer = setTimeout(() => {
+        navigate('/student');
+      }, 5000);
+      
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [isStudent, navigate]);
+
   const handleGetStarted = async (priceId: string, planName: string) => {
     try {
       // If user is not logged in, redirect to signup with plan parameter
@@ -125,10 +135,30 @@ const Pricing = () => {
     }
   };
 
-  // Hide the pricing details for students
+  // Show student banner if user is a student
   if (isStudent) {
-    navigate('/student');
-    return null;
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 pt-32">
+          <div className="text-center max-w-md mx-auto p-8 bg-white rounded-xl shadow-lg">
+            <h1 className="text-3xl font-bold mb-4 text-gray-900">
+              LinguaEdge is free for students 🎉
+            </h1>
+            <p className="text-gray-600 mb-6">
+              You'll be redirected to your dashboard in a few seconds…
+            </p>
+            <Button 
+              onClick={() => navigate('/student')}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              Go to Dashboard Now
+            </Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   return (
