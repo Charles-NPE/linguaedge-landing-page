@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 type Theme = "light" | "dark";
 type ThemeContextType = { theme: Theme; setTheme: (t: Theme) => Promise<void> };
 
-const ThemeContext = createContext<ThemeContextType | null>(null);
+export const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
@@ -14,6 +13,12 @@ export const useTheme = () => {
     throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
+};
+
+// Safe hook that doesn't throw when outside provider
+export const useSafeTheme = () => {
+  const context = useContext(ThemeContext);
+  return context?.theme || "light";
 };
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
