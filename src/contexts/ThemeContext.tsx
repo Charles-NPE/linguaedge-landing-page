@@ -36,19 +36,16 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           
           const storedTheme = (data?.theme || localStorage.getItem("theme") || "light") as Theme;
           setThemeState(storedTheme);
-          applyTheme(storedTheme);
         } else {
           // Handle unauthenticated users
           const storedTheme = (localStorage.getItem("theme") || "light") as Theme;
           setThemeState(storedTheme);
-          applyTheme(storedTheme);
         }
       } catch (error) {
         console.error("Error fetching theme:", error);
         // Fallback to localStorage or browser preference
         const storedTheme = getDefaultTheme();
         setThemeState(storedTheme);
-        applyTheme(storedTheme);
       } finally {
         setIsLoading(false);
       }
@@ -56,15 +53,6 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
     fetchTheme();
   }, []);
-
-  // Apply theme helper
-  const applyTheme = (newTheme: Theme) => {
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
 
   // Get default theme based on localStorage or system preference
   const getDefaultTheme = (): Theme => {
@@ -82,10 +70,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     return "light";
   };
 
-  // Persist theme helper
+  // Persist theme helper - no longer applies to HTML element globally
   const setTheme = async (newTheme: Theme) => {
     setThemeState(newTheme);
-    applyTheme(newTheme);
     localStorage.setItem("theme", newTheme);
     
     try {
