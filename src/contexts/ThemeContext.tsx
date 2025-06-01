@@ -1,3 +1,4 @@
+
 // @ts-nocheck
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,15 +11,13 @@ export const ThemeContext = createContext<ThemeContextType | null>(null);
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === null) {
-    throw new Error("useTheme must be used within a ThemeProvider");
+    // Fail-safe: return light theme for marketing pages
+    return { 
+      theme: "light" as Theme, 
+      setTheme: async () => {} 
+    };
   }
   return context;
-};
-
-// Safe hook that doesn't throw when outside provider
-export const useSafeTheme = () => {
-  const context = useContext(ThemeContext);
-  return context?.theme || "light";
 };
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
