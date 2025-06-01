@@ -1,10 +1,12 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import UserDropdown from "@/components/navigation/UserDropdown";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -13,8 +15,32 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, actions }) => {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { theme } = useTheme();
+  const [dashboardDensity, setDashboardDensity] = useState<"comfortable" | "compact">("comfortable");
+
+  // Load dashboard density from user settings
+  useEffect(() => {
+    const loadDensity = async () => {
+      if (!user) return;
+      
+      try {
+        const { data } = await supabase
+          .from("user_settings")
+          .select("dashboard_density")
+          .eq("user_id", user.id)
+          .single();
+          
+        if (data?.dashboard_density) {
+          setDashboardDensity(data.dashboard_density as "comfortable" | "compact");
+        }
+      } catch (error) {
+        console.error("Error loading dashboard density:", error);
+      }
+    };
+    
+    loadDensity();
+  }, [user]);
 
   // Apply dark class to body for portals/modals when dashboard is mounted
   useEffect(() => {
@@ -30,11 +56,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, acti
     };
   }, [theme]);
 
+  const densityClass = dashboardDensity === "compact" ? "density-compact" : "density-comfortable";
+
   return (
     <div className={theme === "dark" ? "dark" : ""}>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500/5 via-transparent to-violet-500/5 dark:from-indigo-950/20 dark:via-transparent dark:to-violet-950/20 dark:bg-slate-900">
+      <div className={cn(
+        densityClass,
+        "min-h-screen bg-gradient-to-br from-indigo-500/5 via-transparent to-violet-500/5 dark:from-indigo-950/20 dark:via-transparent dark:to-violet-950/20 dark:bg-slate-900"
+      )}>
         <header className="bg-white border-b shadow-sm dark:bg-slate-800 dark:border-slate-700">
-          <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="container mx-auto px-4 py-[var(--p-header,1rem)] flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <Link to="/" className="font-bold text-xl text-primary dark:text-indigo-400">
                 LinguaEdgeAI
@@ -47,8 +78,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, acti
             </div>
           </div>
         </header>
-        <main className="container mx-auto p-4 md:p-6 lg:p-8">
-          <div className="md:hidden mb-6">
+        <main className="container mx-auto p-[var(--p-main,1rem)] md:p-[var(--p-main-md,1.5rem)] lg:p-[var(--p-main-lg,2rem)]">
+          <div className="md:hidden mb-[var(--gap,1.5rem)]">
             <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">{title}</h1>
           </div>
           {children}

@@ -86,6 +86,28 @@
   }
 }
 
+@layer utilities {
+  .density-comfortable {
+    --gap: 1.5rem;           /* Tailwind gap-6 */
+    --p-card: 1.5rem;        /* p-6 */
+    --p-header: 1rem;        /* py-4 */
+    --p-main: 1rem;          /* p-4 */
+    --p-main-md: 1.5rem;     /* md:p-6 */
+    --p-main-lg: 2rem;       /* lg:p-8 */
+    --text-sm: 0.875rem;     /* text-sm */
+  }
+  
+  .density-compact {
+    --gap: 0.75rem;          /* gap-3 */
+    --p-card: 1rem;          /* p-4 */
+    --p-header: 0.75rem;     /* py-3 */
+    --p-main: 0.75rem;       /* p-3 */
+    --p-main-md: 1rem;       /* md:p-4 */
+    --p-main-lg: 1.25rem;    /* lg:p-5 */
+    --text-sm: 0.75rem;      /* smaller text */
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -104,7 +126,7 @@
   }
   
   .card {
-    @apply rounded-xl shadow-sm p-6 bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100;
+    @apply rounded-xl shadow-sm p-[var(--p-card,1.5rem)] bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100;
   }
   
   .alert-success {
