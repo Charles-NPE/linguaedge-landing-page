@@ -12,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Profile } from "@/types/profile.types";
 
 const formSchema = z.object({
@@ -26,9 +26,11 @@ type ProfileFormValues = z.infer<typeof formSchema>;
 const StudentProfileForm: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [wasIncomplete, setWasIncomplete] = useState(false);
   const userRole = 'student';
   const dashboardPath = "/student";
 
@@ -56,6 +58,9 @@ const StudentProfileForm: React.FC = () => {
         if (error) throw error;
         
         if (data) {
+          const incomplete = !data.full_name?.trim();
+          setWasIncomplete(incomplete);
+          
           form.reset({
             fullName: data.full_name || "",
             email: user.email || "",
@@ -110,6 +115,15 @@ const StudentProfileForm: React.FC = () => {
 
       // Refresh updated_at timestamp
       setUpdatedAt(new Date().toISOString());
+      
+      // If profile was incomplete and now has a name, redirect to dashboard
+      if (wasIncomplete && values.fullName.trim()) {
+        toast({
+          title: "Profile completed — thanks!",
+          description: "Welcome to your dashboard!"
+        });
+        navigate('/student');
+      }
     } catch (error) {
       console.error("Error saving profile:", error);
       toast({

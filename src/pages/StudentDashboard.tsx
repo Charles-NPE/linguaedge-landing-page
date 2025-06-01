@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
@@ -11,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { JoinClassDialog } from "@/components/student";
 import { joinClass } from "@/hooks/useJoinClass";
 import { toast } from "@/lib/toastShim";
+import { useRequireProfileComplete } from "@/hooks/useRequireProfileComplete";
+import { ProfileIncompleteModal } from "@/components/modals/ProfileIncompleteModal";
 
 interface ClassInfo {
   id: string;
@@ -24,6 +25,7 @@ const StudentDashboard: React.FC = () => {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const { showModal } = useRequireProfileComplete();
 
   const fetchClasses = async () => {
     if (!user) return;
@@ -78,6 +80,8 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <DashboardLayout title="Student Dashboard">
+      <ProfileIncompleteModal open={showModal} />
+      
       <div className="mb-8">
         <h2 className="text-lg text-slate-900 dark:text-white">
           Welcome back, {user?.email?.split('@')[0] || 'Student'}
