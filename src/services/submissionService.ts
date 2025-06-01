@@ -13,28 +13,39 @@ interface WebhookResponse {
   word_count?: number;
 }
 
-// Improved defensive word count extraction function
-function extractWordCount(raw: any[]): number | null {
-  if (!Array.isArray(raw)) return null;
+/**
+ * Walk any JSON payload and return the first positive integer found
+ * under a key that matches /wordcount/i, or any standalone numeric
+ * element in the root array.
+ */
+function extractWordCount(payload: any): number | null {
+  // 0️⃣  unwrap { data: [...] } if needed
+  const root = Array.isArray(payload?.data) ? payload.data : payload;
+  const queue = Array.isArray(root) ? [...root] : [root];
 
-  // a) Look for an object with 'Wordcount' key
-  const obj = raw.find(el => el && typeof el === 'object' && 'Wordcount' in el);
-  if (obj) {
-    const wordCountString = typeof obj.Wordcount === 'string' 
-      ? obj.Wordcount.replace(/\D/g, '') // Remove all non-digits
-      : String(obj.Wordcount).replace(/\D/g, '');
-    
-    const parsed = parseInt(wordCountString, 10);
-    return !isNaN(parsed) && parsed > 0 ? parsed : null;
+  while (queue.length) {
+    const item = queue.shift();
+
+    if (item == null) continue;
+
+    // a) object with Wordcount-like key
+    if (typeof item === 'object' && !Array.isArray(item)) {
+      for (const [key, val] of Object.entries(item)) {
+        if (/^wordcount$/i.test(key)) {
+          const digits = String(val).replace(/\D+/g, '');
+          const n = parseInt(digits, 10);
+          if (n > 0) return n;
+        }
+        queue.push(val);           // search nested values too
+      }
+      continue;
+    }
+
+    // b) bare number or numeric string
+    if (typeof item === 'number' && item > 0) return item;
+    if (typeof item === 'string' && /^[0-9]+$/.test(item))
+      return parseInt(item, 10);
   }
-
-  // b) Look for any element that is purely numeric (number or numeric string)
-  const bare = raw.find(el => typeof el === 'number' || /^[0-9]+$/.test(String(el)));
-  if (bare) {
-    const parsed = parseInt(String(bare), 10);
-    return !isNaN(parsed) && parsed > 0 ? parsed : null;
-  }
-
   return null;
 }
 
@@ -140,8 +151,8 @@ export const submitEssayAndCorrect = async (
     ? webhookFullResponse.find((el: any) => el?.message?.content)?.message.content
     : webhookFullResponse?.message?.content || webhookFullResponse;
 
-  // Extract word count using improved defensive function
-  const extractedWordCount = extractWordCount(webhookFullResponse);
+  // Extract word count using robust function
+  const wordCount = extractWordCount(webhookFullResponse);
 
   if (!mainCorrectionObject) {
     console.error("Invalid webhook response format:", webhookFullResponse);
@@ -149,7 +160,7 @@ export const submitEssayAndCorrect = async (
   }
 
   console.log("Extracted correction data:", mainCorrectionObject);
-  console.log("Extracted word count:", extractedWordCount);
+  console.log("Extracted word count:", wordCount);
 
   // Save correction to database with proper fallbacks, using the known submission ID
   const { error: correctionError } = await supabase
@@ -160,7 +171,7 @@ export const submitEssayAndCorrect = async (
       errors: mainCorrectionObject.errors || {},
       recommendations: mainCorrectionObject.recommendations || [],
       teacher_feedback: mainCorrectionObject.teacher_feedback || "",
-      word_count: extractedWordCount // Use the defensively extracted word count
+      word_count: wordCount // ✅ now an integer, never mistaken as NULL
     });
 
   if (correctionError) {
