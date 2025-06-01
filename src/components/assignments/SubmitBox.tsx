@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useFileExtraction } from "@/hooks/useFileExtraction";
 import FileUpload from "./FileUpload";
@@ -15,7 +14,6 @@ interface Props {
 }
 
 const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel, loading = false }) => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -57,7 +55,9 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel, loading = false }) => 
     }
   };
 
-  const isDisabled = loading || extracting || submitting || !text.trim();
+  // Separate busy state from content validation
+  const isBusy = loading || extracting || submitting;
+  const canSend = text.trim().length > 0;
 
   return (
     <div className="fixed inset-x-0 bottom-0 bg-white dark:bg-slate-900 border-t p-4 space-y-4">
@@ -67,22 +67,22 @@ const SubmitBox: React.FC<Props> = ({ onSubmit, onCancel, loading = false }) => 
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={6}
-          disabled={isDisabled}
+          disabled={isBusy}
         />
 
         <FileUpload
           file={file}
           onFileSelect={handleFileSelect}
-          disabled={isDisabled}
+          disabled={isBusy}
         />
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel} disabled={isDisabled}>
+        <Button variant="outline" onClick={onCancel} disabled={isBusy}>
           Cancel
         </Button>
         <Button
-          disabled={isDisabled}
+          disabled={!canSend || isBusy}
           onClick={handleSubmit}
         >
           {submitting ? "Analyzing..." : loading ? "Processing..." : extracting ? "Extracting..." : "Send Essay"}
