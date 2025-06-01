@@ -229,6 +229,24 @@ export type Database = {
           },
         ]
       }
+      email_preferences: {
+        Row: {
+          allow_emails: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allow_emails?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allow_emails?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       post_replies: {
         Row: {
           author_id: string | null

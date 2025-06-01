@@ -14,6 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
+import { useEmailPreferences, updateEmailPreferences } from "@/hooks/useEmailPreferences";
+import { useQueryClient } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type ThemeType = "light" | "dark";
 type DensityType = "comfortable" | "compact";
@@ -30,9 +33,13 @@ const SettingsPage = () => {
   const { user, profile } = useAuth();
   const { theme, setTheme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
   
   const userRole = profile?.role || 'student';
   const dashboardPath = userRole === 'teacher' ? "/teacher" : "/student";
+  
+  // Load email preferences
+  const { data: emailPreferences, isLoading: emailPrefsLoading } = useEmailPreferences(user?.id);
   
   const form = useForm<UserSettings>({
     defaultValues: {
@@ -133,6 +140,27 @@ const SettingsPage = () => {
     setValue("theme", newTheme);
     await setTheme(newTheme);
     await saveSettings("theme", newTheme);
+  };
+
+  // Handle email preferences change
+  const handleEmailPreferencesChange = async (checked: boolean) => {
+    if (!user) return;
+    
+    try {
+      await updateEmailPreferences(user.id, checked);
+      queryClient.invalidateQueries({ queryKey: ['emailPreferences', user.id] });
+      toast({
+        title: "Email preferences updated",
+        description: "Your email notification preferences have been saved."
+      });
+    } catch (error) {
+      console.error("Error updating email preferences:", error);
+      toast({
+        title: "Failed to update preferences",
+        description: "There was an error saving your email preferences.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -240,10 +268,10 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
         
-        {/* Notification Settings */}
+        {/* Email Preferences */}
         <Card className="bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100">
           <CardHeader>
-            <CardTitle className="text-slate-900 dark:text-white">Notification Settings</CardTitle>
+            <CardTitle className="text-slate-900 dark:text-white">Email Preferences</CardTitle>
             <CardDescription className="dark:text-slate-300">
               Manage how and when we contact you
             </CardDescription>
@@ -256,16 +284,17 @@ const SettingsPage = () => {
                   <p className="font-medium text-slate-900 dark:text-white">Email Notifications</p>
                 </div>
                 <p className="text-sm text-muted-foreground dark:text-slate-300">
-                  Receive updates and important notifications via email
+                  Receive updates about new features, assignment reminders and account activity
                 </p>
               </div>
-              <Switch 
-                checked={watch("notification_emails")}
-                onCheckedChange={(checked) => {
-                  setValue("notification_emails", checked);
-                  saveSettings("notification_emails", checked);
-                }}
-              />
+              {emailPrefsLoading ? (
+                <Skeleton className="h-6 w-11 rounded-full" />
+              ) : (
+                <Switch 
+                  checked={emailPreferences?.allow_emails ?? true}
+                  onCheckedChange={handleEmailPreferencesChange}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
