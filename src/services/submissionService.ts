@@ -13,47 +13,84 @@ interface WebhookResponse {
   word_count?: number;
 }
 
+// Defensive word count extraction function
+function extractWordCount(raw: any[]): number | null {
+  if (!Array.isArray(raw)) return null;
+
+  // a) object with Wordcount key
+  const obj = raw.find(el => el && typeof el === 'object' && 'Wordcount' in el);
+  if (obj) {
+    const wordCountString = typeof obj.Wordcount === 'string' 
+      ? obj.Wordcount.replace(/\D/g, '') // Remove all non-digits
+      : String(obj.Wordcount).replace(/\D/g, '');
+    
+    const parsed = parseInt(wordCountString, 10);
+    return !isNaN(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  // b) bare number or numeric string (e.g. second element)
+  const bare = raw.find(el => typeof el === 'number' || /^[0-9]+$/.test(String(el)));
+  if (bare) {
+    const parsed = parseInt(String(bare), 10);
+    return !isNaN(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  return null;
+}
+
 export const submitEssayAndCorrect = async (
   text: string,
   userId: string,
+  assignmentId: string,
   onSubmit: (text: string) => Promise<void>
 ) => {
-  // Call the original onSubmit to handle assignment submission
-  await onSubmit(text.trim());
+  console.log("Starting submission process for assignment:", assignmentId);
   
-  // Now handle the correction workflow
+  // Step 1: Insert submission and get its ID immediately
+  const { data: newSubmissions, error: submissionError } = await supabase
+    .from("submissions")
+    .insert({
+      assignment_id: assignmentId,
+      student_id: userId,
+      text: text.trim(),
+      submitted_at: new Date().toISOString()
+    })
+    .select('id, assignment_id')
+    .returns<Array<{id: string, assignment_id: string}>>();
+
+  if (submissionError || !newSubmissions || newSubmissions.length === 0) {
+    console.error("Submission insert error:", submissionError);
+    throw new Error(`Failed to create submission: ${submissionError?.message || 'Unknown error'}`);
+  }
+
+  const newSubmission = newSubmissions[0];
+  console.log("Created submission:", newSubmission.id);
+
+  // Step 2: Update assignment target status
+  await supabase
+    .from('assignment_targets')
+    .update({ 
+      submitted_at: new Date().toISOString(), 
+      status: 'submitted' 
+    })
+    .eq('assignment_id', assignmentId)
+    .eq('student_id', userId);
+
+  // Step 3: Call the original onSubmit for any additional processing
+  await onSubmit(text.trim());
+
+  // Step 4: Start AI analysis
   toast({ 
     title: "Analyzing essay...", 
     description: "AI is reviewing your submission" 
   });
 
-  // Get the most recent submission for this user - with better error handling
-  const { data: recentSubmission, error: submissionError } = await supabase
-    .from("submissions")
-    .select("id, assignment_id")
-    .eq("student_id", userId)
-    .order("submitted_at", { ascending: false })
-    .limit(1)
-    .single();
-
-  if (submissionError) {
-    console.error("Supabase submission error:", submissionError);
-    throw new Error(`Failed to retrieve submission: ${submissionError.message}`);
-  }
-
-  if (!recentSubmission) {
-    throw new Error("No submission found for analysis");
-  }
-
-  console.log("Found submission for correction:", recentSubmission.id);
-
-  // Prepare payload for webhook
+  // Prepare payload for webhook with submission_id
   const payload = {
-    assignment_id: recentSubmission.assignment_id,
+    submission_id: newSubmission.id,
+    assignment_id: assignmentId,
     student_id: userId,
-    text: text.trim(),
-    file_url: null,
-    submitted_at: new Date().toISOString()
+    text: text.trim()
   };
 
   console.log("Sending to webhook:", payload);
@@ -70,7 +107,7 @@ export const submitEssayAndCorrect = async (
     throw new Error(`Webhook failed: ${webhookResponse.status}`);
   }
 
-  // Parse webhook response properly - handle array with separate objects
+  // Parse webhook response
   const webhookFullResponse = await webhookResponse.json();
   console.log("Webhook raw response:", webhookFullResponse);
   
@@ -79,21 +116,8 @@ export const submitEssayAndCorrect = async (
     ? webhookFullResponse.find((el: any) => el?.message?.content)?.message.content
     : webhookFullResponse?.message?.content || webhookFullResponse;
 
-  // Find the word count object separately - look for object with 'Wordcount' key
-  const wordCountObject = Array.isArray(webhookFullResponse)
-    ? webhookFullResponse.find((el: any) => el && typeof el === 'object' && 'Wordcount' in el)
-    : null;
-
-  // Extract and parse the word count properly
-  let extractedWordCount = null;
-  if (wordCountObject && wordCountObject.Wordcount) {
-    const wordCountString = typeof wordCountObject.Wordcount === 'string' 
-      ? wordCountObject.Wordcount.replace(/\n/g, '').trim() // Remove newlines and trim
-      : String(wordCountObject.Wordcount).trim();
-    
-    const parsedCount = parseInt(wordCountString, 10);
-    extractedWordCount = !isNaN(parsedCount) ? parsedCount : null;
-  }
+  // Extract word count using defensive function
+  const extractedWordCount = extractWordCount(webhookFullResponse);
 
   if (!mainCorrectionObject) {
     console.error("Invalid webhook response format:", webhookFullResponse);
@@ -103,16 +127,16 @@ export const submitEssayAndCorrect = async (
   console.log("Extracted correction data:", mainCorrectionObject);
   console.log("Extracted word count:", extractedWordCount);
 
-  // Save correction to database with proper fallbacks
+  // Save correction to database with proper fallbacks, using the known submission ID
   const { error: correctionError } = await supabase
     .from("corrections")
     .insert({
-      submission_id: recentSubmission.id,
+      submission_id: newSubmission.id, // Use the submission ID we just created
       level: mainCorrectionObject.level || "Unknown",
       errors: mainCorrectionObject.errors || {},
       recommendations: mainCorrectionObject.recommendations || [],
       teacher_feedback: mainCorrectionObject.teacher_feedback || "",
-      word_count: extractedWordCount // Use the properly extracted word count
+      word_count: extractedWordCount // Use the defensively extracted word count
     });
 
   if (correctionError) {
@@ -120,7 +144,7 @@ export const submitEssayAndCorrect = async (
     throw new Error(`Failed to save correction: ${correctionError.message}`);
   }
 
-  console.log("Correction saved successfully for submission:", recentSubmission.id);
+  console.log("Correction saved successfully for submission:", newSubmission.id);
 
   toast({ 
     title: "Analysis complete!", 

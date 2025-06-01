@@ -7,6 +7,7 @@ import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import AssignmentCard from "@/components/assignments/AssignmentCard";
 import SubmitBox from "@/components/assignments/SubmitBox";
 import { toast } from "@/hooks/use-toast";
+import { submitEssayAndCorrect } from "@/services/submissionService";
 
 interface TargetRow {
   assignment_id: string;
@@ -57,32 +58,17 @@ const StudentAssignments: React.FC = () => {
     
     setLoading(true);
     try {
-      // 1. Send to webhook
-      const webhookResponse = await fetch(
-        "https://n8n-railway-custom-production-c110.up.railway.app/webhook-test/1f103665-b767-4db5-9394-f251968fce17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            assignment_id: activeId,
-            student_id: user.id,
-            text: essayText
-          })
+      // Use the improved submission service that handles everything
+      await submitEssayAndCorrect(
+        essayText,
+        user.id,
+        activeId,
+        async (text: string) => {
+          // This is the original onSubmit callback - now just for compatibility
+          // The actual submission insert is handled in submitEssayAndCorrect
+          console.log("Processing submission through callback");
         }
       );
-
-      if (!webhookResponse.ok) {
-        throw new Error(`Webhook failed: ${webhookResponse.status}`);
-      }
-
-      // 2. Insert into submissions
-      const { error } = await supabase.from("submissions").insert({
-        assignment_id: activeId,
-        student_id: user.id,
-        text: essayText.trim()
-      });
-
-      if (error) throw error;
 
       toast({ title: "Essay submitted successfully!" });
       
