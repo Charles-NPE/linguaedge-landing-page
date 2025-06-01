@@ -13,11 +13,11 @@ interface WebhookResponse {
   word_count?: number;
 }
 
-// Defensive word count extraction function
+// Improved defensive word count extraction function
 function extractWordCount(raw: any[]): number | null {
   if (!Array.isArray(raw)) return null;
 
-  // a) object with Wordcount key
+  // a) Look for an object with 'Wordcount' key
   const obj = raw.find(el => el && typeof el === 'object' && 'Wordcount' in el);
   if (obj) {
     const wordCountString = typeof obj.Wordcount === 'string' 
@@ -28,7 +28,7 @@ function extractWordCount(raw: any[]): number | null {
     return !isNaN(parsed) && parsed > 0 ? parsed : null;
   }
 
-  // b) bare number or numeric string (e.g. second element)
+  // b) Look for any element that is purely numeric (number or numeric string)
   const bare = raw.find(el => typeof el === 'number' || /^[0-9]+$/.test(String(el)));
   if (bare) {
     const parsed = parseInt(String(bare), 10);
@@ -140,7 +140,7 @@ export const submitEssayAndCorrect = async (
     ? webhookFullResponse.find((el: any) => el?.message?.content)?.message.content
     : webhookFullResponse?.message?.content || webhookFullResponse;
 
-  // Extract word count using defensive function
+  // Extract word count using improved defensive function
   const extractedWordCount = extractWordCount(webhookFullResponse);
 
   if (!mainCorrectionObject) {
