@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -342,10 +341,22 @@ const StudentProgress: React.FC = () => {
                         <Cell key={entry.type} fill={entry.fill} />
                       ))}
                     </Pie>
-                    <Tooltip />
-                    <Legend verticalAlign="bottom" height={36} />
+                    <Tooltip
+                      formatter={(value, _name, props) => {
+                        const { type } = props.payload;
+                        return [`${value} errors`, type];
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
+                <ul className="mt-4 flex flex-wrap justify-center gap-3 text-sm">
+                  {errorBreakdownData.map(({ type, count, fill }) => (
+                    <li key={type} className="flex items-center gap-1">
+                      <span className="inline-block h-3 w-3 rounded-sm" style={{ background: fill }} />
+                      {type} ({count})
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">
