@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCorrections } from "./useCorrections";
 import { Correction } from "@/types/correction.types";
+import { DateRange } from "@/utils/dateRanges";
 
 export interface ProgressMetrics {
   totalEssays: number;
@@ -89,12 +90,32 @@ const calculateImprovementTrend = (corrections: Correction[]): string => {
   return "stable";
 };
 
-export const useProgressData = (studentId: string) => {
-  const { data: corrections = [], isLoading, error } = useCorrections(studentId);
+/**
+ * Filter corrections by date range
+ */
+const filterCorrectionsByDateRange = (corrections: Correction[], dateRange: DateRange): Correction[] => {
+  const fromDate = new Date(dateRange.from);
+  const toDate = new Date(dateRange.to);
+  
+  return corrections.filter(correction => {
+    const correctionDate = new Date(correction.created_at);
+    return correctionDate >= fromDate && correctionDate <= toDate;
+  });
+};
+
+export const useProgressData = (studentId: string, dateRange?: DateRange) => {
+  const { data: allCorrections = [], isLoading, error } = useCorrections(studentId);
 
   return useQuery({
-    queryKey: ["progressData", studentId, corrections.length],
+    queryKey: ["progressData", studentId, dateRange],
     queryFn: (): ProgressMetrics => {
+      let corrections = allCorrections;
+
+      // Filter by date range if provided
+      if (dateRange) {
+        corrections = filterCorrectionsByDateRange(allCorrections, dateRange);
+      }
+
       if (!corrections || corrections.length === 0) {
         return {
           totalEssays: 0,

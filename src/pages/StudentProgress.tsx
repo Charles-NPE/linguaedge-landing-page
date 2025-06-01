@@ -1,16 +1,30 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, Minus, BookOpen, Target, LineChartIcon, Award, BarChart3, FileText } from "lucide-react";
 import { useProgressData } from "@/hooks/useProgressData";
 import { InfoButton } from "@/components/ui/InfoButton";
+import { DateRangeSelector } from "@/components/progress/DateRangeSelector";
+import { DateRange, RangePreset, getDateRange, formatDateRange } from "@/utils/dateRanges";
 
 const StudentProgress: React.FC = () => {
   const { user } = useAuth();
-  const { data: progressData, isLoading, error } = useProgressData(user?.id || "");
+  
+  // Date range state
+  const [selectedPreset, setSelectedPreset] = useState<RangePreset>('month');
+  const [customRange, setCustomRange] = useState<{ from: Date; to: Date }>({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    to: new Date()
+  });
+  
+  // Get current date range based on preset
+  const currentDateRange = getDateRange(selectedPreset, customRange);
+  
+  const { data: progressData, isLoading, error } = useProgressData(user?.id || "", currentDateRange);
 
   const getLevelColor = (level: string) => {
     const colors = {
@@ -76,47 +90,21 @@ const StudentProgress: React.FC = () => {
     );
   }
 
-  if (!progressData || progressData.totalEssays === 0) {
-    return (
-      <DashboardLayout title="My Progress">
-        <div className="mb-8">
-          <h2 className="text-lg text-slate-900 dark:text-white">
-            Track your writing improvement over time
-          </h2>
-          <p className="text-muted-foreground mt-1">
-            View your essay statistics, writing trends, and areas for improvement.
-          </p>
-        </div>
-
-        <Card className="text-center py-12">
-          <CardContent>
-            <LineChartIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-medium mb-2 text-slate-900 dark:text-white">No progress data yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Submit an essay to start tracking your writing progress.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Once you complete assignments, you'll see detailed analytics about your improvement over time.
-            </p>
-          </CardContent>
-        </Card>
-      </DashboardLayout>
-    );
-  }
-
   // Prepare error breakdown data - filter out zero counts
-  const errorBreakdownData = Object.entries({
-    Grammar: progressData.errorsByType.find(e => e.type === "Grammar")?.count || 0,
-    Vocabulary: progressData.errorsByType.find(e => e.type === "Vocabulary")?.count || 0,
-    Cohesion: progressData.errorsByType.find(e => e.type === "Cohesion")?.count || 0,
-    Other: progressData.errorsByType.find(e => e.type === "Other")?.count || 0,
-  })
-    .filter(([, count]) => count > 0)
-    .map(([type, count]) => ({ 
-      type, 
-      count, 
-      fill: ERROR_COLORS[type as keyof typeof ERROR_COLORS] 
-    }));
+  const errorBreakdownData = progressData && progressData.errorsByType.length > 0 
+    ? Object.entries({
+        Grammar: progressData.errorsByType.find(e => e.type === "Grammar")?.count || 0,
+        Vocabulary: progressData.errorsByType.find(e => e.type === "Vocabulary")?.count || 0,
+        Cohesion: progressData.errorsByType.find(e => e.type === "Cohesion")?.count || 0,
+        Other: progressData.errorsByType.find(e => e.type === "Other")?.count || 0,
+      })
+        .filter(([, count]) => count > 0)
+        .map(([type, count]) => ({ 
+          type, 
+          count, 
+          fill: ERROR_COLORS[type as keyof typeof ERROR_COLORS] 
+        }))
+    : [];
 
   return (
     <DashboardLayout title="My Progress">
@@ -127,285 +115,341 @@ const StudentProgress: React.FC = () => {
         <p className="text-muted-foreground mt-1">
           View your essay statistics, writing trends, and areas for improvement.
         </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Showing data: {formatDateRange(currentDateRange)}
+        </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              Essays Submitted
-              <InfoButton text="Total number of essays you have submitted for correction." />
-            </CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{progressData.totalEssays}</div>
-            <p className="text-xs text-muted-foreground">
-              Total submissions
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              Average Length
-              <InfoButton text="Number of words per essay. Higher word count within the recommended range usually means fuller ideas." />
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{progressData.averageWords}</div>
-            <p className="text-xs text-muted-foreground">
-              Words per essay
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              Error Rate
-              <InfoButton text="Total errors divided by essay length × 100. Fewer errors per 100 words indicates better accuracy." />
-            </CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getAvgErrorDensity().toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">
-              Errors per 100 words
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              Current Level
-              <InfoButton text="Level assigned by AI to your most recent essay following the CEFR scale (A1–C2)." />
-            </CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              <Badge className={getLevelColor(progressData.currentLevel)}>
-                {progressData.currentLevel}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Most recent assessment
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Improvement Trend Card */}
+      {/* Date Range Selector */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {getTrendIcon(progressData.improvementTrend)}
-            Overall Progress
-          </CardTitle>
+          <CardTitle>Time Period</CardTitle>
           <CardDescription>
-            Your writing improvement trend based on recent essays
+            Select a time range to filter your progress data
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-lg font-medium mb-2">
-            Status: <span className={
-              progressData.improvementTrend === "up" ? "text-green-600" :
-              progressData.improvementTrend === "down" ? "text-red-600" : 
-              "text-gray-600"
-            }>
-              {getTrendText(progressData.improvementTrend)}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {progressData.improvementTrend === "up" 
-              ? "Great job! Your error rate has been decreasing over time." 
-              : progressData.improvementTrend === "down"
-              ? "Your recent essays show more errors. Consider reviewing feedback and practicing more."
-              : "Your performance has been consistent. Keep up the good work!"}
-          </p>
+          <DateRangeSelector
+            selectedPreset={selectedPreset}
+            onPresetChange={setSelectedPreset}
+            customRange={customRange}
+            onCustomRangeChange={setCustomRange}
+          />
         </CardContent>
       </Card>
 
-      {/* Charts Section */}
-      <div className="grid gap-6 lg:grid-cols-2 mb-8">
-        {/* Word Count Evolution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              Essay Length Over Time
-              <InfoButton text="Number of words you write in each essay. Aim for the recommended range in the assignment." />
-            </CardTitle>
-            <CardDescription>
-              Evolution of your essay length (words per submission)
-            </CardDescription>
-          </CardHeader>
+      {!progressData || progressData.totalEssays === 0 ? (
+        <Card className="text-center py-12">
           <CardContent>
-            <div style={{ minWidth: "240px" }}>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={progressData.wordCountTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value} words`, 'Length']} />
-                  <Line type="monotone" dataKey="words" stroke="#8884d8" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <LineChartIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-medium mb-2 text-slate-900 dark:text-white">No progress data in this period</h3>
+            <p className="text-muted-foreground mb-4">
+              No essays found in the selected time range.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Try selecting a different time period or submit more essays.
+            </p>
           </CardContent>
         </Card>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center">
+                  Essays Submitted
+                  <InfoButton text="Total number of essays you have submitted for correction." />
+                </CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{progressData.totalEssays}</div>
+                <p className="text-xs text-muted-foreground">
+                  Total submissions
+                </p>
+              </CardContent>
+            </Card>
 
-        {/* Error Density Trend */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              Error Rate Over Time
-              <InfoButton text="Total errors divided by essay length × 100. Fewer errors per 100 words indicates better accuracy." />
-            </CardTitle>
-            <CardDescription>
-              Errors per 100 words (lower is better)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div style={{ minWidth: "240px" }}>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={progressData.errorDensityTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value} errors/100 words`, 'Error Rate']} />
-                  <Line type="monotone" dataKey="density" stroke="#ff7300" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center">
+                  Average Length
+                  <InfoButton text="Number of words per essay. Higher word count within the recommended range usually means fuller ideas." />
+                </CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{progressData.averageWords}</div>
+                <p className="text-xs text-muted-foreground">
+                  Words per essay
+                </p>
+              </CardContent>
+            </Card>
 
-        {/* Lexical Diversity */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              Vocabulary Richness
-              <InfoButton text="Unique words / total words. Closer to 1 = more varied vocabulary." />
-            </CardTitle>
-            <CardDescription>
-              Lexical diversity (unique words / total words)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div style={{ minWidth: "240px" }}>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={progressData.lexicalDiversityTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis domain={[0, 1]} />
-                  <Tooltip formatter={(value) => [`${(Number(value) * 100).toFixed(1)}%`, 'Diversity']} />
-                  <Line type="monotone" dataKey="ratio" stroke="#00C49F" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center">
+                  Error Rate
+                  <InfoButton text="Total errors divided by essay length × 100. Fewer errors per 100 words indicates better accuracy." />
+                </CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{getAvgErrorDensity().toFixed(1)}</div>
+                <p className="text-xs text-muted-foreground">
+                  Errors per 100 words
+                </p>
+              </CardContent>
+            </Card>
 
-        {/* Error Distribution */}
-        <Card className="overflow-visible">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              Error Types Breakdown
-              <InfoButton text="Percentage of each error category (grammar, vocabulary, cohesion, other) across all your essays." />
-            </CardTitle>
-            <CardDescription>
-              Distribution of error types across all essays
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {errorBreakdownData.length > 0 ? (
-              <div style={{ minWidth: "240px" }}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={errorBreakdownData}
-                      cx="50%"
-                      cy="40%"
-                      labelLine={false}
-                      label={({ type, percent }) => `${type} (${(percent * 100).toFixed(0)}%)`}
-                      outerRadius={90}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {errorBreakdownData.map((entry) => (
-                        <Cell key={entry.type} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value, _name, props) => {
-                        const { type } = props.payload;
-                        return [`${value} errors`, type];
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <ul className="mt-4 flex flex-wrap justify-center gap-3 text-sm">
-                  {errorBreakdownData.map(({ type, count, fill }) => (
-                    <li key={type} className="flex items-center gap-1">
-                      <span className="inline-block h-3 w-3 rounded-sm" style={{ background: fill }} />
-                      {type} ({count})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                <div className="text-center">
-                  <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No errors found</p>
-                  <p className="text-sm">Excellent work!</p>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center">
+                  Current Level
+                  <InfoButton text="Level assigned by AI to your most recent essay following the CEFR scale (A1–C2)." />
+                </CardTitle>
+                <Award className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <Badge className={getLevelColor(progressData.currentLevel)}>
+                    {progressData.currentLevel}
+                  </Badge>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                <p className="text-xs text-muted-foreground">
+                  Most recent assessment
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Level History */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            CEFR Level Progression
-            <InfoButton text="Level assigned by AI to each essay following the CEFR scale (A1–C2)." />
-          </CardTitle>
-          <CardDescription>
-            Your language level assessment over time
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {progressData.levelHistory.length > 0 ? (
-              <div className="flex flex-wrap gap-4">
-                {progressData.levelHistory.map((entry, index) => (
-                  <div key={index} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                    <span className="text-sm text-muted-foreground">{entry.date}</span>
-                    <Badge className={getLevelColor(entry.level)}>
-                      {entry.level}
-                    </Badge>
+          {/* Improvement Trend Card */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {getTrendIcon(progressData.improvementTrend)}
+                Overall Progress
+              </CardTitle>
+              <CardDescription>
+                Your writing improvement trend based on recent essays
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-medium mb-2">
+                Status: <span className={
+                  progressData.improvementTrend === "up" ? "text-green-600" :
+                  progressData.improvementTrend === "down" ? "text-red-600" : 
+                  "text-gray-600"
+                }>
+                  {getTrendText(progressData.improvementTrend)}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {progressData.improvementTrend === "up" 
+                  ? "Great job! Your error rate has been decreasing over time." 
+                  : progressData.improvementTrend === "down"
+                  ? "Your recent essays show more errors. Consider reviewing feedback and practicing more."
+                  : "Your performance has been consistent. Keep up the good work!"}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Charts Section */}
+          <div className="grid gap-6 lg:grid-cols-2 mb-8">
+            {/* Word Count Evolution */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  Essay Length Over Time
+                  <InfoButton text="Number of words you write in each essay. Aim for the recommended range in the assignment." />
+                </CardTitle>
+                <CardDescription>
+                  Evolution of your essay length (words per submission)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {progressData.wordCountTrend.length > 0 ? (
+                  <div style={{ minWidth: "240px" }}>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={progressData.wordCountTrend}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => [`${value} words`, 'Length']} />
+                        <Line type="monotone" dataKey="words" stroke="#8884d8" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
-                <div className="text-center">
-                  <Award className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No level history available</p>
-                </div>
-              </div>
-            )}
+                ) : (
+                  <div className="text-center text-muted-foreground p-6">
+                    No essays in this period
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Error Density Trend */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  Error Rate Over Time
+                  <InfoButton text="Total errors divided by essay length × 100. Fewer errors per 100 words indicates better accuracy." />
+                </CardTitle>
+                <CardDescription>
+                  Errors per 100 words (lower is better)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {progressData.errorDensityTrend.length > 0 ? (
+                  <div style={{ minWidth: "240px" }}>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={progressData.errorDensityTrend}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => [`${value} errors/100 words`, 'Error Rate']} />
+                        <Line type="monotone" dataKey="density" stroke="#ff7300" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground p-6">
+                    No essays in this period
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Lexical Diversity */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  Vocabulary Richness
+                  <InfoButton text="Unique words / total words. Closer to 1 = more varied vocabulary." />
+                </CardTitle>
+                <CardDescription>
+                  Lexical diversity (unique words / total words)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {progressData.lexicalDiversityTrend.length > 0 ? (
+                  <div style={{ minWidth: "240px" }}>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={progressData.lexicalDiversityTrend}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis domain={[0, 1]} />
+                        <Tooltip formatter={(value) => [`${(Number(value) * 100).toFixed(1)}%`, 'Diversity']} />
+                        <Line type="monotone" dataKey="ratio" stroke="#00C49F" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground p-6">
+                    No essays in this period
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Error Distribution */}
+            <Card className="overflow-visible">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  Error Types Breakdown
+                  <InfoButton text="Percentage of each error category (grammar, vocabulary, cohesion, other) across all your essays." />
+                </CardTitle>
+                <CardDescription>
+                  Distribution of error types across all essays
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {errorBreakdownData.length > 0 ? (
+                  <div style={{ minWidth: "240px" }}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={errorBreakdownData}
+                          cx="50%"
+                          cy="40%"
+                          labelLine={false}
+                          label={({ type, percent }) => `${type} (${(percent * 100).toFixed(0)}%)`}
+                          outerRadius={90}
+                          fill="#8884d8"
+                          dataKey="count"
+                        >
+                          {errorBreakdownData.map((entry) => (
+                            <Cell key={entry.type} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value, _name, props) => {
+                            const { type } = props.payload;
+                            return [`${value} errors`, type];
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <ul className="mt-4 flex flex-wrap justify-center gap-3 text-sm">
+                      {errorBreakdownData.map(({ type, count, fill }) => (
+                        <li key={type} className="flex items-center gap-1">
+                          <span className="inline-block h-3 w-3 rounded-sm" style={{ background: fill }} />
+                          {type} ({count})
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    <div className="text-center">
+                      <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No errors found</p>
+                      <p className="text-sm">Excellent work!</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Level History */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                CEFR Level Progression
+                <InfoButton text="Level assigned by AI to each essay following the CEFR scale (A1–C2)." />
+              </CardTitle>
+              <CardDescription>
+                Your language level assessment over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {progressData.levelHistory.length > 0 ? (
+                  <div className="flex flex-wrap gap-4">
+                    {progressData.levelHistory.map((entry, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                        <span className="text-sm text-muted-foreground">{entry.date}</span>
+                        <Badge className={getLevelColor(entry.level)}>
+                          {entry.level}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-32 text-muted-foreground">
+                    <div className="text-center">
+                      <Award className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No level history in this period</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </DashboardLayout>
   );
 };
