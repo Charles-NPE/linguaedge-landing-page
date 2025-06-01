@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
-import { DateRange, RangePreset, getPresetLabel } from '@/utils/dateRanges';
+import { DateRange, RangePreset, getPresetLabel, getDateRange } from '@/utils/dateRanges';
 import { cn } from '@/lib/utils';
 
 interface DateRangeSelectorProps {
@@ -22,6 +22,26 @@ export const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   onCustomRangeChange,
   className
 }) => {
+  const handlePresetClick = (preset: RangePreset) => {
+    onPresetChange(preset);
+    
+    // If it's not custom, update the custom range to match the preset
+    // This ensures the calendar shows the correct dates when opened
+    if (preset !== 'custom') {
+      const dateRange = getDateRange(preset);
+      const newRange = {
+        from: new Date(dateRange.from),
+        to: new Date(dateRange.to)
+      };
+      onCustomRangeChange(newRange);
+    }
+  };
+
+  const handleCustomRangeChange = (range: { from: Date; to: Date }) => {
+    onCustomRangeChange(range);
+    onPresetChange('custom');
+  };
+
   return (
     <div className={cn("space-y-4", className)}>
       {/* Preset buttons */}
@@ -31,7 +51,7 @@ export const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
             key={preset}
             variant={selectedPreset === preset ? "default" : "outline"}
             size="sm"
-            onClick={() => onPresetChange(preset)}
+            onClick={() => handlePresetClick(preset)}
             className="text-sm"
           >
             {getPresetLabel(preset)}
@@ -41,10 +61,7 @@ export const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         {/* Custom range picker */}
         <DateRangePicker
           value={customRange}
-          onChange={(range) => {
-            onCustomRangeChange(range);
-            onPresetChange('custom');
-          }}
+          onChange={handleCustomRangeChange}
           className={cn(
             selectedPreset === 'custom' ? "border-primary bg-primary text-primary-foreground" : ""
           )}

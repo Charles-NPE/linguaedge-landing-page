@@ -24,15 +24,14 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     to: value.to
   });
 
+  // Update temp range when value changes (from preset selections)
+  React.useEffect(() => {
+    setTempRange({ from: value.from, to: value.to });
+  }, [value.from, value.to]);
+
   const handleSelect = (range: { from?: Date; to?: Date } | undefined) => {
     if (range?.from) {
       setTempRange(range);
-      
-      // If both dates are selected, apply the range
-      if (range.from && range.to) {
-        onChange({ from: range.from, to: range.to });
-        setIsOpen(false);
-      }
     }
   };
 
@@ -41,6 +40,11 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       onChange({ from: tempRange.from, to: tempRange.to });
       setIsOpen(false);
     }
+  };
+
+  const handleCancel = () => {
+    setTempRange({ from: value.from, to: value.to });
+    setIsOpen(false);
   };
 
   return (
@@ -70,13 +74,14 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
             onSelect={handleSelect}
             numberOfMonths={2}
             disabled={(date) => date > new Date()}
-            className="pointer-events-auto"
+            className="pointer-events-auto rounded-md border bg-background"
           />
           <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={() => setIsOpen(false)}
+              onClick={handleCancel}
+              className="focus-visible:outline-none"
             >
               Cancel
             </Button>
@@ -84,6 +89,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               size="sm"
               onClick={handleApply}
               disabled={!tempRange.from || !tempRange.to}
+              className="focus-visible:outline-none"
             >
               Apply
             </Button>
