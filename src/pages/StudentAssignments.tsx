@@ -108,6 +108,7 @@ const StudentAssignments: React.FC = () => {
         <SubmitBox
           onSubmit={handleSubmit}
           onCancel={() => setActiveId(null)}
+          loading={loading}
         />
       )}
     </DashboardLayout>
