@@ -46,6 +46,17 @@ export const submitEssayAndCorrect = async (
 ) => {
   console.log("Starting submission process for assignment:", assignmentId);
   
+  // Check if essay already submitted (prevent resubmission)
+  const { count } = await supabase
+    .from('submissions')
+    .select('id', { count: 'exact', head: true })
+    .eq('assignment_id', assignmentId)
+    .eq('student_id', userId);
+
+  if (count && count > 0) {
+    throw new Error('Essay already submitted.');
+  }
+  
   // Step 1: Insert submission and get its ID immediately
   const { data: newSubmissions, error: submissionError } = await supabase
     .from("submissions")

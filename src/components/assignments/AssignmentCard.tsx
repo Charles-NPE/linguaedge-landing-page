@@ -21,6 +21,17 @@ const AssignmentCard: React.FC<Props> = ({
     status === "late"    ? "text-red-600"    :
                            "text-green-600";
 
+  const getButtonText = () => {
+    switch (status) {
+      case "submitted":
+        return "Submitted";
+      case "late":
+        return "Late submission";
+      default:
+        return "Submit essay";
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="space-y-1">
@@ -30,9 +41,14 @@ const AssignmentCard: React.FC<Props> = ({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="whitespace-pre-line text-sm">{instructions}</p>
-        {status === "pending" && (
-          <Button size="sm" onClick={onSubmit}>Submit essay</Button>
-        )}
+        <Button 
+          size="sm" 
+          onClick={onSubmit}
+          disabled={status !== "pending"}
+          variant={status === "submitted" ? "secondary" : "default"}
+        >
+          {getButtonText()}
+        </Button>
       </CardContent>
     </Card>
   );

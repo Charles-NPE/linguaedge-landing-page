@@ -84,7 +84,7 @@ const CorrectionDetail: React.FC<CorrectionDetailProps> = ({ correction }) => {
           <Badge variant="outline" className="text-base px-3 py-1">
             Level: {correction.level}
           </Badge>
-          {correction.word_count && (
+          {correction.word_count && correction.word_count > 0 && (
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <BarChart className="h-4 w-4" />
               {correction.word_count} words
@@ -99,6 +99,11 @@ const CorrectionDetail: React.FC<CorrectionDetailProps> = ({ correction }) => {
           <h4 className="font-medium flex items-center gap-2">
             <FileText className="h-4 w-4 text-gray-500" />
             Original Essay Text
+            {correction.word_count && correction.word_count > 0 && (
+              <Badge variant="outline" className="text-xs ml-2">
+                📝 {correction.word_count} words
+              </Badge>
+            )}
           </h4>
           <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg border">
             <div className="text-sm leading-relaxed whitespace-pre-wrap select-text">

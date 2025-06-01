@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, MailOpen, BookOpen, Calendar } from "lucide-react";
+import { Mail, MailOpen, BookOpen, Calendar, FileText } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Correction } from "@/types/correction.types";
 
@@ -78,6 +78,12 @@ const CorrectionCard: React.FC<CorrectionCardProps> = ({ correction, onClick }) 
             <Badge variant="outline" className="text-xs">
               {errorCount} {errorCount === 1 ? 'error' : 'errors'}
             </Badge>
+            {correction.word_count && correction.word_count > 0 && (
+              <Badge variant="outline" className="text-xs flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                {correction.word_count} words
+              </Badge>
+            )}
             {isUnread && (
               <div className="w-2 h-2 bg-primary rounded-full"></div>
             )}
