@@ -17,6 +17,7 @@ export const TeacherMyEssays = lazy(() => import("@/pages/TeacherMyEssays"));
 export const StudentDashboard = lazy(() => import("@/pages/StudentDashboard"));
 export const StudentAssignments = lazy(() => import("@/pages/StudentAssignments"));
 export const StudentCorrections = lazy(() => import("@/pages/StudentCorrections"));
+export const StudentProgress = lazy(() => import("@/pages/StudentProgress"));
 export const ClassDetail = lazy(() => import("@/pages/ClassDetail"));
 export const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 export const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
@@ -101,6 +102,16 @@ export const allRoutes = [
     element: (
       <RoleRoute allowed={['student']}>
         <StudentCorrections />
+      </RoleRoute>
+    )
+  },
+  
+  // Student Progress Route
+  { 
+    path: "/student/progress", 
+    element: (
+      <RoleRoute allowed={['student']}>
+        <StudentProgress />
       </RoleRoute>
     )
   },

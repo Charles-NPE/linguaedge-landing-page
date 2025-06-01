@@ -142,13 +142,13 @@ const StudentDashboard: React.FC = () => {
             icon={FileCheck} 
           />
         </Link>
-        <div className="card">
+        <Link to="/student/progress" className="block">
           <FeatureCard 
             title="Progress" 
             description="Track your improvement over time and identify areas to focus on." 
             icon={LineChart} 
           />
-        </div>
+        </Link>
       </div>
 
       <JoinClassDialog 
