@@ -57,7 +57,7 @@ export const submitEssayAndCorrect = async (
     throw new Error('Essay already submitted.');
   }
   
-  // Step 1: Insert submission and get its ID immediately
+  // Step 1: Insert submission and get its ID immediately with assignment details
   const { data: newSubmissions, error: submissionError } = await supabase
     .from("submissions")
     .insert({
@@ -66,8 +66,19 @@ export const submitEssayAndCorrect = async (
       text: text.trim(),
       submitted_at: new Date().toISOString()
     })
-    .select('id, assignment_id')
-    .returns<Array<{id: string, assignment_id: string}>>();
+    .select(`
+      id, 
+      assignment_id,
+      assignments(title, instructions)
+    `)
+    .returns<Array<{
+      id: string, 
+      assignment_id: string,
+      assignments: {
+        title: string,
+        instructions: string
+      } | null
+    }>>();
 
   if (submissionError || !newSubmissions || newSubmissions.length === 0) {
     console.error("Submission insert error:", submissionError);
@@ -96,12 +107,14 @@ export const submitEssayAndCorrect = async (
     description: "AI is reviewing your submission" 
   });
 
-  // Prepare payload for webhook with submission_id
+  // Prepare payload for webhook with submission_id and assignment context
   const payload = {
     submission_id: newSubmission.id,
     assignment_id: assignmentId,
     student_id: userId,
-    text: text.trim()
+    text: text.trim(),
+    assignment_title: newSubmission.assignments?.title || "",
+    assignment_instructions: newSubmission.assignments?.instructions || ""
   };
 
   console.log("Sending to webhook:", payload);
