@@ -4,9 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { TrendingUp, TrendingDown, Minus, BookOpen, Target, LineChart as LineChartIcon, Award } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, BookOpen, Target, LineChartIcon, Award, BarChart3, FileText } from "lucide-react";
 import { useProgressData } from "@/hooks/useProgressData";
 
 const StudentProgress: React.FC = () => {
@@ -39,6 +38,12 @@ const StudentProgress: React.FC = () => {
       case "down": return "Needs attention";
       default: return "Stable";
     }
+  };
+
+  const getAvgErrorDensity = () => {
+    if (!progressData || progressData.errorDensityTrend.length === 0) return 0;
+    const total = progressData.errorDensityTrend.reduce((sum, entry) => sum + entry.density, 0);
+    return total / progressData.errorDensityTrend.length;
   };
 
   // Colors for pie chart
@@ -78,115 +83,16 @@ const StudentProgress: React.FC = () => {
           </p>
         </div>
 
-        {/* Overview Cards */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Essays</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">
-                Essays submitted
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Words</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">
-                Per essay
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Improvement</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">-</div>
-              <p className="text-xs text-muted-foreground">
-                Since last month
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Current Level</CardTitle>
-              <LineChartIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">-</div>
-              <p className="text-xs text-muted-foreground">
-                Based on recent essays
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Progress Charts Section */}
-        <div className="grid gap-6 md:grid-cols-2 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Writing Progress Over Time</CardTitle>
-              <CardDescription>
-                Track your improvement across different writing aspects
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center h-48 text-muted-foreground">
-                <div className="text-center">
-                  <LineChartIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No data available yet</p>
-                  <p className="text-sm">Submit essays to see your progress</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Areas for Improvement</CardTitle>
-              <CardDescription>
-                Focus areas based on recent feedback
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center h-48 text-muted-foreground">
-                <div className="text-center">
-                  <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No feedback data yet</p>
-                  <p className="text-sm">Complete assignments to get insights</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              Your latest essay submissions and corrections
-            </CardDescription>
-          </CardHeader>
+        <Card className="text-center py-12">
           <CardContent>
-            <div className="flex items-center justify-center h-32 text-muted-foreground">
-              <div className="text-center">
-                <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No recent activity</p>
-              </div>
-            </div>
+            <LineChartIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-medium mb-2 text-slate-900 dark:text-white">No progress data yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Submit an essay to start tracking your writing progress.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Once you complete assignments, you'll see detailed analytics about your improvement over time.
+            </p>
           </CardContent>
         </Card>
       </DashboardLayout>
@@ -204,43 +110,43 @@ const StudentProgress: React.FC = () => {
         </p>
       </div>
 
-      {/* Overview Cards */}
+      {/* Summary Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Essays</CardTitle>
+            <CardTitle className="text-sm font-medium">Essays Submitted</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{progressData.totalEssays}</div>
             <p className="text-xs text-muted-foreground">
-              Essays submitted
+              Total submissions
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Words</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Average Length</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{progressData.averageWords}</div>
             <p className="text-xs text-muted-foreground">
-              Per essay
+              Words per essay
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Improvement</CardTitle>
-            {getTrendIcon(progressData.improvementTrend)}
+            <CardTitle className="text-sm font-medium">Error Rate</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{getTrendText(progressData.improvementTrend)}</div>
+            <div className="text-2xl font-bold">{getAvgErrorDensity().toFixed(1)}</div>
             <p className="text-xs text-muted-foreground">
-              Based on error density
+              Errors per 100 words
             </p>
           </CardContent>
         </Card>
@@ -257,20 +163,51 @@ const StudentProgress: React.FC = () => {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Based on recent essays
+              Most recent assessment
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Progress Charts Section */}
+      {/* Improvement Trend Card */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {getTrendIcon(progressData.improvementTrend)}
+            Overall Progress
+          </CardTitle>
+          <CardDescription>
+            Your writing improvement trend based on recent essays
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-lg font-medium mb-2">
+            Status: <span className={
+              progressData.improvementTrend === "up" ? "text-green-600" :
+              progressData.improvementTrend === "down" ? "text-red-600" : 
+              "text-gray-600"
+            }>
+              {getTrendText(progressData.improvementTrend)}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {progressData.improvementTrend === "up" 
+              ? "Great job! Your error rate has been decreasing over time." 
+              : progressData.improvementTrend === "down"
+              ? "Your recent essays show more errors. Consider reviewing feedback and practicing more."
+              : "Your performance has been consistent. Keep up the good work!"}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Charts Section */}
       <div className="grid gap-6 lg:grid-cols-2 mb-8">
         {/* Word Count Evolution */}
         <Card>
           <CardHeader>
-            <CardTitle>Word Count Evolution</CardTitle>
+            <CardTitle>Essay Length Over Time</CardTitle>
             <CardDescription>
-              Track how your essay length changes over time
+              Evolution of your essay length (words per submission)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -279,8 +216,50 @@ const StudentProgress: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip formatter={(value) => [`${value} words`, 'Length']} />
                 <Line type="monotone" dataKey="words" stroke="#8884d8" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Error Density Trend */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Error Rate Over Time</CardTitle>
+            <CardDescription>
+              Errors per 100 words (lower is better)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={progressData.errorDensityTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`${value} errors/100 words`, 'Error Rate']} />
+                <Line type="monotone" dataKey="density" stroke="#ff7300" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Lexical Diversity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Vocabulary Richness</CardTitle>
+            <CardDescription>
+              Lexical diversity (unique words / total words)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={progressData.lexicalDiversityTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis domain={[0, 1]} />
+                <Tooltip formatter={(value) => [`${(Number(value) * 100).toFixed(1)}%`, 'Diversity']} />
+                <Line type="monotone" dataKey="ratio" stroke="#00C49F" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -289,9 +268,9 @@ const StudentProgress: React.FC = () => {
         {/* Error Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Error Distribution</CardTitle>
+            <CardTitle>Error Types Breakdown</CardTitle>
             <CardDescription>
-              Breakdown of error types across all essays
+              Distribution of error types across all essays
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -320,52 +299,10 @@ const StudentProgress: React.FC = () => {
                 <div className="text-center">
                   <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No errors found</p>
-                  <p className="text-sm">Great job!</p>
+                  <p className="text-sm">Excellent work!</p>
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Error Density Trend */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Error Density Over Time</CardTitle>
-            <CardDescription>
-              Errors per 100 words (lower is better)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={progressData.errorDensityTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip formatter={(value) => [`${value} errors/100 words`, 'Error Density']} />
-                <Line type="monotone" dataKey="density" stroke="#ff7300" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Lexical Diversity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Lexical Diversity</CardTitle>
-            <CardDescription>
-              Vocabulary richness (unique words / total words)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={progressData.lexicalDiversityTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis domain={[0, 1]} />
-                <Tooltip formatter={(value) => [`${(Number(value) * 100).toFixed(1)}%`, 'Diversity']} />
-                <Line type="monotone" dataKey="ratio" stroke="#00C49F" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
@@ -373,9 +310,9 @@ const StudentProgress: React.FC = () => {
       {/* Level History */}
       <Card>
         <CardHeader>
-          <CardTitle>Level History</CardTitle>
+          <CardTitle>CEFR Level Progression</CardTitle>
           <CardDescription>
-            Your CEFR level progression over time
+            Your language level assessment over time
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -395,7 +332,7 @@ const StudentProgress: React.FC = () => {
               <div className="flex items-center justify-center h-32 text-muted-foreground">
                 <div className="text-center">
                   <Award className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No level data available</p>
+                  <p>No level history available</p>
                 </div>
               </div>
             )}
