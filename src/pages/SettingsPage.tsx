@@ -90,6 +90,11 @@ const SettingsPage = () => {
   const saveSettings = async (field: string, value: any) => {
     if (!user) return;
     
+    // Guard against saving unsupported languages
+    if (field === "language" && value !== "en") {
+      return;
+    }
+    
     try {
       const settings = {
         user_id: user.id,
@@ -209,8 +214,10 @@ const SettingsPage = () => {
               <Select 
                 value={watch("language")} 
                 onValueChange={(value) => {
-                  setValue("language", value as LanguageType);
-                  saveSettings("language", value);
+                  if (value === "en") {
+                    setValue("language", value as LanguageType);
+                    saveSettings("language", value);
+                  }
                 }}
               >
                 <SelectTrigger className="w-full sm:w-[240px]">
@@ -218,8 +225,12 @@ const SettingsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Español</SelectItem>
-                  <SelectItem value="fr">Français</SelectItem>
+                  <SelectItem value="es" disabled className="opacity-50 cursor-not-allowed">
+                    Español (coming soon)
+                  </SelectItem>
+                  <SelectItem value="fr" disabled className="opacity-50 cursor-not-allowed">
+                    Français (coming soon)
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground dark:text-slate-400">
