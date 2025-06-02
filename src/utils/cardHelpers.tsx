@@ -1,4 +1,6 @@
 
+import React from "react";
+import type { ReactElement } from "react";
 import { CheckCircle, AlertCircle, Clock } from "lucide-react";
 
 export function getCardColor(stats: { submitted: number; pending: number; late: number }): string {
@@ -11,7 +13,7 @@ export function getCardColor(stats: { submitted: number; pending: number; late: 
   return 'bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800';
 }
 
-export function getStatusIcon(stats: { submitted: number; pending: number; late: number }) {
+export function getStatusIcon(stats: { submitted: number; pending: number; late: number }): ReactElement {
   const { submitted, pending, late } = stats;
   const total = submitted + pending + late;
   
