@@ -12,5 +12,5 @@
     "alwaysStrict": true,
     "skipLibCheck": false
   },
-  "include": ["src/**/*", "supabase/functions/**/*", "functions/**/*"]
+  "include": ["src/**/*", "src/utils/**/*", "supabase/functions/**/*", "functions/**/*"]
 }
