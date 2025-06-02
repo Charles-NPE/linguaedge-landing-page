@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -11,6 +10,7 @@ import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { Clock, Users, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import StudentStatusRow from "@/components/assignments/StudentStatusRow";
+import ReminderModal from "@/components/reminders/ReminderModal";
 
 type StatObj = { pending: number; submitted: number; late: number };
 
@@ -46,6 +46,13 @@ const TeacherMyEssays: React.FC = () => {
   const { data: rows = [], isLoading } = useTeacherEssays(user?.id);
   const [openId, setOpenId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailCache>({});
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<{
+    id: string;
+    title: string;
+    studentId?: string;
+    studentName?: string;
+  } | null>(null);
 
   const assignments = rows.map((r: any) => ({
     ...r,
@@ -83,71 +90,22 @@ const TeacherMyEssays: React.FC = () => {
     setDetail(prev => ({ ...prev, [id]: { rows } }));
   };
 
-  const remindOne = async (assignmentId: string, studentId: string, name: string | null) => {
-    const delay = prompt(`Minutes from now to remind ${name ?? "student"}:`, "120");
-    if (!delay) return;
-    
-    const minutes = parseInt(delay) || 0;
-    const run_at = new Date(Date.now() + minutes * 60000).toISOString();
-    
-    const { error } = await supabase.from("reminders").insert({ 
-      assignment_id: assignmentId, 
-      student_id: studentId, 
-      run_at 
+  const handleClassReminder = (assignmentId: string, assignmentTitle: string) => {
+    setSelectedAssignment({
+      id: assignmentId,
+      title: assignmentTitle
     });
-    
-    if (error) {
-      console.error("Error scheduling reminder:", error);
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Reminder scheduled", description: `Will remind ${name ?? "student"} in ${minutes} minutes` });
-    }
+    setReminderModalOpen(true);
   };
 
-  const getCardColor = (stats: StatObj) => {
-    if (stats.late > 0) return "border-red-200 bg-red-50";
-    if (stats.pending > 0) return "border-yellow-200 bg-yellow-50";
-    if (stats.submitted === 0) return "border-blue-200 bg-blue-50";
-    return "border-green-200 bg-green-50";
-  };
-
-  const getStatusIcon = (stats: StatObj) => {
-    if (stats.late > 0) return <AlertCircle className="h-4 w-4 text-red-600" />;
-    if (stats.pending > 0) return <Clock className="h-4 w-4 text-yellow-600" />;
-    return <CheckCircle className="h-4 w-4 text-green-600" />;
-  };
-
-  const scheduleReminder = async (assignmentId: string, assignmentTitle: string) => {
-    const minutesStr = prompt(`Schedule reminder for "${assignmentTitle}" in how many minutes?`, "120");
-    if (!minutesStr) return;
-
-    const minutes = parseInt(minutesStr);
-    if (isNaN(minutes) || minutes < 1) {
-      toast({ title: "Invalid input", description: "Please enter a valid number of minutes", variant: "destructive" });
-      return;
-    }
-
-    const runAt = new Date(Date.now() + minutes * 60000);
-
-    try {
-      const { error } = await supabase.from("reminders").insert({
-        assignment_id: assignmentId,
-        run_at: runAt.toISOString()
-      });
-
-      if (error) {
-        console.error("Error scheduling reminder:", error);
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        toast({ 
-          title: "Reminder scheduled", 
-          description: `Reminder will be sent at ${format(runAt, "PPp")}` 
-        });
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      toast({ title: "Error", description: "Failed to schedule reminder", variant: "destructive" });
-    }
+  const handleStudentReminder = (assignmentId: string, assignmentTitle: string, studentId: string, studentName: string) => {
+    setSelectedAssignment({
+      id: assignmentId,
+      title: assignmentTitle,
+      studentId,
+      studentName
+    });
+    setReminderModalOpen(true);
   };
 
   if (isLoading) {
@@ -229,10 +187,11 @@ const TeacherMyEssays: React.FC = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => scheduleReminder(assignment.id, assignment.title)}
+                      onClick={() => handleClassReminder(assignment.id, assignment.title)}
+                      disabled={assignment.stats.pending + assignment.stats.late === 0}
                     >
                       <Clock className="h-3 w-3 mr-1" />
-                      Schedule reminder
+                      Remind Class
                     </Button>
                   </div>
                   
@@ -244,7 +203,9 @@ const TeacherMyEssays: React.FC = () => {
                           key={sr.student.id}
                           student={sr.student}
                           status={sr.status}
-                          onReminder={(sid, name) => remindOne(assignment.id, sid, name)}
+                          onReminder={(studentId, studentName) => 
+                            handleStudentReminder(assignment.id, assignment.title, studentId, studentName)
+                          }
                         />
                       ))}
                     </div>
@@ -255,6 +216,18 @@ const TeacherMyEssays: React.FC = () => {
           })
         )}
       </div>
+
+      {/* Reminder Modal */}
+      {selectedAssignment && (
+        <ReminderModal
+          open={reminderModalOpen}
+          onOpenChange={setReminderModalOpen}
+          assignmentId={selectedAssignment.id}
+          assignmentTitle={selectedAssignment.title}
+          studentId={selectedAssignment.studentId}
+          studentName={selectedAssignment.studentName}
+        />
+      )}
     </DashboardLayout>
   );
 };

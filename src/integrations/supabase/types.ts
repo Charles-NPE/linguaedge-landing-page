@@ -247,6 +247,47 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          assignment_id: string | null
+          created_at: string | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_replies: {
         Row: {
           author_id: string | null
@@ -374,6 +415,7 @@ export type Database = {
           assignment_id: string | null
           created_at: string
           id: string
+          notification_channel: string | null
           run_at: string
           sent: boolean
           student_id: string | null
@@ -382,6 +424,7 @@ export type Database = {
           assignment_id?: string | null
           created_at?: string
           id?: string
+          notification_channel?: string | null
           run_at: string
           sent?: boolean
           student_id?: string | null
@@ -390,6 +433,7 @@ export type Database = {
           assignment_id?: string | null
           created_at?: string
           id?: string
+          notification_channel?: string | null
           run_at?: string
           sent?: boolean
           student_id?: string | null
@@ -542,6 +586,14 @@ export type Database = {
           _student_ids?: string[]
         }
         Returns: string
+      }
+      create_class_reminders: {
+        Args: {
+          _assignment_id: string
+          _run_at: string
+          _notification_channel?: string
+        }
+        Returns: number
       }
       mark_correction_read: {
         Args: { correction_id: string }

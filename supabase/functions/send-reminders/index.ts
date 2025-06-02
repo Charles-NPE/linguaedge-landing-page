@@ -15,10 +15,9 @@ serve(async () => {
     const { data: reminders, error } = await supabase
       .from("reminders")
       .select(`
-        id, run_at, assignment_id,
+        id, run_at, assignment_id, student_id, notification_channel,
         assignments ( title, teacher_id, classes ( name ) ),
-        student_id,
-        profiles:student_id ( full_name )
+        profiles:student_id ( full_name, email )
       `)
       .eq("sent", false)
       .lte("run_at", new Date().toISOString());
@@ -37,22 +36,45 @@ serve(async () => {
 
     for (const reminder of reminders) {
       try {
-        // Get webhook URL from environment
-        const webhookUrl = Deno.env.get("REMINDER_WEBHOOK_URL");
-        
-        if (webhookUrl) {
-          // Send webhook notification
-          await fetch(webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              student_name: reminder.profiles?.full_name || "Student",
-              assignment: reminder.assignments?.title || "Assignment",
-              class_name: reminder.assignments?.classes?.name || "Class",
-              deadline: reminder.run_at,
-              type: "assignment_reminder"
-            })
-          });
+        const studentName = reminder.profiles?.full_name || "Student";
+        const studentEmail = reminder.profiles?.email;
+        const assignmentTitle = reminder.assignments?.title || "Assignment";
+        const className = reminder.assignments?.classes?.name || "Class";
+        const channel = reminder.notification_channel || "email";
+
+        // Send dashboard notification if required
+        if (channel === "dashboard" || channel === "both") {
+          if (reminder.student_id) {
+            await supabase.from("notifications").insert({
+              user_id: reminder.student_id,
+              title: "Assignment Reminder",
+              message: `Reminder: Your assignment "${assignmentTitle}" is due soon for ${className}`,
+              type: "reminder",
+              assignment_id: reminder.assignment_id
+            });
+            console.log(`Dashboard notification sent for assignment: ${assignmentTitle}`);
+          }
+        }
+
+        // Send email if required
+        if (channel === "email" || channel === "both") {
+          const webhookUrl = Deno.env.get("REMINDER_WEBHOOK_URL");
+          
+          if (webhookUrl && studentEmail) {
+            await fetch(webhookUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                student_name: studentName,
+                student_email: studentEmail,
+                assignment: assignmentTitle,
+                class_name: className,
+                deadline: reminder.run_at,
+                type: "assignment_reminder"
+              })
+            });
+            console.log(`Email reminder sent for assignment: ${assignmentTitle}`);
+          }
         }
 
         // Mark reminder as sent
@@ -61,13 +83,12 @@ serve(async () => {
           .update({ sent: true })
           .eq("id", reminder.id);
 
-        console.log(`Sent reminder for assignment: ${reminder.assignments?.title}`);
       } catch (error) {
         console.error("Error sending individual reminder:", error);
       }
     }
 
-    return new Response(`Successfully sent ${reminders.length} reminders`, { status: 200 });
+    return new Response(`Successfully processed ${reminders.length} reminders`, { status: 200 });
   } catch (error) {
     console.error("Error in send-reminders function:", error);
     return new Response("Internal server error", { status: 500 });

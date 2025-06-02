@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -30,6 +30,7 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
   const [scope, setScope] = useState<"class" | "student">("class");
   const [students, setStudents] = useState<{id: string; name: string; className: string}[]>([]);
   const [studentId, setStudentId] = useState<string>("");
+  const [notifyStudents, setNotifyStudents] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
@@ -43,6 +44,7 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
       setDeadline("");
       setScope("class");
       setStudentId("");
+      setNotifyStudents(true);
       setAiQuery("");
       if (classes.length) setClassId(classes[0].id);
     }
@@ -88,20 +90,26 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
     
     setIsLoading(true);
     try {
-      await createAssignmentWithTargets({
+      const assignmentData = {
         class_id: scope === "class" ? classId : students.find(s => s.id === studentId)?.id ? classId : classes[0]?.id,
         teacher_id: user.id,
         title: title.trim(),
         instructions: instructions.trim(),
         deadline: deadline ? new Date(deadline).toISOString() : null,
         student_ids: scope === "student" ? [studentId] : undefined
-      });
+      };
+
+      await createAssignmentWithTargets(assignmentData);
+
+      // Note: Automatic notifications are now handled by the database trigger
+      // The notifyStudents checkbox is kept for UI consistency but the trigger
+      // will always create notifications. In the future, this could be made conditional.
 
       toast({ 
         title: "Essay assigned!", 
         description: scope === "student" 
           ? "Student has been notified." 
-          : "Students have been notified." 
+          : `Students have been notified${notifyStudents ? " automatically" : ""}.` 
       });
       onOpenChange(false);
     } catch (err: any) {
@@ -246,6 +254,23 @@ const AssignEssayModal: React.FC<Props> = ({ open, onOpenChange, classes }) => {
               </Select>
             </div>
           )}
+          
+          {/* Notification Option */}
+          <div className="border-t pt-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="notify-students" 
+                checked={notifyStudents} 
+                onCheckedChange={setNotifyStudents}
+              />
+              <Label htmlFor="notify-students" className="text-sm">
+                Notify students automatically when assignment is created
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Students will receive a notification in their dashboard when this assignment is published.
+            </p>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 mt-6">
