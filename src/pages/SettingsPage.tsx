@@ -12,18 +12,45 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTheme } from "@/contexts/ThemeContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const SettingsPage: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
   const { data: emailPref, isLoading: emailLoading } = useEmailPreferences(user?.id);
   const [language, setLanguage] = useState("en");
+  const [dashboardDensity, setDashboardDensity] = useState<"comfortable" | "compact">("comfortable");
 
   // Determine dashboard path based on user role/path
   const isTeacher = window.location.pathname.includes('teacher') || user?.user_metadata?.role === 'teacher';
   const dashboardPath = isTeacher ? "/teacher" : "/student";
   const roleTitle = isTeacher ? "Teacher" : "Student";
+
+  // Load dashboard density from user settings
+  useEffect(() => {
+    const loadDensity = async () => {
+      if (!user) return;
+      
+      try {
+        const { data } = await supabase
+          .from("user_settings")
+          .select("dashboard_density")
+          .eq("user_id", user.id)
+          .single();
+          
+        if (data?.dashboard_density) {
+          setDashboardDensity(data.dashboard_density as "comfortable" | "compact");
+        }
+      } catch (error) {
+        console.error("Error loading dashboard density:", error);
+      }
+    };
+    
+    loadDensity();
+  }, [user]);
 
   const handleLanguageChange = async (value: string) => {
     if (value !== 'en') {
@@ -61,6 +88,44 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleThemeToggle = async (checked: boolean) => {
+    const newTheme = checked ? "dark" : "light";
+    await setTheme(newTheme);
+    toast({
+      title: "Theme updated",
+      description: `Switched to ${newTheme} mode.`
+    });
+  };
+
+  const handleDensityChange = async (value: "comfortable" | "compact") => {
+    if (!user?.id) return;
+    
+    try {
+      await supabase
+        .from("user_settings")
+        .upsert(
+          { 
+            user_id: user.id, 
+            dashboard_density: value,
+            updated_at: new Date().toISOString()
+          }, 
+          { onConflict: "user_id" }
+        );
+      
+      setDashboardDensity(value);
+      toast({
+        title: "Dashboard density updated",
+        description: `Switched to ${value} layout.`
+      });
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        description: "Could not update dashboard density. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="container max-w-4xl py-10">
       <h1 className="text-3xl font-bold mb-6">{roleTitle} Settings</h1>
@@ -76,6 +141,60 @@ const SettingsPage: React.FC = () => {
       </div>
 
       <div className="space-y-6">
+        {/* Theme Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Theme Settings</CardTitle>
+            <CardDescription>
+              Customize the appearance of the dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <Switch
+                  id="dark-mode"
+                  checked={theme === "dark"}
+                  onCheckedChange={handleThemeToggle}
+                />
+                <Label htmlFor="dark-mode">Dark Mode</Label>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Toggle between light and dark theme for better visibility.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Interface Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Interface Settings</CardTitle>
+            <CardDescription>
+              Choose your dashboard layout preferences
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <Label htmlFor="dashboard-density" className="min-w-fit">Dashboard Density</Label>
+                <Select value={dashboardDensity} onValueChange={handleDensityChange}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Select density" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border shadow-lg z-50">
+                    <SelectItem value="comfortable">Comfortable</SelectItem>
+                    <SelectItem value="compact">Compact</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Control the spacing and layout density of dashboard elements.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Language Settings */}
         <Card>
           <CardHeader>
