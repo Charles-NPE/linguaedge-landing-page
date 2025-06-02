@@ -7,15 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { useEmailPreferences } from "@/hooks/useEmailPreferences";
+import { useEmailPreferences, updateEmailPreferences } from "@/hooks/useEmailPreferences";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 
 const SettingsPage: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { emailPreferences, updateEmailPreferences, isLoading } = useEmailPreferences();
+  const queryClient = useQueryClient();
+  const { data: emailPref, isLoading: emailLoading } = useEmailPreferences(user?.id);
   const [language, setLanguage] = useState("en");
 
   // Determine dashboard path based on user role/path
@@ -40,14 +42,17 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleEmailToggle = async (checked: boolean) => {
-    const success = await updateEmailPreferences({ allow_emails: checked });
+    if (!user?.id) return;
     
-    if (success) {
+    try {
+      await updateEmailPreferences(user.id, checked);
+      queryClient.invalidateQueries({ queryKey: ['emailPreferences', user.id] });
+      
       toast({
         title: "Email preferences updated",
         description: checked ? "You will receive email notifications." : "Email notifications disabled."
       });
-    } else {
+    } catch (error) {
       toast({
         title: "Update failed",
         description: "Could not update email preferences. Please try again.",
@@ -141,9 +146,9 @@ const SettingsPage: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <Switch
                   id="email-notifications"
-                  checked={emailPreferences?.allow_emails ?? false}
+                  checked={emailPref?.allow_emails ?? false}
                   onCheckedChange={handleEmailToggle}
-                  disabled={isLoading}
+                  disabled={emailLoading}
                 />
                 <Label htmlFor="email-notifications">
                   Receive email notifications
