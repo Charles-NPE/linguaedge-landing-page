@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckedState } from "@radix-ui/react-checkbox";
+import { Clock, Users, User } from "lucide-react";
 
 interface ReminderModalProps {
   open: boolean;
@@ -26,12 +28,19 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
   studentId,
   studentName
 }) => {
-  const [timing, setTiming] = useState("1hour");
+  const [timing, setTiming] = useState<"15min" | "1hour" | "1day" | "3days">("1hour");
   const [sendEmail, setSendEmail] = useState(true);
   const [sendDashboard, setSendDashboard] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   const isClassReminder = !studentId;
+
+  const timeOptions = [
+    { value: "15min", label: "15 minutes" },
+    { value: "1hour", label: "1 hour" },
+    { value: "1day", label: "1 day" },
+    { value: "3days", label: "3 days" },
+  ];
 
   const getRunAt = () => {
     const now = new Date();
@@ -56,7 +65,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
     return "email"; // fallback
   };
 
-  const handleSendReminder = async () => {
+  const handleScheduleReminder = async () => {
     if (!sendEmail && !sendDashboard) {
       toast({
         title: "Error",
@@ -149,15 +158,16 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
 
           <div>
             <Label htmlFor="timing">Send reminder in</Label>
-            <Select value={timing} onValueChange={setTiming}>
+            <Select value={timing} onValueChange={(v) => setTiming(v as any)}>
               <SelectTrigger className="mt-1">
                 <SelectValue placeholder="Select timing" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="15min">15 minutes</SelectItem>
-                <SelectItem value="1hour">1 hour</SelectItem>
-                <SelectItem value="1day">1 day</SelectItem>
-                <SelectItem value="3days">3 days</SelectItem>
+                {timeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -193,7 +203,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
               Cancel
             </Button>
             <Button
-              onClick={handleSendReminder}
+              onClick={handleScheduleReminder}
               disabled={isLoading}
               className="flex-1"
             >
