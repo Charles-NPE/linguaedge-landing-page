@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { Clock, Users, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import StudentStatusRow from "@/components/assignments/StudentStatusRow";
 import ReminderModal from "@/components/reminders/ReminderModal";
+import { getCardColor, getStatusIcon } from "@/utils/cardHelpers";
 
 type StatObj = { pending: number; submitted: number; late: number };
 

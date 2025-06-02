@@ -3,14 +3,13 @@ import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Users, User } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CheckedState } from "@radix-ui/react-checkbox";
 
-interface Props {
+interface ReminderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   assignmentId: string;
@@ -19,7 +18,7 @@ interface Props {
   studentName?: string;
 }
 
-const ReminderModal: React.FC<Props> = ({
+const ReminderModal: React.FC<ReminderModalProps> = ({
   open,
   onOpenChange,
   assignmentId,
@@ -27,23 +26,28 @@ const ReminderModal: React.FC<Props> = ({
   studentId,
   studentName
 }) => {
-  const [reminderType, setReminderType] = useState<"class" | "individual">(
-    studentId ? "individual" : "class"
-  );
-  const [timeOption, setTimeOption] = useState<string>("60");
+  const [timing, setTiming] = useState("1hour");
   const [sendEmail, setSendEmail] = useState(true);
   const [sendDashboard, setSendDashboard] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const timeOptions = [
-    { value: "30", label: "30 minutes" },
-    { value: "60", label: "1 hour" },
-    { value: "120", label: "2 hours" },
-    { value: "240", label: "4 hours" },
-    { value: "480", label: "8 hours" },
-    { value: "1440", label: "1 day" },
-    { value: "2880", label: "2 days" }
-  ];
+  const isClassReminder = !studentId;
+
+  const getRunAt = () => {
+    const now = new Date();
+    switch (timing) {
+      case "15min":
+        return new Date(now.getTime() + 15 * 60 * 1000);
+      case "1hour":
+        return new Date(now.getTime() + 60 * 60 * 1000);
+      case "1day":
+        return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      case "3days":
+        return new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      default:
+        return new Date(now.getTime() + 60 * 60 * 1000);
+    }
+  };
 
   const getNotificationChannel = () => {
     if (sendEmail && sendDashboard) return "both";
@@ -52,11 +56,11 @@ const ReminderModal: React.FC<Props> = ({
     return "email"; // fallback
   };
 
-  const handleScheduleReminder = async () => {
+  const handleSendReminder = async () => {
     if (!sendEmail && !sendDashboard) {
       toast({
-        title: "Selection required",
-        description: "Please select at least one notification method.",
+        title: "Error",
+        description: "Please select at least one notification method",
         variant: "destructive"
       });
       return;
@@ -64,50 +68,48 @@ const ReminderModal: React.FC<Props> = ({
 
     setIsLoading(true);
     try {
-      const minutes = parseInt(timeOption);
-      const runAt = new Date(Date.now() + minutes * 60000);
+      const runAt = getRunAt();
       const channel = getNotificationChannel();
 
-      if (reminderType === "class") {
-        // Use the database function to create reminders for all pending students
-        const { data: reminderCount, error } = await supabase.rpc(
-          "create_class_reminders",
-          {
-            _assignment_id: assignmentId,
-            _run_at: runAt.toISOString(),
-            _notification_channel: channel
-          }
-        );
+      if (isClassReminder) {
+        // Use the new function to create reminders for all pending students
+        const { data, error } = await supabase.rpc("create_class_reminders", {
+          _assignment_id: assignmentId,
+          _run_at: runAt.toISOString(),
+          _notification_channel: channel
+        });
 
         if (error) throw error;
 
         toast({
-          title: "Class reminder scheduled",
-          description: `Reminder scheduled for ${reminderCount} students in ${minutes} minutes`
+          title: "Reminders Scheduled",
+          description: `${data} reminder(s) scheduled for the class`
         });
       } else {
-        // Create reminder for individual student
-        const { error } = await supabase.from("reminders").insert({
-          assignment_id: assignmentId,
-          student_id: studentId,
-          run_at: runAt.toISOString(),
-          notification_channel: channel
-        });
+        // Create reminder for specific student
+        const { error } = await supabase
+          .from("reminders")
+          .insert({
+            assignment_id: assignmentId,
+            student_id: studentId,
+            run_at: runAt.toISOString(),
+            notification_channel: channel
+          });
 
         if (error) throw error;
 
         toast({
-          title: "Reminder scheduled",
-          description: `Reminder scheduled for ${studentName} in ${minutes} minutes`
+          title: "Reminder Scheduled",
+          description: `Reminder scheduled for ${studentName}`
         });
       }
 
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error scheduling reminder:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to schedule reminder",
+        description: "Failed to schedule reminder",
         variant: "destructive"
       });
     } finally {
@@ -115,99 +117,89 @@ const ReminderModal: React.FC<Props> = ({
     }
   };
 
+  const handleEmailChange = (checked: CheckedState) => {
+    setSendEmail(checked === true);
+  };
+
+  const handleDashboardChange = (checked: CheckedState) => {
+    setSendDashboard(checked === true);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Schedule Reminder</DialogTitle>
+          <DialogTitle>
+            Schedule Reminder
+          </DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-6">
-          <div className="text-sm text-muted-foreground">
-            Assignment: <span className="font-medium">{assignmentTitle}</span>
+        
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm font-medium">Assignment</Label>
+            <p className="text-sm text-muted-foreground mt-1">{assignmentTitle}</p>
           </div>
 
-          {/* Reminder Type Selection */}
           <div>
-            <Label className="text-base font-medium">Send reminder to:</Label>
-            <RadioGroup 
-              value={reminderType} 
-              onValueChange={(v) => setReminderType(v as "class" | "individual")}
-              className="mt-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="class" id="class" disabled={!!studentId} />
-                <Label htmlFor="class" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Entire class (pending students only)
-                </Label>
-              </div>
-              {studentId && (
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="individual" id="individual" />
-                  <Label htmlFor="individual" className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {studentName || "Selected student"}
-                  </Label>
-                </div>
-              )}
-            </RadioGroup>
+            <Label className="text-sm font-medium">Recipients</Label>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isClassReminder ? "All pending students in class" : studentName}
+            </p>
           </div>
 
-          {/* Time Selection */}
           <div>
-            <Label className="text-base font-medium">Send reminder in:</Label>
-            <Select value={timeOption} onValueChange={setTimeOption}>
-              <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Select time" />
+            <Label htmlFor="timing">Send reminder in</Label>
+            <Select value={timing} onValueChange={setTiming}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select timing" />
               </SelectTrigger>
               <SelectContent>
-                {timeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      {option.label}
-                    </div>
-                  </SelectItem>
-                ))}
+                <SelectItem value="15min">15 minutes</SelectItem>
+                <SelectItem value="1hour">1 hour</SelectItem>
+                <SelectItem value="1day">1 day</SelectItem>
+                <SelectItem value="3days">3 days</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Notification Channel Selection */}
-          <div>
-            <Label className="text-base font-medium">Notification method:</Label>
-            <div className="mt-2 space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="email" 
-                  checked={sendEmail} 
-                  onCheckedChange={setSendEmail}
-                />
-                <Label htmlFor="email">Send email notification</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="dashboard" 
-                  checked={sendDashboard} 
-                  onCheckedChange={setSendDashboard}
-                />
-                <Label htmlFor="dashboard">Send dashboard notification</Label>
-              </div>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Notification Methods</Label>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="email"
+                checked={sendEmail}
+                onCheckedChange={handleEmailChange}
+              />
+              <Label htmlFor="email" className="text-sm">Send email notification</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="dashboard"
+                checked={sendDashboard}
+                onCheckedChange={handleDashboardChange}
+              />
+              <Label htmlFor="dashboard" className="text-sm">Send dashboard notification</Label>
             </div>
           </div>
-        </div>
 
-        <div className="flex justify-end gap-2 mt-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleScheduleReminder}
-            disabled={isLoading || (!sendEmail && !sendDashboard)}
-          >
-            {isLoading ? "Scheduling..." : "Schedule Reminder"}
-          </Button>
+          <div className="flex gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSendReminder}
+              disabled={isLoading}
+              className="flex-1"
+            >
+              {isLoading ? "Scheduling..." : "Schedule Reminder"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
