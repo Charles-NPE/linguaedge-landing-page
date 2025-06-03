@@ -16,3 +16,6 @@ export const useClasses = (teacherId?: string) =>
       return data ?? [];
     }
   });
+
+// Alias for better clarity when used for teachers
+export const useTeacherClasses = useClasses;

@@ -3,14 +3,16 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mail } from "lucide-react";
+import { format } from "date-fns";
 
 interface Props {
   student: { id: string; full_name: string | null };
   status: "pending" | "submitted" | "late";
+  submittedAt?: string | null;
   onReminder: (studentId: string, studentName: string) => void;
 }
 
-const StudentStatusRow: React.FC<Props> = ({ student, status, onReminder }) => {
+const StudentStatusRow: React.FC<Props> = ({ student, status, submittedAt, onReminder }) => {
   const getStatusBadge = () => {
     switch (status) {
       case "submitted":
@@ -31,6 +33,14 @@ const StudentStatusRow: React.FC<Props> = ({ student, status, onReminder }) => {
           {student.full_name || `Student ${student.id.slice(0, 6)}`}
         </span>
         {getStatusBadge()}
+        {submittedAt && (
+          <span className={`text-xs ${status === "late" ? "text-red-600" : "text-muted-foreground"}`}>
+            {format(new Date(submittedAt), "PPp")}
+          </span>
+        )}
+        {!submittedAt && status !== "submitted" && (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
       </div>
       
       {showReminderButton && (

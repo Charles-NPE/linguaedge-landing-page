@@ -1,11 +1,14 @@
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTeacherEssays } from "@/hooks/useTeacherEssays";
+import { useClasses } from "@/hooks/useClasses";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { Clock, Users, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
@@ -18,7 +21,7 @@ type StatObj = { pending: number; submitted: number; late: number };
 function toStats(j: any): StatObj {
   try {
     if (typeof j === "object") return j as StatObj;
-    return JSON.parse(j) as StatObj;       // handle json string
+    return JSON.parse(j) as StatObj;
   } catch {
     return { pending: 0, submitted: 0, late: 0 };
   }
@@ -30,6 +33,7 @@ type AssignmentRow = {
   deadline: string | null;
   created_at: string;
   class_name: string;
+  class_id: string;
   stats: StatObj;
 };
 
@@ -38,6 +42,7 @@ interface DetailCache {
     rows: {
       student: { id: string; full_name: string | null };
       status: "pending" | "submitted" | "late";
+      submitted_at?: string | null;
     }[];
   };
 }
@@ -45,8 +50,10 @@ interface DetailCache {
 const TeacherMyEssays: React.FC = () => {
   const { user } = useAuth();
   const { data: rows = [], isLoading } = useTeacherEssays(user?.id);
+  const { data: classes = [] } = useClasses(user?.id);
   const [openId, setOpenId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailCache>({});
+  const [selectedClassId, setSelectedClassId] = useState<string>("all");
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<{
     id: string;
@@ -60,6 +67,21 @@ const TeacherMyEssays: React.FC = () => {
     stats: toStats(r.stats)
   }));
 
+  // Filter assignments by selected class
+  const filteredAssignments = selectedClassId === "all" 
+    ? assignments 
+    : assignments.filter(a => a.class_id === selectedClassId);
+
+  // Group assignments by class
+  const grouped = filteredAssignments.reduce<Record<string, AssignmentRow[]>>(
+    (acc, a) => {
+      acc[a.class_id] ||= [];
+      acc[a.class_id].push(a);
+      return acc;
+    },
+    {}
+  );
+
   const toggleDetail = async (id: string) => {
     if (openId === id) { 
       setOpenId(null); 
@@ -72,7 +94,7 @@ const TeacherMyEssays: React.FC = () => {
     const { data, error } = await supabase
       .from("assignment_targets")
       .select(`
-        status, student_id,
+        status, student_id, submitted_at,
         profiles:student_id ( id, full_name )
       `)
       .eq("assignment_id", id);
@@ -85,7 +107,8 @@ const TeacherMyEssays: React.FC = () => {
 
     const rows = (data ?? []).map((r: any) => ({
       student: { id: r.profiles.id, full_name: r.profiles.full_name },
-      status: r.status
+      status: r.status,
+      submitted_at: r.submitted_at
     }));
     
     setDetail(prev => ({ ...prev, [id]: { rows } }));
@@ -125,96 +148,116 @@ const TeacherMyEssays: React.FC = () => {
         ← Back to Dashboard
       </Link>
       
-      <div className="space-y-4">
-        {assignments.length === 0 ? (
+      {/* Class Filter */}
+      <div className="mb-6">
+        <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="Filter by class" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All classes</SelectItem>
+            {classes.map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="space-y-8">
+        {Object.keys(grouped).length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-muted-foreground">No assignments found.</p>
             </CardContent>
           </Card>
         ) : (
-          assignments.map(assignment => {
-            const totalStudents = assignment.stats.pending + assignment.stats.submitted + assignment.stats.late;
-            
-            return (
-              <Card key={assignment.id} className={`${getCardColor(assignment.stats)} transition-all hover:shadow-md`}>
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(assignment.stats)}
-                      <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">
-                          {assignment.deadline 
-                            ? `Due • ${format(new Date(assignment.deadline), "PPp")}` 
-                            : "No deadline"
-                          }
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Created {format(new Date(assignment.created_at), "PP")}
-                        </p>
+          Object.entries(grouped).map(([classId, list]) => (
+            <section key={classId} className="space-y-4">
+              <h3 className="text-base font-semibold flex items-center gap-1">
+                <Users className="h-4 w-4" /> {list[0].class_name}
+              </h3>
+              
+              {list.map(assignment => {
+                const totalStudents = assignment.stats.pending + assignment.stats.submitted + assignment.stats.late;
+                
+                return (
+                  <Card key={assignment.id} className={`${getCardColor(assignment.stats)} transition-all hover:shadow-md`}>
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(assignment.stats)}
+                          <CardTitle className="text-lg">{assignment.title}</CardTitle>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <p className="text-sm text-muted-foreground">
+                              {assignment.deadline 
+                                ? `Due • ${format(new Date(assignment.deadline), "PPp")}` 
+                                : "No deadline"
+                              }
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Created {format(new Date(assignment.created_at), "PP")}
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => toggleDetail(assignment.id)} 
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {openId === assignment.id ? <ChevronUp size={18}/> : <ChevronDown size={18}/> }
+                          </button>
+                        </div>
                       </div>
-                      <button 
-                        onClick={() => toggleDetail(assignment.id)} 
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {openId === assignment.id ? <ChevronUp size={18}/> : <ChevronDown size={18}/> }
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {assignment.class_name}
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-center">
-                    <div className="flex gap-4 text-sm">
-                      <span className="text-green-600">
-                        ✓ {assignment.stats.submitted} submitted
-                      </span>
-                      <span className="text-yellow-600">
-                        ⏳ {assignment.stats.pending} pending
-                      </span>
-                      <span className="text-red-600">
-                        ⚠ {assignment.stats.late} late
-                      </span>
-                      <span className="text-muted-foreground">
-                        ({assignment.stats.submitted}/{totalStudents} total)
-                      </span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleClassReminder(assignment.id, assignment.title)}
-                      disabled={assignment.stats.pending + assignment.stats.late === 0}
-                    >
-                      <Clock className="h-3 w-3 mr-1" />
-                      Remind Class
-                    </Button>
-                  </div>
-                  
-                  {openId === assignment.id && detail[assignment.id] && (
-                    <div className="mt-3 bg-slate-50 dark:bg-slate-800/30 rounded p-3">
-                      <h4 className="text-sm font-medium mb-2">Student Status</h4>
-                      {detail[assignment.id].rows.map(sr => (
-                        <StudentStatusRow
-                          key={sr.student.id}
-                          student={sr.student}
-                          status={sr.status}
-                          onReminder={(studentId, studentName) => 
-                            handleStudentReminder(assignment.id, assignment.title, studentId, studentName)
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })
+                      <p className="text-sm text-muted-foreground">
+                        {assignment.stats.submitted} of {totalStudents} have submitted
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-between items-center">
+                        <div className="flex gap-4 text-sm">
+                          <span className="text-green-600">
+                            ✓ {assignment.stats.submitted} submitted
+                          </span>
+                          <span className="text-yellow-600">
+                            ⏳ {assignment.stats.pending} pending
+                          </span>
+                          <span className="text-red-600">
+                            ⚠ {assignment.stats.late} late
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleClassReminder(assignment.id, assignment.title)}
+                          disabled={assignment.stats.pending + assignment.stats.late === 0}
+                        >
+                          <Clock className="h-3 w-3 mr-1" />
+                          Remind Class
+                        </Button>
+                      </div>
+                      
+                      {openId === assignment.id && detail[assignment.id] && (
+                        <div className="mt-3 bg-slate-50 dark:bg-slate-800/30 rounded p-3">
+                          <h4 className="text-sm font-medium mb-2">Student Status</h4>
+                          {detail[assignment.id].rows.map(sr => (
+                            <StudentStatusRow
+                              key={sr.student.id}
+                              student={sr.student}
+                              status={sr.status}
+                              submittedAt={sr.submitted_at}
+                              onReminder={(studentId, studentName) => 
+                                handleStudentReminder(assignment.id, assignment.title, studentId, studentName)
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </section>
+          ))
         )}
       </div>
 
