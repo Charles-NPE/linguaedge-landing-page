@@ -1,17 +1,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-export interface Notification {
-  id: string;
-  user_id: string;
-  type: 'submission' | 'assignment' | 'feedback' | 'reminder' | 'reminder_sent';
-  message: string;
-  link?: string;
-  data?: any;
-  created_at: string;
-  read_at?: string;
-}
+import { Notification, NotificationType } from "@/types/notification.types";
 
 export const useNotifications = (userId?: string) => {
   const queryClient = useQueryClient();
@@ -29,7 +19,17 @@ export const useNotifications = (userId?: string) => {
         .limit(30);
       
       if (error) throw error;
-      return data || [];
+      
+      // Map Supabase rows to our strict Notification type
+      const notifications: Notification[] = (data || []).map((n) => ({
+        ...n,
+        // Cast to literal union (assume DB contains only valid values)
+        type: n.type as NotificationType,
+        // Map read boolean to read_at timestamp
+        read_at: n.read ? n.created_at : null,
+      }));
+      
+      return notifications;
     },
     enabled: !!userId,
   });
@@ -39,7 +39,7 @@ export const useNotifications = (userId?: string) => {
   const markRead = async (id: string) => {
     await supabase
       .from('notifications')
-      .update({ read_at: new Date().toISOString() })
+      .update({ read: true })  // DB doesn't have read_at column yet
       .eq('id', id);
     
     queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
@@ -50,9 +50,9 @@ export const useNotifications = (userId?: string) => {
     
     await supabase
       .from('notifications')
-      .update({ read_at: new Date().toISOString() })
+      .update({ read: true })  // DB doesn't have read_at column yet
       .eq('user_id', userId)
-      .is('read_at', null);
+      .eq('read', false);
     
     queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
   };

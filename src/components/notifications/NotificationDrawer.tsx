@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { useNotifications, type Notification } from "@/hooks/useNotifications";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Notification, NotificationType } from "@/types/notification.types";
 
 interface NotificationDrawerProps {
   open: boolean;
@@ -27,7 +28,7 @@ interface NotificationDrawerProps {
   userId?: string;
 }
 
-const getIconForType = (type: Notification['type']) => {
+const getIconForType = (type: NotificationType) => {
   switch (type) {
     case 'submission':
       return <FileText className="h-4 w-4 text-blue-600" />;
@@ -141,7 +142,7 @@ const NotificationItem: React.FC<{ notification: Notification }> = ({
         {notification.message}
       </p>
       <p className="text-xs text-muted-foreground mt-1">
-        {formatDistanceToNow(new Date(notification.created_at), { 
+        {formatDistanceToNow(new Date(notification.created_at || ''), { 
           addSuffix: true 
         })}
       </p>
