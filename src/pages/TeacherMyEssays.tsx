@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -8,19 +9,22 @@ import { useClasses } from "@/hooks/useClasses";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
-import { Clock, Users, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, Users, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Download } from "lucide-react";
 import StudentStatusRow from "@/components/assignments/StudentStatusRow";
 import ReminderModal from "@/components/reminders/ReminderModal";
 import TeacherCorrectionView from "@/components/corrections/TeacherCorrectionView";
 import { getCardColor, getStatusIcon } from "@/utils/cardHelpers.tsx";
+import { exportStudentStatusToCSV } from "@/utils/csvExport";
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 
 type StatObj = { pending: number; submitted: number; late: number };
 
@@ -50,6 +54,7 @@ interface DetailCache {
       status: "pending" | "submitted" | "late";
       submitted_at?: string | null;
       correction_id?: string | null;
+      teacher_public_note?: string | null;
     }[];
   };
 }
@@ -61,6 +66,11 @@ const TeacherMyEssays: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailCache>({});
   const [selectedClassId, setSelectedClassId] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: new Date(new Date().getFullYear(), 0, 1), // Start of year
+    to: new Date()
+  });
+  const [onlyIncomplete, setOnlyIncomplete] = useState(false);
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<{
     id: string;
@@ -76,10 +86,26 @@ const TeacherMyEssays: React.FC = () => {
     stats: toStats(r.stats)
   }));
 
-  // Filter assignments by selected class
-  const filteredAssignments = selectedClassId === "all" 
-    ? assignments 
-    : assignments.filter(a => a.class_id === selectedClassId);
+  // Apply filters
+  let filteredAssignments = assignments;
+
+  // Filter by class
+  if (selectedClassId !== "all") {
+    filteredAssignments = filteredAssignments.filter(a => a.class_id === selectedClassId);
+  }
+
+  // Filter by date range
+  filteredAssignments = filteredAssignments.filter(a => {
+    const createdAt = new Date(a.created_at);
+    return createdAt >= dateRange.from && createdAt <= dateRange.to;
+  });
+
+  // Filter by completion status
+  if (onlyIncomplete) {
+    filteredAssignments = filteredAssignments.filter(a => 
+      a.stats.pending + a.stats.late > 0
+    );
+  }
 
   // Group assignments by class
   const grouped = filteredAssignments.reduce<Record<string, AssignmentRow[]>>(
@@ -110,7 +136,8 @@ const TeacherMyEssays: React.FC = () => {
         submissions (
           id,
           corrections (
-            id
+            id,
+            teacher_public_note
           )
         )
       `)
@@ -126,7 +153,8 @@ const TeacherMyEssays: React.FC = () => {
       student: { id: r.profiles.id, full_name: r.profiles.full_name },
       status: r.status,
       submitted_at: r.submitted_at,
-      correction_id: r.submissions?.[0]?.corrections?.[0]?.id || null
+      correction_id: r.submissions?.[0]?.corrections?.[0]?.id || null,
+      teacher_public_note: r.submissions?.[0]?.corrections?.[0]?.teacher_public_note || null
     }));
     
     setDetail(prev => ({ ...prev, [id]: { rows } }));
@@ -155,6 +183,17 @@ const TeacherMyEssays: React.FC = () => {
     setReminderModalOpen(true);
   };
 
+  const handleExportCSV = (assignmentId: string, assignmentTitle: string, className: string) => {
+    const assignmentDetail = detail[assignmentId];
+    if (!assignmentDetail) {
+      toast({ title: "Error", description: "Please expand the assignment first to load student data", variant: "destructive" });
+      return;
+    }
+    
+    exportStudentStatusToCSV(assignmentDetail.rows, assignmentTitle, className);
+    toast({ title: "Success", description: "CSV file downloaded successfully" });
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout title="My Essays">
@@ -171,34 +210,61 @@ const TeacherMyEssays: React.FC = () => {
         ← Back to Dashboard
       </Link>
       
-      {/* Class Filter */}
-      <div className="mb-6">
-        <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Filter by class" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All classes</SelectItem>
-            {classes.map(c => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Filter Controls */}
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        {/* Class Filter */}
+        <div className="min-w-64">
+          <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by class" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All classes</SelectItem>
+              {classes.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Date Range Filter */}
+        <DateRangePicker
+          value={dateRange}
+          onChange={setDateRange}
+        />
+
+        {/* Status Filter */}
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="incomplete"
+            checked={onlyIncomplete}
+            onCheckedChange={setOnlyIncomplete}
+          />
+          <label 
+            htmlFor="incomplete" 
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Only incomplete
+          </label>
+        </div>
       </div>
       
       <div className="space-y-8">
         {Object.keys(grouped).length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center">
-              <p className="text-muted-foreground">No assignments found.</p>
+              <p className="text-muted-foreground">No assignments found matching your filters.</p>
             </CardContent>
           </Card>
         ) : (
           Object.entries(grouped).map(([classId, list]) => (
             <section key={classId} className="space-y-4">
-              <h3 className="text-base font-semibold flex items-center gap-1">
-                <Users className="h-4 w-4" /> {list[0].class_name}
-              </h3>
+              {/* Show class header only if "All classes" is selected */}
+              {selectedClassId === "all" && (
+                <h3 className="text-base font-semibold flex items-center gap-1">
+                  <Users className="h-4 w-4" /> {list[0].class_name}
+                </h3>
+              )}
               
               {list.map(assignment => {
                 const totalStudents = assignment.stats.pending + assignment.stats.submitted + assignment.stats.late;
@@ -262,7 +328,17 @@ const TeacherMyEssays: React.FC = () => {
                       
                       {openId === assignment.id && detail[assignment.id] && (
                         <div className="mt-3 bg-slate-50 dark:bg-slate-800/30 rounded p-3">
-                          <h4 className="text-sm font-medium mb-2">Student Status</h4>
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-sm font-medium">Student Status</h4>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleExportCSV(assignment.id, assignment.title, assignment.class_name)}
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Export CSV
+                            </Button>
+                          </div>
                           {detail[assignment.id].rows.map(sr => (
                             <StudentStatusRow
                               key={sr.student.id}
