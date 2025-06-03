@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -14,7 +13,14 @@ import { toast } from "@/hooks/use-toast";
 import { Clock, Users, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import StudentStatusRow from "@/components/assignments/StudentStatusRow";
 import ReminderModal from "@/components/reminders/ReminderModal";
+import TeacherCorrectionView from "@/components/corrections/TeacherCorrectionView";
 import { getCardColor, getStatusIcon } from "@/utils/cardHelpers.tsx";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 type StatObj = { pending: number; submitted: number; late: number };
 
@@ -43,6 +49,7 @@ interface DetailCache {
       student: { id: string; full_name: string | null };
       status: "pending" | "submitted" | "late";
       submitted_at?: string | null;
+      correction_id?: string | null;
     }[];
   };
 }
@@ -61,6 +68,8 @@ const TeacherMyEssays: React.FC = () => {
     studentId?: string;
     studentName?: string;
   } | null>(null);
+  const [feedbackDrawerOpen, setFeedbackDrawerOpen] = useState(false);
+  const [selectedCorrectionId, setSelectedCorrectionId] = useState<string | null>(null);
 
   const assignments = rows.map((r: any) => ({
     ...r,
@@ -94,8 +103,16 @@ const TeacherMyEssays: React.FC = () => {
     const { data, error } = await supabase
       .from("assignment_targets")
       .select(`
-        status, student_id, submitted_at,
-        profiles:student_id ( id, full_name )
+        status, 
+        student_id, 
+        submitted_at,
+        profiles:student_id ( id, full_name ),
+        submissions (
+          id,
+          corrections (
+            id
+          )
+        )
       `)
       .eq("assignment_id", id);
 
@@ -108,10 +125,16 @@ const TeacherMyEssays: React.FC = () => {
     const rows = (data ?? []).map((r: any) => ({
       student: { id: r.profiles.id, full_name: r.profiles.full_name },
       status: r.status,
-      submitted_at: r.submitted_at
+      submitted_at: r.submitted_at,
+      correction_id: r.submissions?.[0]?.corrections?.[0]?.id || null
     }));
     
     setDetail(prev => ({ ...prev, [id]: { rows } }));
+  };
+
+  const handleViewFeedback = (correctionId: string) => {
+    setSelectedCorrectionId(correctionId);
+    setFeedbackDrawerOpen(true);
   };
 
   const handleClassReminder = (assignmentId: string, assignmentTitle: string) => {
@@ -212,6 +235,7 @@ const TeacherMyEssays: React.FC = () => {
                         {assignment.stats.submitted} of {totalStudents} have submitted
                       </p>
                     </CardHeader>
+                    
                     <CardContent>
                       <div className="flex justify-between items-center">
                         <div className="flex gap-4 text-sm">
@@ -245,9 +269,11 @@ const TeacherMyEssays: React.FC = () => {
                               student={sr.student}
                               status={sr.status}
                               submittedAt={sr.submitted_at}
+                              correctionId={sr.correction_id}
                               onReminder={(studentId, studentName) => 
                                 handleStudentReminder(assignment.id, assignment.title, studentId, studentName)
                               }
+                              onViewFeedback={handleViewFeedback}
                             />
                           ))}
                         </div>
@@ -272,6 +298,20 @@ const TeacherMyEssays: React.FC = () => {
           studentName={selectedAssignment.studentName}
         />
       )}
+
+      {/* Feedback Drawer */}
+      <Drawer open={feedbackDrawerOpen} onOpenChange={setFeedbackDrawerOpen}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader>
+            <DrawerTitle>Student Feedback - Teacher View</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 overflow-y-auto">
+            {selectedCorrectionId && (
+              <TeacherCorrectionView correctionId={selectedCorrectionId} />
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </DashboardLayout>
   );
 };

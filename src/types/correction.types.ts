@@ -6,6 +6,8 @@ export interface Correction {
   errors: Record<string, any> | null;
   recommendations: Record<string, any> | null;
   teacher_feedback: string | null;
+  teacher_private_note?: string | null;
+  teacher_public_note?: string | null;
   word_count: number | null;
   created_at: string;
   read_at: string | null;

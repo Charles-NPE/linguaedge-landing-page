@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Lightbulb, User, BarChart, FileText } from "lucide-react";
+import { AlertCircle, Lightbulb, User, BarChart, FileText, GraduationCap } from "lucide-react";
 import { Correction } from "@/types/correction.types";
 
 interface CorrectionDetailProps {
@@ -118,6 +118,21 @@ const CorrectionDetail: React.FC<CorrectionDetailProps> = ({ correction }) => {
 
       {/* Recomendaciones */}
       {renderRecommendations()}
+
+      {/* Teacher's Public Note */}
+      {correction.teacher_public_note && (
+        <div className="space-y-3">
+          <h4 className="font-medium flex items-center gap-2">
+            <GraduationCap className="h-4 w-4 text-purple-500" />
+            Teacher's Note
+          </h4>
+          <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border-l-4 border-purple-200 dark:border-purple-800">
+            <div className="text-sm leading-relaxed whitespace-pre-wrap select-text">
+              {correction.teacher_public_note}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feedback del profesor */}
       {correction.teacher_feedback && (

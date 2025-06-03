@@ -195,6 +195,8 @@ export type Database = {
           recommendations: Json | null
           submission_id: string | null
           teacher_feedback: string | null
+          teacher_private_note: string | null
+          teacher_public_note: string | null
           word_count: number | null
         }
         Insert: {
@@ -206,6 +208,8 @@ export type Database = {
           recommendations?: Json | null
           submission_id?: string | null
           teacher_feedback?: string | null
+          teacher_private_note?: string | null
+          teacher_public_note?: string | null
           word_count?: number | null
         }
         Update: {
@@ -217,6 +221,8 @@ export type Database = {
           recommendations?: Json | null
           submission_id?: string | null
           teacher_feedback?: string | null
+          teacher_private_note?: string | null
+          teacher_public_note?: string | null
           word_count?: number | null
         }
         Relationships: [
@@ -601,6 +607,10 @@ export type Database = {
       mark_correction_read: {
         Args: { correction_id: string }
         Returns: undefined
+      }
+      mark_overdue_as_late: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       teacher_assignment_stats: {
         Args: Record<PropertyKey, never>

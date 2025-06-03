@@ -13,6 +13,7 @@ export const useCorrections = (studentId: string) =>
         .from("corrections")
         .select(`
           *,
+          teacher_public_note,
           submissions!inner (
             id,
             text,

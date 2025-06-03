@@ -2,17 +2,26 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail } from "lucide-react";
+import { Mail, Eye } from "lucide-react";
 import { format } from "date-fns";
 
 interface Props {
   student: { id: string; full_name: string | null };
   status: "pending" | "submitted" | "late";
   submittedAt?: string | null;
+  correctionId?: string | null;
   onReminder: (studentId: string, studentName: string) => void;
+  onViewFeedback?: (correctionId: string) => void;
 }
 
-const StudentStatusRow: React.FC<Props> = ({ student, status, submittedAt, onReminder }) => {
+const StudentStatusRow: React.FC<Props> = ({ 
+  student, 
+  status, 
+  submittedAt, 
+  correctionId,
+  onReminder,
+  onViewFeedback
+}) => {
   const getStatusBadge = () => {
     switch (status) {
       case "submitted":
@@ -25,6 +34,7 @@ const StudentStatusRow: React.FC<Props> = ({ student, status, submittedAt, onRem
   };
 
   const showReminderButton = status === "pending" || status === "late";
+  const showFeedbackButton = (status === "submitted" || status === "late") && correctionId && onViewFeedback;
 
   return (
     <div className="flex items-center justify-between py-2 px-3 bg-white dark:bg-slate-800 rounded border">
@@ -43,17 +53,31 @@ const StudentStatusRow: React.FC<Props> = ({ student, status, submittedAt, onRem
         )}
       </div>
       
-      {showReminderButton && (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => onReminder(student.id, student.full_name || "Student")}
-          className="h-8 w-8 p-0"
-          title={`Send reminder to ${student.full_name || "student"}`}
-        >
-          <Mail className="h-4 w-4" />
-        </Button>
-      )}
+      <div className="flex items-center gap-2">
+        {showFeedbackButton && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onViewFeedback!(correctionId!)}
+            className="h-8 w-8 p-0"
+            title="View feedback"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        )}
+        
+        {showReminderButton && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onReminder(student.id, student.full_name || "Student")}
+            className="h-8 w-8 p-0"
+            title={`Send reminder to ${student.full_name || "student"}`}
+          >
+            <Mail className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
