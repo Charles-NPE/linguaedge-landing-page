@@ -1,12 +1,14 @@
-
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import UserDropdown from "@/components/navigation/UserDropdown";
+import NotificationDrawer from "@/components/notifications/NotificationDrawer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { Bell } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -18,6 +20,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, acti
   const { signOut, user } = useAuth();
   const { theme } = useTheme();
   const [dashboardDensity, setDashboardDensity] = useState<"comfortable" | "compact">("comfortable");
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const { unreadCount } = useNotifications(user?.id);
 
   // Load dashboard density from user settings
   useEffect(() => {
@@ -74,6 +78,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, acti
             </div>
             <div className="flex items-center space-x-4">
               {actions}
+              {user && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setNotificationDrawerOpen(true)} 
+                  className="relative"
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive" />
+                  )}
+                </Button>
+              )}
               <UserDropdown />
             </div>
           </div>
@@ -85,6 +102,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, acti
           {children}
         </main>
       </div>
+      
+      <NotificationDrawer 
+        open={notificationDrawerOpen}
+        onOpenChange={setNotificationDrawerOpen}
+        userId={user?.id}
+      />
     </div>
   );
 };

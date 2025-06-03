@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface EmailPreference {
   user_id: string;
   allow_emails: boolean;
+  allow_in_app: boolean;
   updated_at: string;
 }
 
@@ -21,10 +22,14 @@ export const useEmailPreferences = (userId: string | undefined) => {
         .single();
       
       if (error?.code === 'PGRST116') {
-        // Row doesn't exist yet → create with default TRUE
+        // Row doesn't exist yet → create with defaults
         const { data: inserted, error: insertError } = await supabase
           .from('email_preferences')
-          .insert({ user_id: userId })
+          .insert({ 
+            user_id: userId,
+            allow_emails: true,
+            allow_in_app: true
+          })
           .select('*')
           .single();
         
@@ -39,12 +44,17 @@ export const useEmailPreferences = (userId: string | undefined) => {
   });
 };
 
-export const updateEmailPreferences = async (userId: string, allowEmails: boolean) => {
+export const updateEmailPreferences = async (
+  userId: string, 
+  allowEmails: boolean, 
+  allowInApp: boolean
+) => {
   const { error } = await supabase
     .from('email_preferences')
     .upsert({ 
       user_id: userId, 
-      allow_emails: allowEmails, 
+      allow_emails: allowEmails,
+      allow_in_app: allowInApp,
       updated_at: new Date().toISOString() 
     });
   

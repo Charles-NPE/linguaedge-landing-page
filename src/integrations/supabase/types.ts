@@ -232,16 +232,19 @@ export type Database = {
       email_preferences: {
         Row: {
           allow_emails: boolean
+          allow_in_app: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
           allow_emails?: boolean
+          allow_in_app?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
           allow_emails?: boolean
+          allow_in_app?: boolean
           updated_at?: string
           user_id?: string
         }

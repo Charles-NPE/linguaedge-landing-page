@@ -34,6 +34,9 @@ serve(async () => {
 
     console.log(`Found ${reminders.length} reminders to send`);
 
+    // Track teachers for reminder_sent notifications
+    const teacherReminders = new Map<string, { assignmentId: string, assignmentTitle: string, className: string, count: number }>();
+
     for (const reminder of reminders) {
       try {
         const studentName = reminder.profiles?.full_name || "Student";
@@ -42,15 +45,30 @@ serve(async () => {
         const className = reminder.assignments?.classes?.name || "Class";
         const channel = reminder.notification_channel || "email";
 
+        // Track for teacher notification
+        const teacherId = reminder.assignments?.teacher_id;
+        if (teacherId) {
+          const key = `${teacherId}-${reminder.assignment_id}`;
+          if (!teacherReminders.has(key)) {
+            teacherReminders.set(key, {
+              assignmentId: reminder.assignment_id,
+              assignmentTitle,
+              className,
+              count: 0
+            });
+          }
+          teacherReminders.get(key)!.count++;
+        }
+
         // Send dashboard notification if required
         if (channel === "dashboard" || channel === "both") {
           if (reminder.student_id) {
             await supabase.from("notifications").insert({
               user_id: reminder.student_id,
-              title: "Assignment Reminder",
-              message: `Reminder: Your assignment "${assignmentTitle}" is due soon for ${className}`,
               type: "reminder",
-              assignment_id: reminder.assignment_id
+              message: `Reminder: submit '${assignmentTitle}' (Class ${className})`,
+              link: "/student/assignments",
+              data: { assignment_id: reminder.assignment_id, class_name: className }
             });
             console.log(`Dashboard notification sent for assignment: ${assignmentTitle}`);
           }
@@ -85,6 +103,31 @@ serve(async () => {
 
       } catch (error) {
         console.error("Error sending individual reminder:", error);
+      }
+    }
+
+    // Send reminder_sent notifications to teachers
+    for (const [key, data] of teacherReminders.entries()) {
+      const teacherId = key.split('-')[0];
+      const message = data.count === 1 
+        ? `Reminder sent to student in ${data.className}`
+        : `Reminder sent to ${data.count} students in ${data.className}`;
+
+      try {
+        await supabase.from("notifications").insert({
+          user_id: teacherId,
+          type: "reminder_sent",
+          message,
+          link: `/teacher/essays`,
+          data: { 
+            assignment_id: data.assignmentId, 
+            class_name: data.className,
+            student_count: data.count
+          }
+        });
+        console.log(`Teacher notification sent: ${message}`);
+      } catch (error) {
+        console.error("Error sending teacher notification:", error);
       }
     }
 
