@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -25,6 +24,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 
 type StatObj = { pending: number; submitted: number; late: number };
 
@@ -116,6 +116,10 @@ const TeacherMyEssays: React.FC = () => {
     },
     {}
   );
+
+  const handleOnlyIncomplete = (checked: CheckedState) => {
+    setOnlyIncomplete(checked === true);
+  };
 
   const toggleDetail = async (id: string) => {
     if (openId === id) { 
@@ -238,7 +242,7 @@ const TeacherMyEssays: React.FC = () => {
           <Checkbox 
             id="incomplete"
             checked={onlyIncomplete}
-            onCheckedChange={setOnlyIncomplete}
+            onCheckedChange={handleOnlyIncomplete}
           />
           <label 
             htmlFor="incomplete" 
