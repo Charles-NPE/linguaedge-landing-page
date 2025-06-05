@@ -99,7 +99,7 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             <div className="divide-y">
               {latest.map((notification) => (
                 <div key={notification.id}>
-                  {notification.link ? (
+                  {notification.link !== null ? (
                     <Link
                       to={notification.link}
                       onClick={() => handleNotificationClick(notification)}
@@ -110,10 +110,7 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                   ) : (
                     <div 
                       onClick={() => handleNotificationClick(notification)}
-                      className={cn(
-                        "cursor-pointer",
-                        !notification.link && "cursor-default"
-                      )}
+                      className="cursor-default"
                     >
                       <NotificationItem notification={notification} />
                     </div>
@@ -133,7 +130,8 @@ const NotificationItem: React.FC<{ notification: Notification }> = ({
 }) => (
   <div
     className={cn(
-      "px-4 py-3 flex gap-3 hover:bg-accent transition-colors cursor-pointer",
+      "px-4 py-3 flex gap-3 hover:bg-accent transition-colors",
+      notification.link !== null && "cursor-pointer",
       !notification.read_at && "bg-secondary/25"
     )}
   >

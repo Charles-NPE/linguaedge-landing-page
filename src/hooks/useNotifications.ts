@@ -27,9 +27,6 @@ export const useNotifications = (userId?: string) => {
         type: n.type as NotificationType,
         // Map read boolean to read_at timestamp
         read_at: n.read ? n.created_at : null,
-        // Include the new link and data columns
-        link: n.link,
-        data: n.data,
       }));
       
       return notifications;

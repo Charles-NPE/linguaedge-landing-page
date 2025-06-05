@@ -15,6 +15,6 @@ type NotificationBase = Database["public"]["Tables"]["notifications"]["Row"];
 export interface Notification extends Omit<NotificationBase, "type"> {
   type: NotificationType;          // stricter literal union
   read_at?: string | null;         // optional timestamp when marked read
-  link?: string | null;            // navigation link for the notification
-  data?: any;                      // additional metadata
+  link: string | null;             // navigation link for the notification (required, can be null)
+  data: NotificationBase["data"];  // additional metadata (Json | null)
 }
