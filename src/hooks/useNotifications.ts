@@ -22,9 +22,14 @@ export const useNotifications = (userId?: string) => {
       
       // Map Supabase rows to our strict Notification type
       const notifications: Notification[] = (data || []).map((n) => ({
-        ...n,
-        // Cast to literal union (assume DB contains only valid values)
+        id: n.id,
+        user_id: n.user_id,
         type: n.type as NotificationType,
+        title: n.title,
+        message: n.message,
+        link: n.link,
+        data: n.data,
+        created_at: n.created_at,
         // Map read boolean to read_at timestamp
         read_at: n.read ? n.created_at : null,
       }));

@@ -139,9 +139,15 @@ const NotificationItem: React.FC<{ notification: Notification }> = ({
       {getIconForType(notification.type)}
     </div>
     <div className="flex-1 min-w-0">
+      <h4 className={cn(
+        "text-sm font-medium leading-5",
+        !notification.read_at && "font-semibold"
+      )}>
+        {notification.title}
+      </h4>
       <p className={cn(
-        "text-sm leading-5",
-        !notification.read_at && "font-medium"
+        "text-sm leading-5 text-muted-foreground mt-1",
+        !notification.read_at && "text-foreground"
       )}>
         {notification.message}
       </p>

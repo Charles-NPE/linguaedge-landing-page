@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +9,7 @@ import { BookOpen, BarChart, Users, CreditCard, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
+import { getCardColor } from "@/utils/cardHelpers";
 
 const TeacherDashboard: React.FC = () => {
   const {

@@ -66,6 +66,7 @@ serve(async () => {
             await supabase.from("notifications").insert({
               user_id: reminder.student_id,
               type: "reminder",
+              title: "Reminder",
               message: `Reminder: submit '${assignmentTitle}' (Class ${className})`,
               link: "/student/assignments",
               data: { assignment_id: reminder.assignment_id, class_name: className }
@@ -117,6 +118,7 @@ serve(async () => {
         await supabase.from("notifications").insert({
           user_id: teacherId,
           type: "reminder_sent",
+          title: "Reminder Sent",
           message,
           link: `/teacher/essays`,
           data: { 
