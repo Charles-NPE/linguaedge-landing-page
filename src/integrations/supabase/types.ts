@@ -260,7 +260,9 @@ export type Database = {
         Row: {
           assignment_id: string | null
           created_at: string | null
+          data: Json | null
           id: string
+          link: string | null
           message: string
           read: boolean | null
           title: string
@@ -270,7 +272,9 @@ export type Database = {
         Insert: {
           assignment_id?: string | null
           created_at?: string | null
+          data?: Json | null
           id?: string
+          link?: string | null
           message: string
           read?: boolean | null
           title: string
@@ -280,7 +284,9 @@ export type Database = {
         Update: {
           assignment_id?: string | null
           created_at?: string | null
+          data?: Json | null
           id?: string
+          link?: string | null
           message?: string
           read?: boolean | null
           title?: string

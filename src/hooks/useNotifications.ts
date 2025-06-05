@@ -27,6 +27,9 @@ export const useNotifications = (userId?: string) => {
         type: n.type as NotificationType,
         // Map read boolean to read_at timestamp
         read_at: n.read ? n.created_at : null,
+        // Include the new link and data columns
+        link: n.link,
+        data: n.data,
       }));
       
       return notifications;
@@ -39,7 +42,7 @@ export const useNotifications = (userId?: string) => {
   const markRead = async (id: string) => {
     await supabase
       .from('notifications')
-      .update({ read: true })  // DB doesn't have read_at column yet
+      .update({ read: true })
       .eq('id', id);
     
     queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
@@ -50,7 +53,7 @@ export const useNotifications = (userId?: string) => {
     
     await supabase
       .from('notifications')
-      .update({ read: true })  // DB doesn't have read_at column yet
+      .update({ read: true })
       .eq('user_id', userId)
       .eq('read', false);
     

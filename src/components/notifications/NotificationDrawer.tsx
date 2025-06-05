@@ -108,7 +108,13 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                       <NotificationItem notification={notification} />
                     </Link>
                   ) : (
-                    <div onClick={() => handleNotificationClick(notification)}>
+                    <div 
+                      onClick={() => handleNotificationClick(notification)}
+                      className={cn(
+                        "cursor-pointer",
+                        !notification.link && "cursor-default"
+                      )}
+                    >
                       <NotificationItem notification={notification} />
                     </div>
                   )}
