@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -72,7 +73,20 @@ const TeacherDashboard: React.FC = () => {
         
         {/* Show subscription status */}
         {profile?.stripe_status && <div className="mt-4">
-            
+            {profile.stripe_status === 'active' && (
+              <Alert className="border-green-200 bg-green-50">
+                <AlertDescription className="text-green-800">
+                  Your subscription is active
+                </AlertDescription>
+              </Alert>
+            )}
+            {profile.stripe_status === 'trialing' && (
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertDescription className="text-blue-800">
+                  You're on a free trial
+                </AlertDescription>
+              </Alert>
+            )}
           </div>}
       </div>
 

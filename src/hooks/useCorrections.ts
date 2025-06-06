@@ -46,10 +46,16 @@ export const useMarkCorrectionRead = () => {
         correction_id: correctionId
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error marking correction as read:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["corrections"] });
     },
+    onError: (error) => {
+      console.error("Failed to mark correction as read:", error);
+    }
   });
 };
