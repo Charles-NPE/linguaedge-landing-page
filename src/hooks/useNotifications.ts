@@ -18,7 +18,10 @@ export const useNotifications = (userId?: string) => {
         .order('created_at', { ascending: false })
         .limit(30);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching notifications:", error);
+        throw error;
+      }
       
       // Map Supabase rows to our strict Notification type
       const notifications: Notification[] = (data || []).map((n) => ({
@@ -43,24 +46,42 @@ export const useNotifications = (userId?: string) => {
   const unreadCount = query.data?.filter(n => !n.read_at).length ?? 0;
 
   const markRead = async (id: string) => {
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('id', id);
-    
-    queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id);
+      
+      if (error) {
+        console.error("Error marking notification as read:", error);
+        throw error;
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
   };
 
   const markAllRead = async () => {
     if (!userId) return;
     
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('user_id', userId)
-      .eq('read', false);
-    
-    queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', userId)
+        .eq('read', false);
+      
+      if (error) {
+        console.error("Error marking all notifications as read:", error);
+        throw error;
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+    }
   };
 
   return { 

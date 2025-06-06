@@ -11,6 +11,8 @@ export interface UserProfile {
   stripe_customer_id?: string | null;
   stripe_status?: string | null;
   subscription_end?: string | null;
+  full_name?: string | null;
+  phone?: string | null;
 }
 
 export interface AuthUser extends User {
