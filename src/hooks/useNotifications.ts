@@ -29,6 +29,7 @@ export const useNotifications = (userId?: string) => {
         message: n.message,
         link: n.link,
         data: n.data,
+        assignment_id: n.assignment_id,
         created_at: n.created_at,
         // Map read boolean to read_at timestamp
         read_at: n.read ? n.created_at : null,
