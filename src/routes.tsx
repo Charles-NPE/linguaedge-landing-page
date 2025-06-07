@@ -19,6 +19,7 @@ import StudentAssignments from "@/pages/StudentAssignments";
 import StudentCorrections from "@/pages/StudentCorrections";
 import StudentProgress from "@/pages/StudentProgress";
 import TeacherDashboard from "@/pages/TeacherDashboard";
+import TeacherAssign from "@/pages/TeacherAssign";
 import TeacherClassesPage from "@/pages/TeacherClassesPage";
 import ClassDetail from "@/pages/ClassDetail";
 import TeacherMyEssays from "@/pages/TeacherMyEssays";
@@ -127,6 +128,10 @@ export const routes = createBrowserRouter([
           {
             path: "/teacher",
             element: <TeacherDashboard />,
+          },
+          {
+            path: "/teacher/assign",
+            element: <TeacherAssign />,
           },
           {
             path: "/teacher/classes",

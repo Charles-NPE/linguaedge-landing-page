@@ -1,131 +1,65 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { useClasses } from "@/hooks/useClasses";
+
+import React from "react";
+import { Link } from "react-router-dom";
+import { Users, ClipboardEdit, FileText, BarChart2 } from "lucide-react";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
-import FeatureCard from "@/components/dashboards/FeatureCard";
-import AssignEssayModal from "@/components/assignments/AssignEssayModal";
-import { BookOpen, BarChart, Users, CreditCard, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { toast } from "@/hooks/use-toast";
-import { getCardColor } from "@/utils/cardHelpers";
+import { useAuth } from "@/hooks/useAuth";
+
+const cards = [
+  { 
+    icon: Users, 
+    title: "Manage Classes", 
+    href: "/teacher/classes",
+    desc: "Create and organize classes, add students, and track progress." 
+  },
+  { 
+    icon: ClipboardEdit, 
+    title: "Assign Essays", 
+    href: "/teacher/assign",
+    desc: "Create new writing assignments for your students." 
+  },
+  { 
+    icon: FileText, 
+    title: "My Essays", 
+    href: "/teacher/essays",
+    desc: "View all assignments with delivery stats and reminders." 
+  },
+  { 
+    icon: BarChart2, 
+    title: "View Analytics", 
+    href: "/teacher/analytics",
+    desc: "Track student progress and identify areas for improvement." 
+  },
+];
 
 const TeacherDashboard: React.FC = () => {
-  const {
-    user,
-    profile,
-    isSubscriptionActive,
-    checkSubscription
-  } = useAuth();
-  const navigate = useNavigate();
-  const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const { data: classes = [], isLoading: classesLoading } = useClasses(user?.id);
-
-  useEffect(() => {
-    // Check subscription when the dashboard loads
-    const checkSubscriptionStatus = async () => {
-      try {
-        await checkSubscription();
-      } catch (error) {
-        console.error("Error checking subscription:", error);
-      }
-    };
-    checkSubscriptionStatus();
-
-    // Check for successful checkout in URL params
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('checkout') === 'success') {
-      toast({
-        title: "Subscription Active",
-        description: "Your subscription has been activated successfully."
-      });
-
-      // Clean the URL
-      navigate('/teacher', {
-        replace: true
-      });
-    }
-  }, [checkSubscription, navigate]);
-
-  // Route guard: redirect to pricing if no active subscription
-  useEffect(() => {
-    if (profile && profile.role === 'teacher' && profile.stripe_status !== undefined && !isSubscriptionActive && !['active', 'trialing'].includes(profile.stripe_status || '')) {
-      navigate('/pricing?subscription=inactive');
-    }
-  }, [profile, isSubscriptionActive, navigate]);
-
-  // Show a loading state until we determine subscription status
-  if (profile?.role === 'teacher' && profile.stripe_status === undefined) {
-    return <DashboardLayout title="Teacher Dashboard">
-        <div className="flex justify-center items-center h-64">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-        </div>
-      </DashboardLayout>;
-  }
+  const { user } = useAuth();
   
-  return <DashboardLayout title="Teacher Dashboard">
-      <div className="mb-8">
-        <h2 className="text-lg text-slate-900 dark:text-slate-100">
-          Welcome back, {user?.email?.split('@')[0] || 'Teacher'}
-        </h2>
-        
-        {/* Show subscription status */}
-        {profile?.stripe_status && <div className="mt-4">
-            {profile.stripe_status === 'active' && (
-              <Alert className="border-green-200 bg-green-50">
-                <AlertDescription className="text-green-800">
-                  Your subscription is active
-                </AlertDescription>
-              </Alert>
-            )}
-            {profile.stripe_status === 'trialing' && (
-              <Alert className="border-blue-200 bg-blue-50">
-                <AlertDescription className="text-blue-800">
-                  You're on a free trial
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>}
-      </div>
+  const teacherName = user?.email?.split('@')[0] || 'Teacher';
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Link to="/teacher/classes" className="block">
-          <FeatureCard 
-            title="Manage Classes" 
-            description="Create and organize classes, add students, and track progress." 
-            icon={Users} 
-          />
-        </Link>
-        <div className="card cursor-pointer" onClick={() => setAssignModalOpen(true)}>
-          <FeatureCard 
-            title="Assign Essays" 
-            description="Create new writing assignments for your students." 
-            icon={BookOpen} 
-          />
-        </div>
-        <Link to="/teacher/essays" className="block">
-          <FeatureCard 
-            title="My Essays" 
-            description="View all assignments with delivery stats and schedule reminders." 
-            icon={FileText} 
-          />
-        </Link>
-        <Link to="/teacher/analytics" className="block">
-          <FeatureCard 
-            title="View Analytics" 
-            description="Track student progress and identify areas for improvement." 
-            icon={BarChart} 
-          />
-        </Link>
-      </div>
+  return (
+    <DashboardLayout title="Teacher Dashboard">
+      <h2 className="mb-6 text-lg font-medium text-slate-900 dark:text-slate-100">
+        Welcome back, {teacherName}
+      </h2>
 
-      <AssignEssayModal 
-        open={assignModalOpen} 
-        onOpenChange={setAssignModalOpen} 
-        classes={classes} 
-      />
-    </DashboardLayout>;
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.map(({ icon: Icon, title, href, desc }) => (
+          <Link
+            key={title}
+            to={href}
+            className="group rounded-xl border bg-card p-6 shadow-sm transition
+                       hover:shadow-md focus-visible:outline-none focus-visible:ring-2
+                       hover:ring-2 hover:ring-primary/60 dark:hover:ring-primary/40"
+          >
+            <Icon className="mb-4 h-8 w-8 text-primary group-hover:scale-105 transition-transform" />
+            <h3 className="text-base font-semibold mb-1">{title}</h3>
+            <p className="text-sm text-muted-foreground">{desc}</p>
+          </Link>
+        ))}
+      </div>
+    </DashboardLayout>
+  );
 };
 
 export default TeacherDashboard;
