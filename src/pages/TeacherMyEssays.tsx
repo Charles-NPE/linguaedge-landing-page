@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -94,9 +95,9 @@ const TeacherMyEssays: React.FC = () => {
   // Apply filters
   let filteredAssignments = assignments;
 
-  // Filter by class
+  // ✅ Fix: Filter by class name instead of class ID
   if (selectedClassId !== "all") {
-    filteredAssignments = filteredAssignments.filter(a => a.class_id === selectedClassId);
+    filteredAssignments = filteredAssignments.filter(a => a.class_name === selectedClassId);
   }
 
   // ✅ Fix: Use assignment created_at for date filtering (not submission dates)
@@ -232,7 +233,7 @@ const TeacherMyEssays: React.FC = () => {
             <SelectContent>
               <SelectItem value="all">All classes</SelectItem>
               {classes.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
