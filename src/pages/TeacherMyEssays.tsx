@@ -99,12 +99,13 @@ const TeacherMyEssays: React.FC = () => {
     filteredAssignments = filteredAssignments.filter(a => a.class_id === selectedClassId);
   }
 
-  // Filter by date range using assignment created date from the view
+  // ✅ Fix: Use assignment created_at for date filtering (not submission dates)
   filteredAssignments = filteredAssignments.filter(a => {
-    const createdAt = new Date(a.created_at);
+    const assignmentCreatedAt = new Date(a.created_at);
     const start = toUtc(dateRange.from);
-    const end = toUtc(dateRange.to, 23, 59, 59);
-    return createdAt >= start && createdAt <= end;
+    // ✅ Fix: Add one day to end date to include the full end day
+    const end = toUtc(new Date(dateRange.to.getTime() + 24 * 60 * 60 * 1000), 23, 59, 59);
+    return assignmentCreatedAt >= start && assignmentCreatedAt <= end;
   });
 
   // Filter by completion status
