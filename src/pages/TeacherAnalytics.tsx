@@ -9,7 +9,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ChevronLeft, Users, FileText, CheckCircle, Clock, AlertCircle, Award } from "lucide-react";
-import { getCardColor } from "@/utils/cardHelpers";
+
+type ClassStats = {
+  class_id: string;
+  class_name: string;
+  total_assignments: number;
+  submitted: number;
+  pending: number;
+  late: number;
+  avg_grade: number;
+  teacher_id: string;
+};
+
+type StudentStats = {
+  class_id: string;
+  class_name: string;
+  student_id: string;
+  full_name: string;
+  total_assignments: number;
+  submitted: number;
+  pending: number;
+  late: number;
+  avg_grade: number;
+};
 
 const TeacherAnalytics: React.FC = () => {
   const { user } = useAuth();
@@ -27,19 +49,18 @@ const TeacherAnalytics: React.FC = () => {
 
   // Calculate totals
   const totals = classStats.reduce(
-    (acc, stat) => ({
-      total_assignments: acc.total_assignments + (stat.total_assignments || 0),
-      submitted: acc.submitted + (stat.submitted || 0),
-      pending: acc.pending + (stat.pending || 0),
-      late: acc.late + (stat.late || 0),
-      avg_grade: stat.avg_grade ? [...acc.grades, stat.avg_grade] : acc.grades
+    (acc, cur) => ({
+      total_assignments: acc.total_assignments + cur.total_assignments,
+      submitted: acc.submitted + cur.submitted,
+      pending: acc.pending + cur.pending,
+      late: acc.late + cur.late,
+      gradeSum: acc.gradeSum + (cur.avg_grade || 0) * cur.submitted,
+      gradeCnt: acc.gradeCnt + cur.submitted,
     }),
-    { total_assignments: 0, submitted: 0, pending: 0, late: 0, grades: [] as number[] }
+    { total_assignments: 0, submitted: 0, pending: 0, late: 0, gradeSum: 0, gradeCnt: 0 }
   );
 
-  const overallAvgGrade = totals.grades.length > 0 
-    ? totals.grades.reduce((sum, grade) => sum + grade, 0) / totals.grades.length 
-    : 0;
+  const overallAvgGrade = totals.gradeCnt > 0 ? totals.gradeSum / totals.gradeCnt : 0;
 
   // Filter data for selected student
   const displayStats = selectedStudentId === "all" 
@@ -48,7 +69,7 @@ const TeacherAnalytics: React.FC = () => {
 
   // Prepare chart data
   const chartData = displayStats.map(stat => ({
-    name: stat.class_name || stat.full_name,
+    name: stat.class_name || (stat as StudentStats).full_name,
     submitted: stat.submitted || 0,
     pending: stat.pending || 0,
     late: stat.late || 0
@@ -216,7 +237,7 @@ const TeacherAnalytics: React.FC = () => {
                     <Users className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <h3 className="font-medium">
-                        {stat.class_name || stat.full_name}
+                        {stat.class_name || (stat as StudentStats).full_name}
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         {stat.total_assignments} assignments total
@@ -234,7 +255,7 @@ const TeacherAnalytics: React.FC = () => {
                       ⚠ {stat.late || 0} late
                     </span>
                     <span className="text-muted-foreground">
-                      📊 {stat.avg_grade ? `${stat.avg_grade}` : "N/A"} avg
+                      📊 {stat.avg_grade ? `${stat.avg_grade.toFixed(1)}` : "N/A"} avg
                     </span>
                   </div>
                 </div>
