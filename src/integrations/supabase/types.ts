@@ -145,6 +145,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "class_students_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "v_class_stats"
+            referencedColumns: ["class_id"]
+          },
+          {
+            foreignKeyName: "class_students_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "v_student_stats"
+            referencedColumns: ["class_id"]
+          },
+          {
             foreignKeyName: "class_students_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
@@ -400,6 +414,20 @@ export type Database = {
             referencedRelation: "classes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "posts_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "v_class_stats"
+            referencedColumns: ["class_id"]
+          },
+          {
+            foreignKeyName: "posts_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "v_student_stats"
+            referencedColumns: ["class_id"]
+          },
         ]
       }
       profiles: {
@@ -636,6 +664,41 @@ export type Database = {
           },
           {
             foreignKeyName: "assignment_targets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_class_stats: {
+        Row: {
+          avg_grade: number | null
+          class_id: string | null
+          class_name: string | null
+          late: number | null
+          pending: number | null
+          submitted: number | null
+          teacher_id: string | null
+          total_assignments: number | null
+        }
+        Relationships: []
+      }
+      v_student_stats: {
+        Row: {
+          avg_grade: number | null
+          class_id: string | null
+          class_name: string | null
+          full_name: string | null
+          late: number | null
+          pending: number | null
+          student_id: string | null
+          submitted: number | null
+          total_assignments: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_students_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"

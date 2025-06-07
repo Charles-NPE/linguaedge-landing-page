@@ -1,165 +1,155 @@
-
-import { lazy } from "react";
-import { Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
+import Index from "@/pages/Index";
+import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import SignupPage from "@/pages/SignupPage";
+import TeacherRegisterPage from "@/pages/TeacherRegisterPage";
+import StudentRegisterPage from "@/pages/StudentRegisterPage";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
+import Pricing from "@/pages/Pricing";
+import TermsOfService from "@/pages/TermsOfService";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import Demo from "@/pages/Demo";
+import StudentDashboard from "@/pages/StudentDashboard";
+import StudentAssignments from "@/pages/StudentAssignments";
+import StudentCorrections from "@/pages/StudentCorrections";
+import StudentProgress from "@/pages/StudentProgress";
+import TeacherDashboard from "@/pages/TeacherDashboard";
+import TeacherClassesPage from "@/pages/TeacherClassesPage";
+import ClassDetail from "@/pages/ClassDetail";
+import TeacherMyEssays from "@/pages/TeacherMyEssays";
+import ProfilePage from "@/pages/ProfilePage";
+import SettingsPage from "@/pages/SettingsPage";
+import BillingPage from "@/pages/BillingPage";
+import NotFound from "@/pages/NotFound";
 import RoleRoute from "@/components/RoleRoute";
+import TeacherAnalytics from "@/pages/TeacherAnalytics";
 
-// Lazy load all page components
-export const Index = lazy(() => import("@/pages/Index"));
-export const LoginPage = lazy(() => import("@/pages/LoginPage"));
-export const SignupPage = lazy(() => import("@/pages/SignupPage"));
-export const TeacherRegisterPage = lazy(() => import("@/pages/TeacherRegisterPage"));
-export const StudentRegisterPage = lazy(() => import("@/pages/StudentRegisterPage"));
-export const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
-export const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
-export const TeacherDashboard = lazy(() => import("@/pages/TeacherDashboard"));
-export const TeacherClassesPage = lazy(() => import("@/pages/TeacherClassesPage"));
-export const TeacherMyEssays = lazy(() => import("@/pages/TeacherMyEssays"));
-export const StudentDashboard = lazy(() => import("@/pages/StudentDashboard"));
-export const StudentAssignments = lazy(() => import("@/pages/StudentAssignments"));
-export const StudentCorrections = lazy(() => import("@/pages/StudentCorrections"));
-export const StudentProgress = lazy(() => import("@/pages/StudentProgress"));
-export const ClassDetail = lazy(() => import("@/pages/ClassDetail"));
-export const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
-export const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
-export const BillingPage = lazy(() => import("@/pages/BillingPage"));
-export const Demo = lazy(() => import("@/pages/Demo"));
-export const About = lazy(() => import("@/pages/About"));
-export const Contact = lazy(() => import("@/pages/Contact"));
-export const Pricing = lazy(() => import("@/pages/Pricing"));
-export const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
-export const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
-export const NotFound = lazy(() => import("@/pages/NotFound"));
-
-export const allRoutes = [
-  { path: "/", element: <Index /> },
-  { path: "/login", element: <LoginPage /> },
-  
-  // Password Reset Routes
-  { path: "/forgot-password", element: <ForgotPasswordPage /> },
-  { path: "/reset-password", element: <ResetPasswordPage /> },
-  
-  // New signup flow routes
-  { path: "/signup", element: <SignupPage /> },
-  { path: "/signup/teacher", element: <TeacherRegisterPage /> },
-  { path: "/signup/student", element: <StudentRegisterPage /> },
-  
-  // Redirect old register route to new signup flow
-  { path: "/register", element: <Navigate to="/signup" replace /> },
-  
-  // Protected Teacher Routes - now requires active subscription
-  { 
-    path: "/teacher", 
-    element: (
-      <RoleRoute allowed={['teacher']} requireSubscription={true}>
-        <TeacherDashboard />
-      </RoleRoute>
-    )
+export const routes = createBrowserRouter([
+  {
+    path: "/",
+    element: <Index />,
   },
-  
-  // New Teacher Classes Route
-  { 
-    path: "/teacher/classes", 
-    element: (
-      <RoleRoute allowed={['teacher']} requireSubscription={true}>
-        <TeacherClassesPage />
-      </RoleRoute>
-    )
+  {
+    path: "/login",
+    element: <LoginPage />,
   },
-  
-  // Class Detail Route - accessible to both teachers and students
-  { 
-    path: "/teacher/classes/:id", 
-    element: (
-      <RoleRoute allowed={['teacher', 'student']}>
-        <ClassDetail />
-      </RoleRoute>
-    )
+  {
+    path: "/register",
+    element: <RegisterPage />,
   },
-  
-  // Protected Student Routes
-  { 
-    path: "/student", 
-    element: (
-      <RoleRoute allowed={['student']}>
-        <StudentDashboard />
-      </RoleRoute>
-    )
+  {
+    path: "/forgot-password",
+    element: <ForgotPasswordPage />,
   },
-  
-  // Student Assignments Route
-  { 
-    path: "/student/assignments", 
-    element: (
-      <RoleRoute allowed={['student']}>
-        <StudentAssignments />
-      </RoleRoute>
-    )
+  {
+    path: "/reset-password",
+    element: <ResetPasswordPage />,
   },
-  
-  // Student Corrections Route
-  { 
-    path: "/student/corrections", 
-    element: (
-      <RoleRoute allowed={['student']}>
-        <StudentCorrections />
-      </RoleRoute>
-    )
+  {
+    path: "/signup",
+    element: <SignupPage />,
   },
-  
-  // Student Progress Route
-  { 
-    path: "/student/progress", 
-    element: (
-      <RoleRoute allowed={['student']}>
-        <StudentProgress />
-      </RoleRoute>
-    )
+  {
+    path: "/teacher-register",
+    element: <TeacherRegisterPage />,
   },
-  
-  // User Account Routes
-  { 
-    path: "/profile", 
-    element: (
-      <RoleRoute allowed={['teacher', 'student']}>
-        <ProfilePage />
-      </RoleRoute>
-    )
+  {
+    path: "/student-register",
+    element: <StudentRegisterPage />,
   },
-  { 
-    path: "/settings", 
-    element: (
-      <RoleRoute allowed={['teacher', 'student']}>
-        <SettingsPage />
-      </RoleRoute>
-    )
+  {
+    path: "/about",
+    element: <About />,
   },
-  { 
-    path: "/billing", 
-    element: (
-      <RoleRoute allowed={['teacher', 'student']}>
-        <BillingPage />
-      </RoleRoute>
-    )
+  {
+    path: "/contact",
+    element: <Contact />,
   },
-  
-  // Other Public Routes
-  { path: "/demo", element: <Demo /> },
-  { path: "/about", element: <About /> },
-  { path: "/contact", element: <Contact /> },
-  { path: "/pricing", element: <Pricing /> },
-  { path: "/privacy-policy", element: <PrivacyPolicy /> },
-  { path: "/terms-of-service", element: <TermsOfService /> },
-  
-  // New Teacher Essays Route
-  { 
-    path: "/teacher/essays", 
-    element: (
-      <RoleRoute allowed={['teacher']} requireSubscription={true}>
-        <TeacherMyEssays />
-      </RoleRoute>
-    )
+  {
+    path: "/pricing",
+    element: <Pricing />,
   },
-  
-  // Catch-all Route
-  { path: "*", element: <NotFound /> }
-];
+  {
+    path: "/terms",
+    element: <TermsOfService />,
+  },
+  {
+    path: "/privacy",
+    element: <PrivacyPolicy />,
+  },
+  {
+    path: "/demo",
+    element: <Demo />,
+  },
+  {
+    element: <RoleRoute allowed={["student"]} />,
+    children: [
+      {
+        path: "/student",
+        element: <StudentDashboard />,
+      },
+      {
+        path: "/student/assignments",
+        element: <StudentAssignments />,
+      },
+      {
+        path: "/student/corrections",
+        element: <StudentCorrections />,
+      },
+      {
+        path: "/student/progress",
+        element: <StudentProgress />,
+      },
+    ],
+  },
+  {
+    element: <RoleRoute allowed={["teacher"]} requireSubscription={true} />,
+    children: [
+      {
+        path: "/teacher",
+        element: <TeacherDashboard />,
+      },
+      {
+        path: "/teacher/classes",
+        element: <TeacherClassesPage />,
+      },
+      {
+        path: "/teacher/classes/:id",
+        element: <ClassDetail />,
+      },
+      {
+        path: "/teacher/essays",
+        element: <TeacherMyEssays />,
+      },
+      {
+        path: "/teacher/analytics",
+        element: <TeacherAnalytics />,
+      },
+    ],
+  },
+  {
+    element: <RoleRoute allowed={["student", "teacher"]} />,
+    children: [
+      {
+        path: "/profile",
+        element: <ProfilePage />,
+      },
+      {
+        path: "/settings",
+        element: <SettingsPage />,
+      },
+      {
+        path: "/billing",
+        element: <BillingPage />,
+      },
+    ],
+  },
+  {
+    path: "*",
+    element: <NotFound />,
+  },
+]);

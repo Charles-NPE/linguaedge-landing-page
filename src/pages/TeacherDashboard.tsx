@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -112,13 +111,13 @@ const TeacherDashboard: React.FC = () => {
             icon={FileText} 
           />
         </Link>
-        <div className="card">
+        <Link to="/teacher/analytics" className="block">
           <FeatureCard 
             title="View Analytics" 
             description="Track student progress and identify areas for improvement." 
             icon={BarChart} 
           />
-        </div>
+        </Link>
       </div>
 
       <AssignEssayModal 
