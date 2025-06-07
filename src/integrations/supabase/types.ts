@@ -598,10 +598,12 @@ export type Database = {
       v_assignment_student_status: {
         Row: {
           assignment_id: string | null
+          class_id: string | null
           correction_id: string | null
           has_feedback: boolean | null
           status: Database["public"]["Enums"]["assignment_status"] | null
           student_id: string | null
+          student_name: string | null
           submission_created_at: string | null
           submission_id: string | null
           submitted_at: string | null

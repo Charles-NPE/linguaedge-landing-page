@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format } from "date-fns";
+import { format, endOfDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { Clock, Users, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Download } from "lucide-react";
 import StudentStatusRow from "@/components/assignments/StudentStatusRow";
@@ -96,10 +96,11 @@ const TeacherMyEssays: React.FC = () => {
     filteredAssignments = filteredAssignments.filter(a => a.class_id === selectedClassId);
   }
 
-  // Filter by date range
+  // Filter by date range - Fix timezone issues
   filteredAssignments = filteredAssignments.filter(a => {
     const createdAt = new Date(a.created_at);
-    return createdAt >= dateRange.from && createdAt <= dateRange.to;
+    // Use endOfDay to include the full day range in UTC
+    return createdAt >= dateRange.from && createdAt <= endOfDay(dateRange.to);
   });
 
   // Filter by completion status
@@ -132,7 +133,7 @@ const TeacherMyEssays: React.FC = () => {
     
     if (detail[id]) return; // already cached
     
-    // Use the new view instead of nested query
+    // Use the updated view with class_id and student_name
     const { data, error } = await supabase
       .from("v_assignment_student_status")
       .select(`
@@ -141,7 +142,8 @@ const TeacherMyEssays: React.FC = () => {
         correction_id,
         teacher_public_note,
         has_feedback,
-        profiles:student_id ( id, full_name )
+        student_id,
+        student_name
       `)
       .eq("assignment_id", id);
 
@@ -152,7 +154,7 @@ const TeacherMyEssays: React.FC = () => {
     }
 
     const rows = (data ?? []).map((r: any) => ({
-      student: { id: r.profiles.id, full_name: r.profiles.full_name },
+      student: { id: r.student_id, full_name: r.student_name },
       status: r.status,
       submitted_at: r.submitted_at,
       correction_id: r.correction_id,

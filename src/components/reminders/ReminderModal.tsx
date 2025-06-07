@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,11 @@ interface ReminderModalProps {
   studentName?: string;
 }
 
+interface PendingStudent {
+  student_id: string;
+  student_name: string;
+}
+
 const ReminderModal: React.FC<ReminderModalProps> = ({
   open,
   onOpenChange,
@@ -32,6 +37,8 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
   const [sendEmail, setSendEmail] = useState(true);
   const [sendDashboard, setSendDashboard] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingStudents, setPendingStudents] = useState<PendingStudent[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState<string>("all");
 
   const isClassReminder = !studentId;
 
@@ -41,6 +48,35 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
     { value: "1day", label: "1 day" },
     { value: "3days", label: "3 days" },
   ];
+
+  // Load pending students when modal opens for class reminders
+  useEffect(() => {
+    if (open && isClassReminder) {
+      loadPendingStudents();
+    }
+  }, [open, isClassReminder, assignmentId]);
+
+  const loadPendingStudents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("v_assignment_student_status")
+        .select("student_id, student_name")
+        .eq("assignment_id", assignmentId)
+        .in("status", ["pending", "late"]);
+
+      if (error) throw error;
+
+      setPendingStudents(data || []);
+      setSelectedStudents("all"); // Default to all students
+    } catch (error) {
+      console.error("Error loading pending students:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load pending students",
+        variant: "destructive"
+      });
+    }
+  };
 
   const getRunAt = () => {
     const now = new Date();
@@ -81,21 +117,41 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
       const channel = getNotificationChannel();
 
       if (isClassReminder) {
-        // Use the new function to create reminders for all pending students
-        const { data, error } = await supabase.rpc("create_class_reminders", {
-          _assignment_id: assignmentId,
-          _run_at: runAt.toISOString(),
-          _notification_channel: channel
-        });
+        if (selectedStudents === "all") {
+          // Use the existing function to create reminders for all pending students
+          const { data, error } = await supabase.rpc("create_class_reminders", {
+            _assignment_id: assignmentId,
+            _run_at: runAt.toISOString(),
+            _notification_channel: channel
+          });
 
-        if (error) throw error;
+          if (error) throw error;
 
-        toast({
-          title: "Reminders Scheduled",
-          description: `${data} reminder(s) scheduled for the class`
-        });
+          toast({
+            title: "Reminders Scheduled",
+            description: `${data} reminder(s) scheduled for pending students`
+          });
+        } else {
+          // Create reminder for specific student
+          const { error } = await supabase
+            .from("reminders")
+            .insert({
+              assignment_id: assignmentId,
+              student_id: selectedStudents,
+              run_at: runAt.toISOString(),
+              notification_channel: channel
+            });
+
+          if (error) throw error;
+
+          const selectedStudent = pendingStudents.find(s => s.student_id === selectedStudents);
+          toast({
+            title: "Reminder Scheduled",
+            description: `Reminder scheduled for ${selectedStudent?.student_name || "student"}`
+          });
+        }
       } else {
-        // Create reminder for specific student
+        // Create reminder for specific student (individual reminder)
         const { error } = await supabase
           .from("reminders")
           .insert({
@@ -151,9 +207,35 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
 
           <div>
             <Label className="text-sm font-medium">Recipients</Label>
-            <p className="text-sm text-muted-foreground mt-1">
-              {isClassReminder ? "All pending students in class" : studentName}
-            </p>
+            {isClassReminder ? (
+              <div className="mt-2 space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {pendingStudents.length} pending student(s)
+                </p>
+                {pendingStudents.length > 1 && (
+                  <Select value={selectedStudents} onValueChange={setSelectedStudents}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select students" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All pending students</SelectItem>
+                      {pendingStudents.map((student) => (
+                        <SelectItem key={student.student_id} value={student.student_id}>
+                          {student.student_name || `Student ${student.student_id.slice(0, 6)}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {pendingStudents.length === 1 && (
+                  <p className="text-sm text-muted-foreground">
+                    {pendingStudents[0].student_name || `Student ${pendingStudents[0].student_id.slice(0, 6)}`}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground mt-1">{studentName}</p>
+            )}
           </div>
 
           <div>
@@ -204,7 +286,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
             </Button>
             <Button
               onClick={handleScheduleReminder}
-              disabled={isLoading}
+              disabled={isLoading || (isClassReminder && pendingStudents.length === 0)}
               className="flex-1"
             >
               {isLoading ? "Scheduling..." : "Schedule Reminder"}
