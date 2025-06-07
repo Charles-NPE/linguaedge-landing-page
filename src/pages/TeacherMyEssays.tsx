@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -100,7 +99,7 @@ const TeacherMyEssays: React.FC = () => {
     filteredAssignments = filteredAssignments.filter(a => a.class_id === selectedClassId);
   }
 
-  // Filter by date range using UTC helper
+  // Filter by date range using assignment created date from the view
   filteredAssignments = filteredAssignments.filter(a => {
     const createdAt = new Date(a.created_at);
     const start = toUtc(dateRange.from);
@@ -138,14 +137,14 @@ const TeacherMyEssays: React.FC = () => {
     
     if (detail[id]) return; // already cached
     
-    // ✅ Usar únicamente la vista v_assignment_student_status
+    // ✅ Usar la vista actualizada con assignment_created_at
     const { data, error } = await supabase
       .from("v_assignment_student_status")
       .select(`
         student_id,
         student_name,
         status,
-        submitted_at,
+        submission_created_at,
         correction_id,
         teacher_public_note,
         has_feedback
@@ -162,7 +161,7 @@ const TeacherMyEssays: React.FC = () => {
     const rows = (data ?? []).map((r: any) => ({
       student: { id: r.student_id, full_name: r.student_name },
       status: r.status,
-      submitted_at: r.submitted_at,
+      submitted_at: r.submission_created_at,
       correction_id: r.correction_id,
       teacher_public_note: r.teacher_public_note,
       has_feedback: r.has_feedback

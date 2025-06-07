@@ -611,7 +611,10 @@ export type Database = {
     Views: {
       v_assignment_student_status: {
         Row: {
+          assignment_created_at: string | null
+          assignment_deadline: string | null
           assignment_id: string | null
+          assignment_title: string | null
           class_id: string | null
           correction_id: string | null
           has_feedback: boolean | null
