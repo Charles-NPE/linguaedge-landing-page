@@ -233,6 +233,13 @@ export type Database = {
             referencedRelation: "submissions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "corrections_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "v_assignment_student_status"
+            referencedColumns: ["submission_id"]
+          },
         ]
       }
       email_preferences: {
@@ -588,7 +595,35 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_assignment_student_status: {
+        Row: {
+          assignment_id: string | null
+          correction_id: string | null
+          has_feedback: boolean | null
+          status: Database["public"]["Enums"]["assignment_status"] | null
+          student_id: string | null
+          submission_created_at: string | null
+          submission_id: string | null
+          submitted_at: string | null
+          teacher_public_note: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_targets_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_targets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       create_assignment_with_targets: {

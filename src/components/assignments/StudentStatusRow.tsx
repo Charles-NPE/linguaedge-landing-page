@@ -34,7 +34,7 @@ const StudentStatusRow: React.FC<Props> = ({
   };
 
   const showReminderButton = status === "pending" || status === "late";
-  const showFeedbackButton = (status === "submitted" || status === "late") && correctionId && onViewFeedback;
+  const showFeedbackButton = correctionId && onViewFeedback;
 
   return (
     <div className="flex items-center justify-between py-2 px-3 bg-white dark:bg-slate-800 rounded border">

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -55,6 +56,7 @@ interface DetailCache {
       submitted_at?: string | null;
       correction_id?: string | null;
       teacher_public_note?: string | null;
+      has_feedback: boolean;
     }[];
   };
 }
@@ -130,20 +132,16 @@ const TeacherMyEssays: React.FC = () => {
     
     if (detail[id]) return; // already cached
     
+    // Use the new view instead of nested query
     const { data, error } = await supabase
-      .from("assignment_targets")
+      .from("v_assignment_student_status")
       .select(`
         status, 
-        student_id, 
         submitted_at,
-        profiles:student_id ( id, full_name ),
-        submissions (
-          id,
-          corrections (
-            id,
-            teacher_public_note
-          )
-        )
+        correction_id,
+        teacher_public_note,
+        has_feedback,
+        profiles:student_id ( id, full_name )
       `)
       .eq("assignment_id", id);
 
@@ -157,8 +155,9 @@ const TeacherMyEssays: React.FC = () => {
       student: { id: r.profiles.id, full_name: r.profiles.full_name },
       status: r.status,
       submitted_at: r.submitted_at,
-      correction_id: r.submissions?.[0]?.corrections?.[0]?.id || null,
-      teacher_public_note: r.submissions?.[0]?.corrections?.[0]?.teacher_public_note || null
+      correction_id: r.correction_id,
+      teacher_public_note: r.teacher_public_note,
+      has_feedback: r.has_feedback
     }));
     
     setDetail(prev => ({ ...prev, [id]: { rows } }));
