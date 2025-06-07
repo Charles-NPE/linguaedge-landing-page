@@ -58,6 +58,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({
 
   const loadPendingStudents = async () => {
     try {
+      // ✅ Usar únicamente la vista v_assignment_student_status
       const { data, error } = await supabase
         .from("v_assignment_student_status")
         .select("student_id, student_name")

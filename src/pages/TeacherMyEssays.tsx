@@ -61,6 +61,10 @@ interface DetailCache {
   };
 }
 
+// Helper para crear fechas UTC correctas
+const toUtc = (d: Date, h = 0, m = 0, s = 0) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), h, m, s));
+
 const TeacherMyEssays: React.FC = () => {
   const { user } = useAuth();
   const { data: rows = [], isLoading } = useTeacherEssays(user?.id);
@@ -96,11 +100,12 @@ const TeacherMyEssays: React.FC = () => {
     filteredAssignments = filteredAssignments.filter(a => a.class_id === selectedClassId);
   }
 
-  // Filter by date range - Fix timezone issues
+  // Filter by date range using UTC helper
   filteredAssignments = filteredAssignments.filter(a => {
     const createdAt = new Date(a.created_at);
-    // Use endOfDay to include the full day range in UTC
-    return createdAt >= dateRange.from && createdAt <= endOfDay(dateRange.to);
+    const start = toUtc(dateRange.from);
+    const end = toUtc(dateRange.to, 23, 59, 59);
+    return createdAt >= start && createdAt <= end;
   });
 
   // Filter by completion status
@@ -133,19 +138,20 @@ const TeacherMyEssays: React.FC = () => {
     
     if (detail[id]) return; // already cached
     
-    // Use the updated view with class_id and student_name
+    // ✅ Usar únicamente la vista v_assignment_student_status
     const { data, error } = await supabase
       .from("v_assignment_student_status")
       .select(`
-        status, 
+        student_id,
+        student_name,
+        status,
         submitted_at,
         correction_id,
         teacher_public_note,
-        has_feedback,
-        student_id,
-        student_name
+        has_feedback
       `)
-      .eq("assignment_id", id);
+      .eq("assignment_id", id)
+      .order("student_name");
 
     if (error) {
       console.error("Error fetching student details:", error);

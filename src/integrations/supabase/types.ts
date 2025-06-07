@@ -522,6 +522,20 @@ export type Database = {
             referencedRelation: "assignments"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "submissions_assignment_target_fk"
+            columns: ["assignment_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_targets"
+            referencedColumns: ["assignment_id", "student_id"]
+          },
+          {
+            foreignKeyName: "submissions_assignment_target_fk"
+            columns: ["assignment_id", "student_id"]
+            isOneToOne: false
+            referencedRelation: "v_assignment_student_status"
+            referencedColumns: ["assignment_id", "student_id"]
+          },
         ]
       }
       subscribers: {
