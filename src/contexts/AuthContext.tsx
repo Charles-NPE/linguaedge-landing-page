@@ -1,8 +1,8 @@
-
 // @ts-nocheck
 import React, { createContext, useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { supabaseRT } from "@/integrations/supabase/realtime";
 import { AuthUser, UserProfile, UserRole } from "@/types/auth.types";
 import { useNavigate } from "react-router-dom";
 import { fetchUserProfile, signUpUser, signInUser, signOutUser, getRedirectPathForRole } from "@/utils/authUtils";
@@ -31,6 +31,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
   const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
+  const [realtimeChannel, setRealtimeChannel] = useState<any>(null);
+  const [fallbackInterval, setFallbackInterval] = useState<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,6 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setProfile(null);
           setIsSubscriptionActive(false);
+          // Clean up realtime subscription when user logs out
+          cleanupRealtimeSubscription();
         }
       }
     );
@@ -67,8 +71,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      cleanupRealtimeSubscription();
+    };
   }, []);
+
+  const cleanupRealtimeSubscription = () => {
+    if (realtimeChannel) {
+      console.log("Cleaning up realtime subscription");
+      supabaseRT.removeChannel(realtimeChannel);
+      setRealtimeChannel(null);
+    }
+    if (fallbackInterval) {
+      clearInterval(fallbackInterval);
+      setFallbackInterval(null);
+    }
+  };
+
+  const setupRealtimeSubscription = (userId: string) => {
+    // Clean up existing subscription first
+    cleanupRealtimeSubscription();
+
+    console.log("Setting up realtime subscription for user:", userId);
+    
+    const channel = supabaseRT
+      .channel(`profile_changes_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('Profile realtime update received:', payload);
+          const newProfile = payload.new as UserProfile;
+          
+          // Update profile state
+          setProfile(newProfile);
+          setUser(prev => prev ? { ...prev, profile: newProfile } : null);
+          
+          // Update subscription status
+          if (newProfile.role === 'teacher') {
+            const active = newProfile.stripe_status === 'active' || newProfile.stripe_status === 'trialing';
+            setIsSubscriptionActive(active);
+            console.log('Subscription status updated via realtime:', active);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('Realtime subscription established successfully');
+          // Clear any existing fallback polling
+          if (fallbackInterval) {
+            clearInterval(fallbackInterval);
+            setFallbackInterval(null);
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Realtime connection failed, setting up fallback polling');
+          setupFallbackPolling();
+        }
+      });
+
+    setRealtimeChannel(channel);
+  };
+
+  const setupFallbackPolling = () => {
+    // Only set up fallback if not already running
+    if (fallbackInterval) return;
+    
+    console.log("Setting up fallback polling every 10 minutes");
+    const interval = setInterval(async () => {
+      console.log("Fallback polling: checking subscription status");
+      await checkSubscription();
+    }, 600000); // 10 minutes
+    
+    setFallbackInterval(interval);
+  };
 
   const fetchAndSetUserProfile = async (userId: string) => {
     console.log("Fetching profile for user:", userId);
@@ -82,9 +165,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(profileData as UserProfile);
         setUser(prev => prev ? { ...prev, profile: profileData as UserProfile } : null);
         
-        // If teacher, check subscription status
+        // If teacher, check subscription status and set up realtime
         if (profileData.role === 'teacher') {
           await checkSubscription();
+          setupRealtimeSubscription(userId);
         }
         return;
       } else {

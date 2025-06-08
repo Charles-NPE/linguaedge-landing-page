@@ -19,9 +19,9 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
   const { user, isLoading, profile, isSubscriptionActive, checkSubscription } = useAuth();
   const navigate = useNavigate();
 
-  // Check subscription status when component mounts if user is a teacher
+  // Initial subscription check when component mounts if user is a teacher
   useEffect(() => {
-    if (user && profile?.role === 'teacher') {
+    if (user && profile?.role === 'teacher' && profile.stripe_status === undefined) {
       checkSubscription();
     }
   }, [user, profile, checkSubscription]);
@@ -50,9 +50,7 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
     return <Navigate to={redirectPath} replace />;
   }
 
-  // ───────────────────────────────
-  //  NO redirect until we have a status
-  // ───────────────────────────────
+  // For teachers, check subscription status (realtime updates handle this now)
   if (userRole === 'teacher') {
     // If stripe_status is still undefined, keep loading
     if (profile?.stripe_status === undefined) {
