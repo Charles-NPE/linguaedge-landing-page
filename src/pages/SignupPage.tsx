@@ -18,7 +18,7 @@ const SignupPage: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Link to="/signup/teacher" className="block w-full">
+          <Link to="/pricing?signup=teacher" className="block w-full">
             <Button variant="default" className="w-full h-16 text-lg bg-primary hover:bg-primary/90 flex justify-between items-center">
               <span>Teachers</span>
               <UserCheck className="h-5 w-5" />

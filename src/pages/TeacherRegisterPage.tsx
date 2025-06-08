@@ -28,13 +28,21 @@ const TeacherRegisterPage: React.FC = () => {
   const [plan, setPlan] = useState<string>("starter");
   const [isRedirecting, setIsRedirecting] = useState(false);
   
-  // Extract plan from URL search params
+  // Extract plan from URL search params and redirect if no plan
   useEffect(() => {
     const planParam = searchParams.get('plan');
-    if (planParam && (planParam === 'starter' || planParam === 'academy')) {
-      setPlan(planParam);
+    if (!planParam) {
+      // If no plan is specified, redirect to pricing
+      navigate('/pricing?signup=teacher');
+      return;
     }
-  }, [searchParams]);
+    if (planParam === 'starter' || planParam === 'academy') {
+      setPlan(planParam);
+    } else {
+      // If invalid plan, redirect to pricing
+      navigate('/pricing?signup=teacher');
+    }
+  }, [searchParams, navigate]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -94,11 +102,9 @@ const TeacherRegisterPage: React.FC = () => {
           <CardTitle className="text-2xl font-bold flex items-center gap-2">
             <UserCheck className="h-6 w-6" />
             Register as Teacher
-            {plan && (
-              <Badge variant="outline" className="ml-2">
-                {plan === 'starter' ? 'Starter' : 'Academy'} Plan
-              </Badge>
-            )}
+            <Badge variant="outline" className="ml-2">
+              {plan === 'academy' ? 'Academy Plan' : 'Starter Plan'}
+            </Badge>
           </CardTitle>
           <CardDescription>
             Create a teacher account and start managing your language academy.
@@ -157,9 +163,9 @@ const TeacherRegisterPage: React.FC = () => {
             variant="ghost"
             size="sm"
             className="text-gray-500"
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate('/pricing?signup=teacher')}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to signup options
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to plans
           </Button>
         </CardFooter>
       </Card>

@@ -77,7 +77,18 @@ const Pricing = () => {
 
   const handleGetStarted = async (priceId: string, planName: string) => {
     try {
-      // If user is not logged in, redirect to signup with plan parameter
+      // Check if this is a signup flow
+      const params = new URLSearchParams(location.search);
+      const isSignup = params.get('signup') === 'teacher';
+      
+      // If user is not logged in and it's a signup flow, redirect to signup with plan parameter
+      if (!user && isSignup) {
+        const planParam = priceId === "STARTER_PRICE_ID" ? "starter" : "academy";
+        navigate(`/signup/teacher?plan=${planParam}`);
+        return;
+      }
+
+      // If user is not logged in but not in signup flow, redirect to signup with plan parameter
       if (!user) {
         const planParam = priceId === "STARTER_PRICE_ID" ? "starter" : "academy";
         navigate(`/signup/teacher?plan=${planParam}`);
