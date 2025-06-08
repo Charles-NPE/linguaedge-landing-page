@@ -16,8 +16,11 @@ const logWebhook = (type: string, details?: any) => {
 
 // Helper function to determine subscription tier from price_id
 const getSubscriptionTier = (priceId: string): string => {
-  const starterPriceId = Deno.env.get("STARTER_PRICE_ID");
-  const academyPriceId = Deno.env.get("ACADEMY_PRICE_ID");
+  const STARTER_PRICE_ID = "price_1RKzjAGULVEx6ff4xe51d6YT";
+  const ACADEMY_PRICE_ID = "price_1RKzrHGULVEx6ff4JmxatsFu";
+  
+  const starterPriceId = Deno.env.get("STARTER_PRICE_ID") ?? STARTER_PRICE_ID;
+  const academyPriceId = Deno.env.get("ACADEMY_PRICE_ID") ?? ACADEMY_PRICE_ID;
   
   logWebhook("Determining tier", { priceId, starterPriceId, academyPriceId });
   
