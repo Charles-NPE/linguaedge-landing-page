@@ -19,7 +19,10 @@ export const useTeacherStats = () => {
         throw error;
       }
       
-      return data as TeacherStats;
+      // Safe casting from Json to TeacherStats
+      const stats = data as unknown as TeacherStats;
+      
+      return stats;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
