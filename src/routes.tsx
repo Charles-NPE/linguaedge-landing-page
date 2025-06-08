@@ -1,4 +1,3 @@
-
 import { createBrowserRouter, Outlet } from "react-router-dom";
 import Index from "@/pages/Index";
 import LoginPage from "@/pages/LoginPage";
@@ -68,6 +67,14 @@ export const routes = createBrowserRouter([
       {
         path: "/signup",
         element: <SignupPage />,
+      },
+      {
+        path: "/signup/teacher",
+        element: <TeacherRegisterPage />,
+      },
+      {
+        path: "/signup/student",
+        element: <StudentRegisterPage />,
       },
       {
         path: "/teacher-register",

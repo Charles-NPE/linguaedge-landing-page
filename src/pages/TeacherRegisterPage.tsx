@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,18 +24,17 @@ type FormData = z.infer<typeof formSchema>;
 const TeacherRegisterPage: React.FC = () => {
   const { signUp, isLoading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [plan, setPlan] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [plan, setPlan] = useState<string>("starter");
   const [isRedirecting, setIsRedirecting] = useState(false);
   
-  // Extract plan from URL query params
+  // Extract plan from URL search params
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const planParam = params.get('plan');
-    if (planParam) {
+    const planParam = searchParams.get('plan');
+    if (planParam && (planParam === 'starter' || planParam === 'academy')) {
       setPlan(planParam);
     }
-  }, [location]);
+  }, [searchParams]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
