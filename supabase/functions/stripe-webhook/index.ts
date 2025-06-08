@@ -14,6 +14,23 @@ const logWebhook = (type: string, details?: any) => {
   console.log(`[STRIPE] ${type}${detailsStr}`);
 };
 
+// Helper function to determine subscription tier from price_id
+const getSubscriptionTier = (priceId: string): string => {
+  const starterPriceId = Deno.env.get("STARTER_PRICE_ID");
+  const academyPriceId = Deno.env.get("ACADEMY_PRICE_ID");
+  
+  logWebhook("Determining tier", { priceId, starterPriceId, academyPriceId });
+  
+  if (priceId === academyPriceId) {
+    return 'academy';
+  } else if (priceId === starterPriceId) {
+    return 'starter';
+  }
+  
+  // Default to starter for unknown price IDs
+  return 'starter';
+};
+
 serve(async (req) => {
   try {
     // Get the signature from the header
@@ -56,17 +73,39 @@ serve(async (req) => {
           { auth: { persistSession: false } }
         );
         
-        // 1) Store Stripe customer id in profiles and mark as subscribed
+        // Get subscription details to determine tier
+        let subscriptionTier = 'starter';
+        
+        if (session.subscription) {
+          try {
+            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+            if (subscription.items.data.length > 0) {
+              const priceId = subscription.items.data[0].price.id;
+              subscriptionTier = getSubscriptionTier(priceId);
+              logWebhook("Subscription tier determined", { priceId, subscriptionTier });
+            }
+          } catch (error) {
+            logWebhook("Error retrieving subscription details", { error: error.message });
+          }
+        }
+        
+        // 1) Store Stripe customer id, subscription status, and tier in profiles
         const { error: updateError } = await supabaseAdmin
           .from("profiles")
           .update({ 
             stripe_customer_id: customerId, 
-            stripe_status: 'active'
+            stripe_status: 'active',
+            subscription_tier: subscriptionTier
           })
           .eq("id", metadata.supabase_uid);
           
         if (updateError) {
           console.error("[STRIPE] Error updating profile:", updateError);
+        } else {
+          logWebhook("Profile updated successfully", { 
+            userId: metadata.supabase_uid,
+            subscriptionTier 
+          });
         }
         
         // 2) Send welcome email via Resend if API key is available
@@ -80,7 +119,7 @@ serve(async (req) => {
               subject: "Your LinguaEdge Subscription is Active",
               html: `
                 <h1>Welcome to LinguaEdge!</h1>
-                <p>Thank you for subscribing. Your account is now active and you have full access to all premium features.</p>
+                <p>Thank you for subscribing to our ${subscriptionTier} plan. Your account is now active and you have full access to all premium features.</p>
                 <p>If you have any questions, please don't hesitate to contact our support team.</p>
                 <p>Best regards,<br>The LinguaEdge Team</p>
               `

@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import ClassCard from "@/components/classes/ClassCard";
 import CreateClassDialog from "@/components/classes/CreateClassDialog";
+import { useTeacherStats } from "@/hooks/useTeacherStats";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronLeft } from "lucide-react";
@@ -20,24 +21,14 @@ interface ClassWithStudents {
 }
 
 const TeacherClassesPage = () => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [classes, setClasses] = useState<ClassWithStudents[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Get student limit based on subscription tier
-  const getStudentLimit = () => {
-    if (!profile) return 20; // Default limit
-    
-    switch(profile.stripe_status) {
-      case "academy":
-        return 60;
-      case "starter":
-      default:
-        return 20;
-    }
-  };
+  // Get teacher stats including student limits
+  const { data: teacherStats, refetch: refetchStats } = useTeacherStats();
 
   const fetchClasses = async () => {
     if (!user) return;
@@ -76,22 +67,15 @@ const TeacherClassesPage = () => {
     fetchClasses();
   }, [user]);
 
-  const getTotalStudents = (classList: ClassWithStudents[]) => {
-    return classList.reduce((sum, cls) => sum + (cls.class_students?.count || 0), 0);
-  };
-
   const handleCreateClass = async (name: string) => {
-    if (!user) return;
+    if (!user || !teacherStats) return;
     
     try {
       // Check if adding a new class would exceed the student limit
-      const studentLimit = getStudentLimit();
-      const totalStudents = getTotalStudents(classes);
-      
-      if (totalStudents >= studentLimit) {
+      if (teacherStats.totalStudents >= teacherStats.student_limit) {
         toast({
           title: "Student Limit Reached",
-          description: "You've reached your student limit. Upgrade plan to add more.",
+          description: "Upgrade to Academy to enroll more students.",
           variant: "destructive"
         });
         return false;
@@ -111,8 +95,9 @@ const TeacherClassesPage = () => {
         
       if (error) throw error;
       
-      // Re-fetch classes to update the list
+      // Re-fetch classes and stats to update the list
       await fetchClasses();
+      await refetchStats();
       
       toast({
         title: "Success",
@@ -131,8 +116,10 @@ const TeacherClassesPage = () => {
     }
   };
 
-  const totalStudents = getTotalStudents(classes);
-  const planLimit = getStudentLimit();
+  const totalStudents = teacherStats?.totalStudents || 0;
+  const planLimit = teacherStats?.student_limit || 20;
+  const subscriptionTier = teacherStats?.subscription_tier || 'starter';
+  const isAtLimit = totalStudents >= planLimit;
 
   return (
     <DashboardLayout 
@@ -146,10 +133,14 @@ const TeacherClassesPage = () => {
                 <span className="text-sm font-medium">
                   {totalStudents} / {planLimit}
                 </span>
+                <span className="text-xs text-muted-foreground capitalize">
+                  ({subscriptionTier})
+                </span>
               </div>
             </TooltipTrigger>
             <TooltipContent>
               You can enrol up to {planLimit} students in all your classes.
+              {isAtLimit && " Upgrade to Academy plan for more students."}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -167,6 +158,11 @@ const TeacherClassesPage = () => {
       <div className="mb-6">
         <p className="text-slate-600 dark:text-slate-400">
           Create and manage your classes. Students can join using the class code.
+          {isAtLimit && (
+            <span className="block text-amber-600 dark:text-amber-500 mt-1">
+              You've reached your student limit. Upgrade to Academy plan to add more students.
+            </span>
+          )}
         </p>
       </div>
       
@@ -182,9 +178,17 @@ const TeacherClassesPage = () => {
               <p className="text-slate-500 dark:text-slate-400 mb-4">
                 Create your first class to get started
               </p>
-              <Button onClick={() => setIsDialogOpen(true)}>
+              <Button 
+                onClick={() => setIsDialogOpen(true)}
+                disabled={isAtLimit}
+              >
                 <Plus className="mr-1 h-4 w-4" /> Create Class
               </Button>
+              {isAtLimit && (
+                <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
+                  Upgrade to Academy plan to create classes
+                </p>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -212,9 +216,15 @@ const TeacherClassesPage = () => {
             onClick={() => setIsDialogOpen(true)} 
             size="lg" 
             className="rounded-full shadow-lg"
+            disabled={isAtLimit}
           >
             <Plus className="mr-1 h-5 w-5" /> New Class
           </Button>
+          {isAtLimit && (
+            <p className="text-xs text-center text-amber-600 dark:text-amber-500 mt-1">
+              Upgrade to Academy
+            </p>
+          )}
         </div>
       )}
       

@@ -10,6 +10,7 @@ export interface UserProfile {
   updated_at?: string;
   stripe_customer_id?: string | null;
   stripe_status?: string | null;
+  subscription_tier?: string | null;
   subscription_end?: string | null;
   full_name?: string | null;
   phone?: string | null;

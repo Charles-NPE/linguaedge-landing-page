@@ -118,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const active = newProfile.stripe_status === 'active' || newProfile.stripe_status === 'trialing';
             setIsSubscriptionActive(active);
             console.log('Subscription status updated via realtime:', active);
+            console.log('Subscription tier updated via realtime:', newProfile.subscription_tier);
           }
         }
       )
@@ -215,7 +216,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return {
           ...prev,
           stripe_status: data.stripe_status,
-          subscription_end: data.subscription_end
+          subscription_end: data.subscription_end,
+          subscription_tier: data.subscription_tier
         };
       });
 

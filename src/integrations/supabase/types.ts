@@ -438,6 +438,8 @@ export type Database = {
           phone: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           stripe_customer_id: string | null
+          student_limit: number | null
+          subscription_tier: string | null
           updated_at: string
         }
         Insert: {
@@ -447,6 +449,8 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           stripe_customer_id?: string | null
+          student_limit?: number | null
+          subscription_tier?: string | null
           updated_at?: string
         }
         Update: {
@@ -456,6 +460,8 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           stripe_customer_id?: string | null
+          student_limit?: number | null
+          subscription_tier?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -708,6 +714,10 @@ export type Database = {
       }
     }
     Functions: {
+      count_teacher_students: {
+        Args: { teacher_uuid: string }
+        Returns: number
+      }
       create_assignment_with_targets: {
         Args: {
           _class_id: string
@@ -726,6 +736,14 @@ export type Database = {
           _notification_channel?: string
         }
         Returns: number
+      }
+      get_current_user_student_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_teacher_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       mark_correction_read: {
         Args: { correction_id: string }
