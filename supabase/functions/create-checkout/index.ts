@@ -108,7 +108,8 @@ serve(async (req) => {
       logStep("Creating checkout session", { 
         customerId, 
         customerEmail: customerId ? undefined : user.email,
-        priceId: actualPriceId
+        priceId: actualPriceId,
+        metadata: { supabase_uid: user.id }
       });
       
       const session = await stripe.checkout.sessions.create({
@@ -126,9 +127,12 @@ serve(async (req) => {
         subscription_data: {
           trial_period_days: 30,
         },
+        metadata: {
+          supabase_uid: user.id
+        },
       });
       
-      logStep("Checkout session created", { sessionId: session.id, url: session.url });
+      logStep("Checkout session created", { sessionId: session.id, url: session.url, metadata: session.metadata });
 
       // Return the session URL
       return new Response(JSON.stringify({ url: session.url }), {
