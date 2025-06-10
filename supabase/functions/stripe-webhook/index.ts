@@ -92,13 +92,14 @@ serve(async (req) => {
           }
         }
         
-        // 1) Store Stripe customer id, subscription status, and tier in profiles
+        // 1) Store Stripe customer id, subscription status, tier, and student limit in profiles
         const { error: updateError } = await supabaseAdmin
           .from("profiles")
           .update({ 
             stripe_customer_id: customerId, 
             stripe_status: 'active',
-            subscription_tier: subscriptionTier
+            subscription_tier: subscriptionTier,
+            student_limit: subscriptionTier === 'academy' ? 60 : 20
           })
           .eq("id", metadata.supabase_uid);
           
@@ -107,7 +108,8 @@ serve(async (req) => {
         } else {
           logWebhook("Profile updated successfully", { 
             userId: metadata.supabase_uid,
-            subscriptionTier 
+            subscriptionTier,
+            studentLimit: subscriptionTier === 'academy' ? 60 : 20
           });
         }
         
