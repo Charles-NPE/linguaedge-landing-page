@@ -4,6 +4,10 @@ import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { Resend } from "npm:resend@2.0.0";
 
+// Price IDs from environment variables
+const STARTER_PRICE_ID = "price_1RKzjAGULVEx6ff4xe51d6YT";
+const ACADEMY_PRICE_ID = "price_1RKzrHGULVEx6ff4JmxatsFu";
+
 // Initialize Stripe with the secret key from environment variables
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2023-10-16" });
 const WH_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
@@ -16,9 +20,6 @@ const logWebhook = (type: string, details?: any) => {
 
 // Helper function to determine subscription tier from price_id
 const getSubscriptionTier = (priceId: string): string => {
-  const STARTER_PRICE_ID = "price_1RKzjAGULVEx6ff4xe51d6YT";
-  const ACADEMY_PRICE_ID = "price_1RKzrHGULVEx6ff4JmxatsFu";
-  
   const starterPriceId = Deno.env.get("STARTER_PRICE_ID") ?? STARTER_PRICE_ID;
   const academyPriceId = Deno.env.get("ACADEMY_PRICE_ID") ?? ACADEMY_PRICE_ID;
   
