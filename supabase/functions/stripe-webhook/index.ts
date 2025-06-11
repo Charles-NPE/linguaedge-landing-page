@@ -4,13 +4,27 @@ import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { Resend } from "npm:resend@2.0.0";
 
+// === Sanity-check de secretos ================
+const REQUIRED_SECRETS = [
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY"
+] as const;
+
+REQUIRED_SECRETS.forEach((k) => {
+  if (!Deno.env.get(k)) {
+    console.error(`[STRIPE-WEBHOOK] ❌ Falta la variable ${k}`);
+  }
+});
+// =============================================
+
 // Price IDs from environment variables
 const STARTER_PRICE_ID = "price_1RKzjAGULVEx6ff4xe51d6YT";
 const ACADEMY_PRICE_ID = "price_1RKzrHGULVEx6ff4JmxatsFu";
 
 // Initialize Stripe with the secret key from environment variables
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2023-10-16" });
-const WH_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
 
 // Helper function for logging
 const logWebhook = (type: string, details?: any) => {
@@ -40,17 +54,29 @@ serve(async (req) => {
     // Get the signature from the header
     const sig = req.headers.get("stripe-signature");
     if (!sig) {
-      return new Response(JSON.stringify({ error: "No signature found" }), { status: 400 });
+      logWebhook("No signature found");
+      return new Response("OK", { status: 200 });
     }
     
     const body = await req.text();
     
-    // Verify the signature
+    // Verify the signature - determine which secret to use
     let event: Stripe.Event;
     try {
+      // First try to construct event to get livemode info
+      const tempEvent = JSON.parse(body);
+      const isLivemode = tempEvent?.livemode ?? true;
+      
+      const WH_SECRET = isLivemode
+        ? Deno.env.get("STRIPE_WEBHOOK_SECRET")!
+        : Deno.env.get("STRIPE_WEBHOOK_SECRET_TEST")!;
+      
+      logWebhook("Using webhook secret", { isLivemode, hasSecret: !!WH_SECRET });
+      
       event = stripe.webhooks.constructEvent(body, sig, WH_SECRET);
     } catch (err) {
-      return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 400 });
+      console.error("[STRIPE] Firma inválida:", err.message);
+      return new Response("OK", { status: 200 }); // Always return 200 to prevent retries
     }
     
     // Log the event type
