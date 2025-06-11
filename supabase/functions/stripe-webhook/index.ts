@@ -125,13 +125,24 @@ serve(async (req) => {
             }
           }
           
-          // ③ Si aún no hay supabase_uid, buscar en subscription
+          // ③ Si no hay supabase_uid, buscar en parent.subscription_details.metadata
+          if (!metadata.supabase_uid) {
+            const subMeta = (invoice.parent as any)?.subscription_details?.metadata;
+            if (subMeta?.supabase_uid) {
+              metadata.supabase_uid = subMeta.supabase_uid;
+              logWebhook("③ Found in parent.subscription_details.metadata", { 
+                subMeta
+              });
+            }
+          }
+          
+          // ④ Si aún no hay supabase_uid, buscar en subscription
           if (!metadata.supabase_uid && subscriptionId) {
             try {
               const subscription = await stripe.subscriptions.retrieve(subscriptionId);
               if (subscription.metadata?.supabase_uid) {
                 metadata.supabase_uid = subscription.metadata.supabase_uid;
-                logWebhook("③ Found in subscription metadata", { 
+                logWebhook("④ Found in subscription metadata", { 
                   subscriptionId,
                   metadata: subscription.metadata 
                 });
