@@ -73,7 +73,7 @@ serve(async (req) => {
       
       logWebhook("Using webhook secret", { isLivemode, hasSecret: !!WH_SECRET });
       
-      event = stripe.webhooks.constructEvent(body, sig, WH_SECRET);
+      event = await stripe.webhooks.constructEventAsync(body, sig, WH_SECRET);
     } catch (err) {
       console.error("[STRIPE] Firma inválida:", err.message);
       return new Response("OK", { status: 200 }); // Always return 200 to prevent retries
