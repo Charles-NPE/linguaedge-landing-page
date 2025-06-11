@@ -28,7 +28,9 @@ const TeacherClassesPage = () => {
   const navigate = useNavigate();
 
   // Get teacher stats including student limits
-  const { data: teacherStats, refetch: refetchStats } = useTeacherStats();
+  const { data: teacherStats, isLoading: statsLoading, refetch: refetchStats } = useTeacherStats();
+
+  console.log("[TeacherClassesPage] Teacher stats:", teacherStats);
 
   const fetchClasses = async () => {
     if (!user) return;
@@ -75,7 +77,7 @@ const TeacherClassesPage = () => {
       if (teacherStats.totalStudents >= teacherStats.student_limit) {
         toast({
           title: "Student Limit Reached",
-          description: "Upgrade to Academy to enroll more students.",
+          description: `Upgrade to Academy to enroll more students. Current limit: ${teacherStats.student_limit} students.`,
           variant: "destructive"
         });
         return false;
@@ -116,10 +118,20 @@ const TeacherClassesPage = () => {
     }
   };
 
+  // Use teacherStats data with fallbacks while loading
   const totalStudents = teacherStats?.totalStudents || 0;
   const planLimit = teacherStats?.student_limit || 20;
   const subscriptionTier = teacherStats?.subscription_tier || 'starter';
   const isAtLimit = totalStudents >= planLimit;
+  const progressPercentage = planLimit > 0 ? (totalStudents / planLimit) * 100 : 0;
+
+  console.log("[TeacherClassesPage] Computed values:", {
+    totalStudents,
+    planLimit,
+    subscriptionTier,
+    isAtLimit,
+    progressPercentage
+  });
 
   return (
     <DashboardLayout 
@@ -129,18 +141,22 @@ const TeacherClassesPage = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="flex items-center gap-2">
-                <Progress value={(totalStudents / planLimit) * 100} className="w-32 h-2" />
+                <Progress value={progressPercentage} className="w-32 h-2" />
                 <span className="text-sm font-medium">
                   {totalStudents} / {planLimit}
                 </span>
                 <span className="text-xs text-muted-foreground capitalize">
                   ({subscriptionTier})
                 </span>
+                {statsLoading && (
+                  <span className="text-xs text-muted-foreground">Loading...</span>
+                )}
               </div>
             </TooltipTrigger>
             <TooltipContent>
               You can enrol up to {planLimit} students in all your classes.
               {isAtLimit && " Upgrade to Academy plan for more students."}
+              {subscriptionTier === 'starter' && " Upgrade to Academy plan for up to 60 students."}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -160,7 +176,8 @@ const TeacherClassesPage = () => {
           Create and manage your classes. Students can join using the class code.
           {isAtLimit && (
             <span className="block text-amber-600 dark:text-amber-500 mt-1">
-              You've reached your student limit. Upgrade to Academy plan to add more students.
+              You've reached your student limit ({planLimit} students). 
+              {subscriptionTier === 'starter' && " Upgrade to Academy plan to add more students."}
             </span>
           )}
         </p>
