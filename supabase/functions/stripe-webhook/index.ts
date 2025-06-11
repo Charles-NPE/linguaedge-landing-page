@@ -106,7 +106,16 @@ serve(async (req) => {
         case "invoice.payment_succeeded":
           const invoice = event.data.object as Stripe.Invoice;
           subscriptionId = invoice.subscription as string;
-          metadata = invoice.lines.data[0]?.price?.metadata ?? {};
+          // Try to get metadata from subscription if available
+          if (subscriptionId) {
+            try {
+              const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+              metadata = subscription.metadata ?? {};
+            } catch (error) {
+              logWebhook("Error retrieving subscription for metadata", { error: error.message });
+              metadata = {};
+            }
+          }
           break;
 
         case "customer.subscription.created":
@@ -122,7 +131,7 @@ serve(async (req) => {
       });
 
       // Only proceed if we have the user ID in metadata
-      if (metadata.supabase_uid) {
+      if (metadata.supabase_uid && subscriptionId) {
         // Create Supabase client
         const supabaseAdmin = createClient(
           Deno.env.get("SUPABASE_URL") ?? "",
@@ -130,30 +139,32 @@ serve(async (req) => {
           { auth: { persistSession: false } }
         );
         
-        // 2️⃣ igual que antes: recuperar subscriptionTier
+        // 2️⃣ recuperar subscriptionTier y customer info
         let subscriptionTier = 'starter';
+        let customerId: string | null = null;
+        let stripeStatus = 'active';
         
-        if (subscriptionId) {
-          try {
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            if (subscription.items.data.length > 0) {
-              const priceId = subscription.items.data[0].price.id;
-              subscriptionTier = getSubscriptionTier(priceId);
-              logWebhook("Subscription tier determined", { priceId, subscriptionTier });
-            }
-          } catch (error) {
-            logWebhook("Error retrieving subscription details", { error: error.message });
+        try {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          customerId = subscription.customer as string;
+          stripeStatus = subscription.status;
+          
+          if (subscription.items.data.length > 0) {
+            const priceId = subscription.items.data[0].price.id;
+            subscriptionTier = getSubscriptionTier(priceId);
+            logWebhook("Subscription tier determined", { priceId, subscriptionTier });
           }
+        } catch (error) {
+          logWebhook("Error retrieving subscription details", { error: error.message });
         }
         
-        // 3️⃣ mismo update que ya tenías
+        // 3️⃣ Update profile with subscription info
         const { error: updateError } = await supabaseAdmin
           .from("profiles")
           .update({ 
-            stripe_customer_id: subscriptionId ? (await stripe.subscriptions.retrieve(subscriptionId)).customer as string : null, 
-            stripe_status: 'active',
-            subscription_tier: subscriptionTier,
-            student_limit: subscriptionTier === 'academy' ? 60 : 20
+            stripe_customer_id: customerId,
+            stripe_status: stripeStatus,
+            subscription_tier: subscriptionTier
           })
           .eq("id", metadata.supabase_uid);
           
@@ -163,11 +174,11 @@ serve(async (req) => {
           logWebhook("Profile updated successfully", { 
             userId: metadata.supabase_uid,
             subscriptionTier,
-            studentLimit: subscriptionTier === 'academy' ? 60 : 20
+            stripeStatus
           });
         }
         
-        // 2) Send welcome email via Resend if API key is available and it's a checkout completion
+        // Send welcome email via Resend if API key is available and it's a checkout completion
         if (event.type === "checkout.session.completed") {
           const resendKey = Deno.env.get("RESEND_API_KEY");
           const session = event.data.object as Stripe.Checkout.Session;
@@ -192,7 +203,10 @@ serve(async (req) => {
           }
         }
       } else {
-        console.warn("[STRIPE] Metadata sin supabase_uid");
+        console.warn("[STRIPE] Metadata sin supabase_uid o subscriptionId faltante", { 
+          hasUid: !!metadata.supabase_uid,
+          hasSubscriptionId: !!subscriptionId 
+        });
       }
     }
     

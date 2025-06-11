@@ -438,6 +438,7 @@ export type Database = {
           phone: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           stripe_customer_id: string | null
+          stripe_status: string | null
           student_limit: number | null
           subscription_tier: string | null
           updated_at: string
@@ -449,6 +450,7 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           stripe_customer_id?: string | null
+          stripe_status?: string | null
           student_limit?: number | null
           subscription_tier?: string | null
           updated_at?: string
@@ -460,6 +462,7 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           stripe_customer_id?: string | null
+          stripe_status?: string | null
           student_limit?: number | null
           subscription_tier?: string | null
           updated_at?: string
