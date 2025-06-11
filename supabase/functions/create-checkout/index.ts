@@ -126,6 +126,9 @@ serve(async (req) => {
         cancel_url: `${req.headers.get("origin")}/pricing`,
         subscription_data: {
           trial_period_days: 30,
+          metadata: {
+            supabase_uid: user.id
+          }
         },
         metadata: {
           supabase_uid: user.id
