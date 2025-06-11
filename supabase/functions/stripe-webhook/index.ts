@@ -82,18 +82,45 @@ serve(async (req) => {
     // Log the event type
     logWebhook(event.type);
     
-    // Handle the checkout.session.completed event specifically
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const customerId = session.customer as string;
-      const metadata = session.metadata || {}; // Contains supabase_uid sent from Checkout
-      
-      logWebhook("checkout.session.completed", { 
-        sessionId: session.id,
-        customerId,
+    // Handle multiple subscription-related events
+    const HANDLED_EVENTS = [
+      "checkout.session.completed",
+      "invoice.finalized",
+      "invoice.payment_succeeded",
+      "customer.subscription.created"
+    ] as const;
+
+    if (HANDLED_EVENTS.includes(event.type as any)) {
+      // 1️⃣ obtener session o subscription según el tipo
+      let subscriptionId: string | undefined;
+      let metadata: Record<string,string> = {};
+
+      switch (event.type) {
+        case "checkout.session.completed":
+          const session = event.data.object as Stripe.Checkout.Session;
+          subscriptionId = session.subscription as string;
+          metadata = session.metadata ?? {};
+          break;
+
+        case "invoice.finalized":
+        case "invoice.payment_succeeded":
+          const invoice = event.data.object as Stripe.Invoice;
+          subscriptionId = invoice.subscription as string;
+          metadata = invoice.lines.data[0]?.price?.metadata ?? {};
+          break;
+
+        case "customer.subscription.created":
+          const sub = event.data.object as Stripe.Subscription;
+          subscriptionId = sub.id;
+          metadata = sub.metadata ?? {};
+          break;
+      }
+
+      logWebhook(`${event.type} processed`, { 
+        subscriptionId,
         metadata
       });
-      
+
       // Only proceed if we have the user ID in metadata
       if (metadata.supabase_uid) {
         // Create Supabase client
@@ -103,12 +130,12 @@ serve(async (req) => {
           { auth: { persistSession: false } }
         );
         
-        // Get subscription details to determine tier
+        // 2️⃣ igual que antes: recuperar subscriptionTier
         let subscriptionTier = 'starter';
         
-        if (session.subscription) {
+        if (subscriptionId) {
           try {
-            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             if (subscription.items.data.length > 0) {
               const priceId = subscription.items.data[0].price.id;
               subscriptionTier = getSubscriptionTier(priceId);
@@ -119,11 +146,11 @@ serve(async (req) => {
           }
         }
         
-        // 1) Store Stripe customer id, subscription status, tier, and student limit in profiles
+        // 3️⃣ mismo update que ya tenías
         const { error: updateError } = await supabaseAdmin
           .from("profiles")
           .update({ 
-            stripe_customer_id: customerId, 
+            stripe_customer_id: subscriptionId ? (await stripe.subscriptions.retrieve(subscriptionId)).customer as string : null, 
             stripe_status: 'active',
             subscription_tier: subscriptionTier,
             student_limit: subscriptionTier === 'academy' ? 60 : 20
@@ -140,29 +167,32 @@ serve(async (req) => {
           });
         }
         
-        // 2) Send welcome email via Resend if API key is available
-        const resendKey = Deno.env.get("RESEND_API_KEY");
-        if (resendKey && session.customer_details?.email) {
-          try {
-            const resend = new Resend(resendKey);
-            await resend.emails.send({
-              from: "no-reply@linguaedge.ai",
-              to: session.customer_details.email,
-              subject: "Your LinguaEdge Subscription is Active",
-              html: `
-                <h1>Welcome to LinguaEdge!</h1>
-                <p>Thank you for subscribing to our ${subscriptionTier} plan. Your account is now active and you have full access to all premium features.</p>
-                <p>If you have any questions, please don't hesitate to contact our support team.</p>
-                <p>Best regards,<br>The LinguaEdge Team</p>
-              `
-            });
-            console.log("[RESEND] Welcome email sent successfully");
-          } catch (emailError) {
-            console.error("[RESEND] Error sending welcome email:", emailError);
+        // 2) Send welcome email via Resend if API key is available and it's a checkout completion
+        if (event.type === "checkout.session.completed") {
+          const resendKey = Deno.env.get("RESEND_API_KEY");
+          const session = event.data.object as Stripe.Checkout.Session;
+          if (resendKey && session.customer_details?.email) {
+            try {
+              const resend = new Resend(resendKey);
+              await resend.emails.send({
+                from: "no-reply@linguaedge.ai",
+                to: session.customer_details.email,
+                subject: "Your LinguaEdge Subscription is Active",
+                html: `
+                  <h1>Welcome to LinguaEdge!</h1>
+                  <p>Thank you for subscribing to our ${subscriptionTier} plan. Your account is now active and you have full access to all premium features.</p>
+                  <p>If you have any questions, please don't hesitate to contact our support team.</p>
+                  <p>Best regards,<br>The LinguaEdge Team</p>
+                `
+              });
+              console.log("[RESEND] Welcome email sent successfully");
+            } catch (emailError) {
+              console.error("[RESEND] Error sending welcome email:", emailError);
+            }
           }
         }
       } else {
-        console.warn("[STRIPE] Missing supabase_uid in session metadata");
+        console.warn("[STRIPE] Metadata sin supabase_uid");
       }
     }
     
