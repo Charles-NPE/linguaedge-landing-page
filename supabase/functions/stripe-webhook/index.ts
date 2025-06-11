@@ -176,6 +176,27 @@ serve(async (req) => {
             subscriptionTier,
             stripeStatus
           });
+
+          // ⚡ Enhanced logging - verify database state after update
+          try {
+            const { data: profileData, error: profileError } = await supabaseAdmin
+              .from("profiles")
+              .select("subscription_tier, student_limit, stripe_status")
+              .eq("id", metadata.supabase_uid)
+              .single();
+            
+            if (profileError) {
+              logWebhook("❌ Error fetching profile after update", { error: profileError.message });
+            } else {
+              logWebhook("⚡ DB row after update", {
+                subscription_tier: profileData.subscription_tier,
+                student_limit: profileData.student_limit,
+                stripe_status: profileData.stripe_status
+              });
+            }
+          } catch (verifyError) {
+            logWebhook("❌ Verification query failed", { error: verifyError.message });
+          }
         }
         
         // Send welcome email via Resend if API key is available and it's a checkout completion
