@@ -125,24 +125,33 @@ serve(async (req) => {
             }
           }
           
-          // ③ Si no hay supabase_uid, buscar en parent.subscription_details.metadata
+          // ③ Si aún no hay UID, mirar invoice.subscription_details.metadata (API 2023-10-16+)
+          if (!metadata.supabase_uid && (invoice as any).subscription_details?.metadata) {
+            const subDetMeta = (invoice as any).subscription_details.metadata;
+            if (subDetMeta.supabase_uid) {
+              metadata.supabase_uid = subDetMeta.supabase_uid;
+              logWebhook("③ Found in invoice.subscription_details.metadata", { subDetMeta });
+            }
+          }
+          
+          // ④ Si no hay supabase_uid, buscar en parent.subscription_details.metadata (fallback legacy)
           if (!metadata.supabase_uid) {
             const subMeta = (invoice.parent as any)?.subscription_details?.metadata;
             if (subMeta?.supabase_uid) {
               metadata.supabase_uid = subMeta.supabase_uid;
-              logWebhook("③ Found in parent.subscription_details.metadata", { 
+              logWebhook("④ Found in parent.subscription_details.metadata", { 
                 subMeta
               });
             }
           }
           
-          // ④ Si aún no hay supabase_uid, buscar en subscription
+          // ⑤ Si aún no hay supabase_uid, buscar en subscription
           if (!metadata.supabase_uid && subscriptionId) {
             try {
               const subscription = await stripe.subscriptions.retrieve(subscriptionId);
               if (subscription.metadata?.supabase_uid) {
                 metadata.supabase_uid = subscription.metadata.supabase_uid;
-                logWebhook("④ Found in subscription metadata", { 
+                logWebhook("⑤ Found in subscription metadata", { 
                   subscriptionId,
                   metadata: subscription.metadata 
                 });
