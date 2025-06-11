@@ -111,7 +111,7 @@ serve(async (req) => {
           metadata = invoice.metadata ?? {};
           logWebhook("① Invoice metadata", { metadata });
           
-          // ② Si no hay supabase_uid, buscar en line_items
+          // ② Si no hay supabase_uid, buscar en TODAS las line_items
           if (!metadata.supabase_uid && invoice.lines?.data?.length) {
             for (const lineItem of invoice.lines.data) {
               if (lineItem.metadata?.supabase_uid) {
@@ -120,7 +120,7 @@ serve(async (req) => {
                   lineItemId: lineItem.id,
                   metadata: lineItem.metadata 
                 });
-                break;
+                break; // Found it, stop searching
               }
             }
           }
