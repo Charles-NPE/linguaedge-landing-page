@@ -145,6 +145,14 @@ serve(async (req) => {
             }
           }
           
+          // 👉 NUEVO: si invoice.subscription vino null, lo sacamos del objeto parent / subscription_details
+          if (!subscriptionId) {
+            subscriptionId =
+              (invoice.parent as any)?.subscription_details?.subscription ??
+              (invoice as any).subscription_details?.subscription;
+            if (subscriptionId) logWebhook("Obtained subscriptionId from subscription_details", { subscriptionId });
+          }
+          
           // ⑤ Si aún no hay supabase_uid, buscar en subscription
           if (!metadata.supabase_uid && subscriptionId) {
             try {
