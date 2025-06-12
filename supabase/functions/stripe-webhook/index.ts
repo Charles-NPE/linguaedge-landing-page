@@ -230,14 +230,13 @@ serve(async (req) => {
           logWebhook("Error retrieving subscription details", { error: error.message });
         }
         
-        // 3️⃣ Update profile with subscription info
+        // 3️⃣ Update profile with subscription info (WITHOUT student_limit)
         const { error: updateError } = await supabaseAdmin
           .from("profiles")
           .update({ 
             stripe_customer_id: customerId,
             stripe_status: stripeStatus,
-            subscription_tier: subscriptionTier,
-            student_limit: subscriptionTier === 'academy' ? 60 : 20
+            subscription_tier: subscriptionTier
           })
           .eq("id", metadata.supabase_uid);
           
@@ -247,8 +246,7 @@ serve(async (req) => {
           logWebhook("Profile updated successfully", { 
             userId: metadata.supabase_uid,
             subscriptionTier,
-            stripeStatus,
-            studentLimit: subscriptionTier === 'academy' ? 60 : 20
+            stripeStatus
           });
 
           // ⚡ Enhanced logging - verify database state after update
