@@ -106,70 +106,16 @@ serve(async (req) => {
         case "invoice.payment_succeeded":
           const invoice = event.data.object as Stripe.Invoice;
           subscriptionId = invoice.subscription as string;
-          
-          // ① Intentar directamente desde invoice.metadata
-          metadata = invoice.metadata ?? {};
-          logWebhook("① Invoice metadata", { metadata });
-          
-          // ② Si no hay supabase_uid, buscar en TODAS las line_items
-          if (!metadata.supabase_uid && invoice.lines?.data?.length) {
-            for (const lineItem of invoice.lines.data) {
-              if (lineItem.metadata?.supabase_uid) {
-                metadata.supabase_uid = lineItem.metadata.supabase_uid;
-                logWebhook("② Found in line_item metadata", { 
-                  lineItemId: lineItem.id,
-                  metadata: lineItem.metadata 
-                });
-                break; // Found it, stop searching
-              }
-            }
-          }
-          
-          // ③ Si aún no hay UID, mirar invoice.subscription_details.metadata (API 2023-10-16+)
-          if (!metadata.supabase_uid && (invoice as any).subscription_details?.metadata) {
-            const subDetMeta = (invoice as any).subscription_details.metadata;
-            if (subDetMeta.supabase_uid) {
-              metadata.supabase_uid = subDetMeta.supabase_uid;
-              logWebhook("③ Found in invoice.subscription_details.metadata", { subDetMeta });
-            }
-          }
-          
-          // ④ Si no hay supabase_uid, buscar en parent.subscription_details.metadata (fallback legacy)
-          if (!metadata.supabase_uid) {
-            const subMeta = (invoice.parent as any)?.subscription_details?.metadata;
-            if (subMeta?.supabase_uid) {
-              metadata.supabase_uid = subMeta.supabase_uid;
-              logWebhook("④ Found in parent.subscription_details.metadata", { 
-                subMeta
-              });
-            }
-          }
-          
-          // 👉 NUEVO: si invoice.subscription vino null, lo sacamos del objeto parent / subscription_details
-          if (!subscriptionId) {
-            subscriptionId =
-              (invoice.parent as any)?.subscription_details?.subscription ??
-              (invoice as any).subscription_details?.subscription;
-            if (subscriptionId) logWebhook("Obtained subscriptionId from subscription_details", { subscriptionId });
-          }
-          
-          // ⑤ Si aún no hay supabase_uid, buscar en subscription
-          if (!metadata.supabase_uid && subscriptionId) {
+          // Try to get metadata from subscription if available
+          if (subscriptionId) {
             try {
               const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-              if (subscription.metadata?.supabase_uid) {
-                metadata.supabase_uid = subscription.metadata.supabase_uid;
-                logWebhook("⑤ Found in subscription metadata", { 
-                  subscriptionId,
-                  metadata: subscription.metadata 
-                });
-              }
+              metadata = subscription.metadata ?? {};
             } catch (error) {
               logWebhook("Error retrieving subscription for metadata", { error: error.message });
+              metadata = {};
             }
           }
-          
-          logWebhook("👉 Final metadata after all searches", { metadata });
           break;
 
         case "customer.subscription.created":
@@ -181,9 +127,7 @@ serve(async (req) => {
 
       logWebhook(`${event.type} processed`, { 
         subscriptionId,
-        metadata,
-        hasUid: !!metadata.supabase_uid,
-        hasSubscriptionId: !!subscriptionId
+        metadata
       });
 
       // Only proceed if we have the user ID in metadata
@@ -220,8 +164,7 @@ serve(async (req) => {
           .update({ 
             stripe_customer_id: customerId,
             stripe_status: stripeStatus,
-            subscription_tier: subscriptionTier,
-            student_limit: subscriptionTier === 'academy' ? 60 : 20
+            subscription_tier: subscriptionTier
           })
           .eq("id", metadata.supabase_uid);
           
@@ -231,8 +174,7 @@ serve(async (req) => {
           logWebhook("Profile updated successfully", { 
             userId: metadata.supabase_uid,
             subscriptionTier,
-            stripeStatus,
-            studentLimit: subscriptionTier === 'academy' ? 60 : 20
+            stripeStatus
           });
 
           // ⚡ Enhanced logging - verify database state after update
@@ -284,9 +226,7 @@ serve(async (req) => {
       } else {
         console.warn("[STRIPE] Metadata sin supabase_uid o subscriptionId faltante", { 
           hasUid: !!metadata.supabase_uid,
-          hasSubscriptionId: !!subscriptionId,
-          eventType: event.type,
-          metadata
+          hasSubscriptionId: !!subscriptionId 
         });
       }
     }
