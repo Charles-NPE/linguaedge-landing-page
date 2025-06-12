@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import ClassCard from "@/components/classes/ClassCard";
 import CreateClassDialog from "@/components/classes/CreateClassDialog";
 import { useTeacherStats } from "@/hooks/useTeacherStats";
+import { useStripeStudentLimit } from "@/hooks/useStripeStudentLimit";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronLeft } from "lucide-react";
@@ -21,16 +22,20 @@ interface ClassWithStudents {
 }
 
 const TeacherClassesPage = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [classes, setClasses] = useState<ClassWithStudents[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Get teacher stats including student limits
+  // Get teacher stats including student counts
   const { data: teacherStats, isLoading: statsLoading, refetch: refetchStats } = useTeacherStats();
+  
+  // Get student limit directly from Stripe
+  const { studentLimit: stripeStudentLimit, isLoading: limitLoading } = useStripeStudentLimit();
 
   console.log("[TeacherClassesPage] Teacher stats:", teacherStats);
+  console.log("[TeacherClassesPage] Stripe student limit:", stripeStudentLimit);
 
   const fetchClasses = async () => {
     if (!user) return;
@@ -70,14 +75,15 @@ const TeacherClassesPage = () => {
   }, [user]);
 
   const handleCreateClass = async (name: string) => {
-    if (!user || !teacherStats) return;
+    if (!user) return;
     
     try {
-      // Check if adding a new class would exceed the student limit
-      if (teacherStats.totalStudents >= teacherStats.student_limit) {
+      // Check if adding a new class would exceed the student limit from Stripe
+      const totalStudents = teacherStats?.totalStudents || 0;
+      if (totalStudents >= stripeStudentLimit) {
         toast({
           title: "Student Limit Reached",
-          description: `Upgrade to Academy to enroll more students. Current limit: ${teacherStats.student_limit} students.`,
+          description: `Upgrade to Academy to enroll more students. Current limit: ${stripeStudentLimit} students.`,
           variant: "destructive"
         });
         return false;
@@ -118,10 +124,10 @@ const TeacherClassesPage = () => {
     }
   };
 
-  // Use teacherStats data with fallbacks while loading
+  // Use Stripe student limit instead of database limit
   const totalStudents = teacherStats?.totalStudents || 0;
-  const planLimit = teacherStats?.student_limit || 20;
-  const subscriptionTier = teacherStats?.subscription_tier || 'starter';
+  const planLimit = stripeStudentLimit; // Use Stripe limit directly
+  const subscriptionTier = profile?.subscription_tier || 'starter';
   const isAtLimit = totalStudents >= planLimit;
   const progressPercentage = planLimit > 0 ? (totalStudents / planLimit) * 100 : 0;
 
@@ -130,7 +136,8 @@ const TeacherClassesPage = () => {
     planLimit,
     subscriptionTier,
     isAtLimit,
-    progressPercentage
+    progressPercentage,
+    stripeStudentLimit
   });
 
   return (
@@ -148,7 +155,7 @@ const TeacherClassesPage = () => {
                 <span className="text-xs text-muted-foreground capitalize">
                   ({subscriptionTier})
                 </span>
-                {statsLoading && (
+                {(statsLoading || limitLoading) && (
                   <span className="text-xs text-muted-foreground">Loading...</span>
                 )}
               </div>
