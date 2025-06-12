@@ -111,6 +111,22 @@ serve(async (req) => {
           metadata = invoice.metadata ?? {};
           logWebhook("① Invoice metadata", { metadata });
           
+          // 👉 Si no hay UID Y no tenemos line_items, los pedimos con expand()
+          if (!metadata.supabase_uid && !invoice.lines?.data?.length) {
+            try {
+              const fullInvoice = await stripe.invoices.retrieve(invoice.id, {
+                expand: ["lines.data"],
+              });
+              // Asignar las líneas expandidas al invoice original
+              (invoice as any).lines = fullInvoice.lines;
+              logWebhook("👉 Expanded invoice lines", { 
+                linesCount: fullInvoice.lines?.data?.length 
+              });
+            } catch (error) {
+              logWebhook("Error expanding invoice lines", { error: error.message });
+            }
+          }
+          
           // ② Si no hay supabase_uid, buscar en TODAS las line_items
           if (!metadata.supabase_uid && invoice.lines?.data?.length) {
             for (const lineItem of invoice.lines.data) {
