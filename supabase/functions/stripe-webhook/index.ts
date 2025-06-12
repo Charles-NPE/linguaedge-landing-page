@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -105,7 +104,12 @@ serve(async (req) => {
         case "invoice.finalized":
         case "invoice.payment_succeeded":
           const invoice = event.data.object as Stripe.Invoice;
-          subscriptionId = invoice.subscription as string;
+          
+          // 0 € trial invoices traen el id dentro de parent.subscription_details
+          subscriptionId = invoice.subscription as string
+            ?? (invoice.parent as any)?.subscription_details?.subscription;
+          
+          logWebhook("②½ SubId after parent lookup", { subscriptionId });
           
           // ① Intentar directamente desde invoice.metadata
           metadata = invoice.metadata ?? {};
@@ -151,22 +155,6 @@ serve(async (req) => {
               (invoice.parent as any)?.subscription_details?.subscription ??
               (invoice as any).subscription_details?.subscription;
             if (subscriptionId) logWebhook("Obtained subscriptionId from subscription_details", { subscriptionId });
-          }
-          
-          // ⑤ Si aún no hay supabase_uid, buscar en subscription
-          if (!metadata.supabase_uid && subscriptionId) {
-            try {
-              const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-              if (subscription.metadata?.supabase_uid) {
-                metadata.supabase_uid = subscription.metadata.supabase_uid;
-                logWebhook("⑤ Found in subscription metadata", { 
-                  subscriptionId,
-                  metadata: subscription.metadata 
-                });
-              }
-            } catch (error) {
-              logWebhook("Error retrieving subscription for metadata", { error: error.message });
-            }
           }
           
           logWebhook("👉 Final metadata after all searches", { metadata });
