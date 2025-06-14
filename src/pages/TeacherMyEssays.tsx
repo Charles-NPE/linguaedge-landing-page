@@ -282,11 +282,11 @@ const TeacherMyEssays: React.FC = () => {
                 const totalStudents = assignment.stats.pending + assignment.stats.submitted + assignment.stats.late;
                 
                 return (
-                  <Card key={assignment.id} className={`${getCardColor(assignment.stats)} transition-all hover:shadow-md`}>
+                  <Card key={assignment.id} className={`${getCardColor(assignment.stats, assignment.deadline)} transition-all hover:shadow-md`}>
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(assignment.stats)}
+                          {getStatusIcon(assignment.stats, assignment.deadline)}
                           <CardTitle className="text-lg">{assignment.title}</CardTitle>
                         </div>
                         <div className="flex items-center gap-2">
