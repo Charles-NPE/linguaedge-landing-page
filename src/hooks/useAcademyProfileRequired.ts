@@ -14,9 +14,10 @@ export const useAcademyProfileRequired = () => {
 
   useEffect(() => {
     const checkAcademyProfile = async () => {
-      // Only check for teachers
+      // Only check for teachers who are logged in
       if (!user?.id || profile?.role !== 'teacher') {
         setShowNotification(false);
+        setIsCheckingProfile(false);
         return;
       }
       
@@ -32,29 +33,37 @@ export const useAcademyProfileRequired = () => {
         if (error) {
           console.error("Error checking academy profile:", error);
           setShowNotification(false);
+          setIsCheckingProfile(false);
           return;
         }
 
-        // Check if profile is incomplete (academy_name and admin_name are required)
-        const isProfileIncomplete = !academyProfile || 
-          !academyProfile.academy_name?.trim() || 
-          !academyProfile.admin_name?.trim();
-
-        console.log("Academy profile check:", {
+        console.log("Academy profile verification:", {
           hasProfile: !!academyProfile,
           academyName: academyProfile?.academy_name,
           adminName: academyProfile?.admin_name,
-          isIncomplete: isProfileIncomplete
+          academyNameEmpty: !academyProfile?.academy_name?.trim(),
+          adminNameEmpty: !academyProfile?.admin_name?.trim()
         });
 
-        // Only show notification if profile is actually incomplete
-        setShowNotification(isProfileIncomplete);
-        
-        // Auto-redirect only if completely empty (no record at all)
-        if (!academyProfile) {
-          setTimeout(() => {
-            navigate('/profile');
-          }, 3000);
+        // Check if we have a profile and both required fields are filled
+        const hasCompleteProfile = academyProfile && 
+          academyProfile.academy_name?.trim() && 
+          academyProfile.admin_name?.trim();
+
+        console.log("Profile is complete:", hasCompleteProfile);
+
+        // Only show notification if profile is incomplete
+        if (hasCompleteProfile) {
+          setShowNotification(false);
+        } else {
+          setShowNotification(true);
+          
+          // Auto-redirect only if no profile exists at all
+          if (!academyProfile) {
+            setTimeout(() => {
+              navigate('/profile');
+            }, 3000);
+          }
         }
       } catch (error) {
         console.error("Error checking academy profile:", error);
@@ -64,8 +73,14 @@ export const useAcademyProfileRequired = () => {
       }
     };
 
-    checkAcademyProfile();
-  }, [user, profile, navigate]);
+    // Only run the check if we have a user and profile
+    if (user?.id && profile?.role === 'teacher') {
+      checkAcademyProfile();
+    } else {
+      setShowNotification(false);
+      setIsCheckingProfile(false);
+    }
+  }, [user?.id, profile?.role, navigate]);
 
   // Show toast notification when profile is incomplete
   useEffect(() => {
