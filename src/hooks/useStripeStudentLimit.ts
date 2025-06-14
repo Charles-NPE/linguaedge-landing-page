@@ -3,18 +3,15 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-const STARTER_PRICE_ID = "price_1RKzjAGULVEx6ff4xe51d6YT";
-const ACADEMY_PRICE_ID = "price_1RKzrHGULVEx6ff4JmxatsFu";
-
 export const useStripeStudentLimit = () => {
   const { profile } = useAuth();
   const [studentLimit, setStudentLimit] = useState<number>(20); // Default to starter
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStudentLimitFromStripe = async () => {
-      if (!profile?.stripe_customer_id) {
-        setStudentLimit(20); // Default to starter if no customer
+    const fetchStudentLimitFromStats = async () => {
+      if (!profile) {
+        setStudentLimit(20); // Default to starter if no profile
         setIsLoading(false);
         return;
       }
@@ -22,37 +19,43 @@ export const useStripeStudentLimit = () => {
       try {
         setIsLoading(true);
         
-        // Call our edge function to get subscription details from Stripe
-        const { data, error } = await supabase.functions.invoke('check-subscription');
+        console.log("[useStripeStudentLimit] Fetching teacher stats for student limit...");
+        
+        // Use the corrected get_teacher_stats function that returns student_limit directly
+        const { data, error } = await supabase.rpc('get_teacher_stats');
         
         if (error) {
-          console.error("Error checking subscription:", error);
+          console.error("[useStripeStudentLimit] Error calling get_teacher_stats:", error);
           setStudentLimit(20); // Fallback to starter
           return;
         }
 
-        // Calculate student limit based on subscription tier
-        if (data.subscription_tier === 'academy') {
-          setStudentLimit(60);
-        } else {
-          setStudentLimit(20);
-        }
+        console.log("[useStripeStudentLimit] Raw teacher stats:", data);
         
-        console.log("[useStripeStudentLimit] Calculated limit:", {
-          subscription_tier: data.subscription_tier,
-          studentLimit: data.subscription_tier === 'academy' ? 60 : 20
-        });
+        // Extract student_limit directly from the response
+        const limit = data?.student_limit;
+        
+        if (limit && typeof limit === 'number') {
+          setStudentLimit(limit);
+          console.log("[useStripeStudentLimit] Applied student limit:", limit);
+        } else {
+          // If student_limit is null/undefined, determine from subscription_tier
+          const tier = data?.subscription_tier || 'starter';
+          const calculatedLimit = tier === 'academy' ? 60 : 20;
+          setStudentLimit(calculatedLimit);
+          console.log("[useStripeStudentLimit] Calculated limit from tier:", { tier, calculatedLimit });
+        }
 
       } catch (error) {
-        console.error("Error fetching student limit from Stripe:", error);
+        console.error("[useStripeStudentLimit] Error fetching student limit:", error);
         setStudentLimit(20); // Fallback to starter
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchStudentLimitFromStripe();
-  }, [profile?.stripe_customer_id]);
+    fetchStudentLimitFromStats();
+  }, [profile?.id, profile?.subscription_tier]);
 
   return { studentLimit, isLoading };
 };

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -31,11 +30,12 @@ const TeacherClassesPage = () => {
   // Get teacher stats including student counts
   const { data: teacherStats, isLoading: statsLoading, refetch: refetchStats } = useTeacherStats();
   
-  // Get student limit directly from Stripe
-  const { studentLimit: stripeStudentLimit, isLoading: limitLoading } = useStripeStudentLimit();
+  // Get student limit from the corrected function
+  const { studentLimit, isLoading: limitLoading } = useStripeStudentLimit();
 
   console.log("[TeacherClassesPage] Teacher stats:", teacherStats);
-  console.log("[TeacherClassesPage] Stripe student limit:", stripeStudentLimit);
+  console.log("[TeacherClassesPage] Student limit from hook:", studentLimit);
+  console.log("[TeacherClassesPage] Profile subscription tier:", profile?.subscription_tier);
 
   const fetchClasses = async () => {
     if (!user) return;
@@ -78,12 +78,23 @@ const TeacherClassesPage = () => {
     if (!user) return;
     
     try {
-      // Check if adding a new class would exceed the student limit from Stripe
+      // Check if adding a new class would exceed the student limit
       const totalStudents = teacherStats?.totalStudents || 0;
-      if (totalStudents >= stripeStudentLimit) {
+      
+      console.log("[TeacherClassesPage] Checking limits before creating class:", {
+        totalStudents,
+        studentLimit,
+        subscriptionTier: profile?.subscription_tier
+      });
+      
+      if (totalStudents >= studentLimit) {
+        const upgradeMessage = profile?.subscription_tier === 'starter' 
+          ? `Upgrade to Academy to enroll more students. Current limit: ${studentLimit} students.`
+          : `You've reached your student limit of ${studentLimit} students.`;
+        
         toast({
           title: "Student Limit Reached",
-          description: `Upgrade to Academy to enroll more students. Current limit: ${stripeStudentLimit} students.`,
+          description: upgradeMessage,
           variant: "destructive"
         });
         return false;
@@ -124,9 +135,9 @@ const TeacherClassesPage = () => {
     }
   };
 
-  // Use Stripe student limit instead of database limit
+  // Use the student limit from our hook
   const totalStudents = teacherStats?.totalStudents || 0;
-  const planLimit = stripeStudentLimit; // Use Stripe limit directly
+  const planLimit = studentLimit;
   const subscriptionTier = profile?.subscription_tier || 'starter';
   const isAtLimit = totalStudents >= planLimit;
   const progressPercentage = planLimit > 0 ? (totalStudents / planLimit) * 100 : 0;
@@ -136,8 +147,7 @@ const TeacherClassesPage = () => {
     planLimit,
     subscriptionTier,
     isAtLimit,
-    progressPercentage,
-    stripeStudentLimit
+    progressPercentage
   });
 
   return (
@@ -162,8 +172,8 @@ const TeacherClassesPage = () => {
             </TooltipTrigger>
             <TooltipContent>
               You can enrol up to {planLimit} students in all your classes.
-              {isAtLimit && " Upgrade to Academy plan for more students."}
-              {subscriptionTier === 'starter' && " Upgrade to Academy plan for up to 60 students."}
+              {isAtLimit && subscriptionTier === 'starter' && " Upgrade to Academy plan for up to 60 students."}
+              {isAtLimit && subscriptionTier === 'academy' && " You've reached your Academy plan limit."}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -210,7 +220,9 @@ const TeacherClassesPage = () => {
               </Button>
               {isAtLimit && (
                 <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
-                  Upgrade to Academy plan to create classes
+                  {subscriptionTier === 'starter' 
+                    ? "Upgrade to Academy plan to create classes" 
+                    : "You've reached your student limit"}
                 </p>
               )}
             </div>
@@ -246,7 +258,9 @@ const TeacherClassesPage = () => {
           </Button>
           {isAtLimit && (
             <p className="text-xs text-center text-amber-600 dark:text-amber-500 mt-1">
-              Upgrade to Academy
+              {subscriptionTier === 'starter' 
+                ? "Upgrade to Academy" 
+                : "Limit reached"}
             </p>
           )}
         </div>
