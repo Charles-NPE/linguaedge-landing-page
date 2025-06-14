@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -174,9 +173,8 @@ const AcademyProfileForm = () => {
         logoUrl = await uploadLogo();
       }
 
-      // Prepare data for upsert
+      // Prepare data for upsert - ensure we always have an ID
       const upsertData = {
-        id: profileId || undefined,
         user_id: user.id,
         academy_name: values.academyName,
         admin_name: values.adminName,
@@ -187,21 +185,40 @@ const AcademyProfileForm = () => {
         default_language: values.defaultLanguage,
         logo_url: logoUrl,
         updated_at: new Date().toISOString()
-      } as any;
+      };
 
-      // Perform upsert operation
-      const { error } = await supabase.from('academy_profiles').upsert(upsertData, {
-        onConflict: 'user_id'
-      });
-      if (error) {
+      let result;
+      
+      if (profileId) {
+        // Update existing profile
+        result = await supabase
+          .from('academy_profiles')
+          .update(upsertData)
+          .eq('id', profileId);
+      } else {
+        // Insert new profile - let the database generate the ID
+        result = await supabase
+          .from('academy_profiles')
+          .insert(upsertData)
+          .select()
+          .single();
+          
+        // Update profileId state with the newly created ID
+        if (result.data) {
+          setProfileId(result.data.id);
+        }
+      }
+
+      if (result.error) {
         toast({
           title: "Update failed",
-          description: `Error: ${error.message}`,
+          description: `Error: ${result.error.message}`,
           variant: "destructive"
         });
-        console.error("Supabase error:", error);
+        console.error("Supabase error:", result.error);
         return;
       }
+
       toast({
         title: "Profile updated",
         description: "Your academy profile has been updated successfully."
