@@ -50,7 +50,7 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
     return <Navigate to={redirectPath} replace />;
   }
 
-  // For teachers, check subscription status (realtime updates handle this now)
+  // For teachers, check subscription status only if requireSubscription is true
   if (userRole === 'teacher' && requireSubscription) {
     // If stripe_status is still undefined, keep loading
     if (profile?.stripe_status === undefined) {
@@ -61,13 +61,9 @@ const RoleRoute: React.FC<RoleRouteProps> = ({
       );
     }
 
-    // Only redirect to pricing if status is explicitly inactive/cancelled/past_due
-    // Allow 'active' and 'trialing' status to proceed
-    if (
-      profile.stripe_status && 
-      !['active', 'trialing'].includes(profile.stripe_status) &&
-      ['inactive', 'cancelled', 'past_due', 'unpaid'].includes(profile.stripe_status)
-    ) {
+    // Only redirect to pricing if the subscription is explicitly inactive
+    // 'trialing' should be considered as active
+    if (!isSubscriptionActive) {
       return <Navigate to="/pricing?subscription=inactive" replace />;
     }
   }

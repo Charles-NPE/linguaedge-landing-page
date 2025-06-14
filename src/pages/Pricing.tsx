@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '@/components/landing/Navbar';
@@ -55,8 +54,9 @@ const Pricing = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('subscription') === 'inactive') {
-      // Only show the alert if the user is actually a teacher with inactive subscription
-      if (isTeacher && profile?.stripe_status && !['active', 'trialing'].includes(profile.stripe_status)) {
+      // Only show the alert if the user is actually a teacher with an inactive subscription
+      // 'trialing' should NOT trigger the inactive alert
+      if (isTeacher && profile?.stripe_status && !isSubscriptionActive) {
         setShowInactiveAlert(true);
       }
     }
@@ -65,7 +65,7 @@ const Pricing = () => {
     if (user && isTeacher) {
       checkSubscription();
     }
-  }, [location, user, isTeacher, checkSubscription, profile]);
+  }, [location, user, isTeacher, checkSubscription, profile, isSubscriptionActive]);
 
   // Student auto-redirect logic
   useEffect(() => {
@@ -236,7 +236,7 @@ const Pricing = () => {
                     {isLoading[plan.priceId] ? 'Processing...' : (
                       !session 
                         ? 'Sign up & Pay'
-                        : isTeacher && !profile?.stripe_status?.match(/active|trialing/)
+                        : isTeacher && !isSubscriptionActive
                           ? 'Choose & Pay'
                           : 'Go to Dashboard'
                     )}
