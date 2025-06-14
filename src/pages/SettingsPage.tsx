@@ -22,7 +22,6 @@ const SettingsPage: React.FC = () => {
   const [notificationEmails, setNotificationEmails] = useState(true);
   const [dashboardNotifications, setDashboardNotifications] = useState(true);
   const [dashboardDensity, setDashboardDensity] = useState<"comfortable" | "compact">("comfortable");
-  const [language, setLanguage] = useState("en");
 
   // Load settings from database
   useEffect(() => {
@@ -39,13 +38,12 @@ const SettingsPage: React.FC = () => {
       try {
         const { data } = await supabase
           .from("user_settings")
-          .select("dashboard_density, language, notification_emails")
+          .select("dashboard_density")
           .eq("user_id", user.id)
           .single();
           
         if (data) {
           setDashboardDensity(data.dashboard_density as "comfortable" | "compact");
-          setLanguage(data.language || "en");
         }
       } catch (error) {
         console.error("Error loading settings:", error);
@@ -83,7 +81,6 @@ const SettingsPage: React.FC = () => {
         .upsert({
           user_id: user.id,
           dashboard_density: dashboardDensity,
-          language,
           theme,
           updated_at: new Date().toISOString()
         });
@@ -192,20 +189,6 @@ const SettingsPage: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="comfortable">Comfortable</SelectItem>
                   <SelectItem value="compact">Compact</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="language">Language</Label>
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Español</SelectItem>
-                  <SelectItem value="fr">Français</SelectItem>
                 </SelectContent>
               </Select>
             </div>
