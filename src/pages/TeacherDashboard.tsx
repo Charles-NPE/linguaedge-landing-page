@@ -25,7 +25,7 @@ const TeacherDashboard = () => {
         classes and assignments.
       </p>
       
-      <ProfileIncompleteModal open={showModal} />
+      <ProfileIncompleteModal open={showModal} onClose={dismiss} />
       
       {/* Add the modal at the end */}
       <AcademyProfileRequiredModal 
