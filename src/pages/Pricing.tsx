@@ -51,18 +51,21 @@ const Pricing = () => {
   const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
   const [showInactiveAlert, setShowInactiveAlert] = useState(false);
 
-  // Check if there's a subscription inactive flag in the URL
+  // Check if there's a subscription inactive flag in the URL and validate it
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('subscription') === 'inactive') {
-      setShowInactiveAlert(true);
+      // Only show the alert if the user is actually a teacher with inactive subscription
+      if (isTeacher && profile?.stripe_status && !['active', 'trialing'].includes(profile.stripe_status)) {
+        setShowInactiveAlert(true);
+      }
     }
 
     // Check subscription status when the component mounts
     if (user && isTeacher) {
       checkSubscription();
     }
-  }, [location, user, isTeacher, checkSubscription]);
+  }, [location, user, isTeacher, checkSubscription, profile]);
 
   // Student auto-redirect logic
   useEffect(() => {

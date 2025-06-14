@@ -1,3 +1,4 @@
+
 // @ts-nocheck
 import React, { createContext, useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
@@ -275,15 +276,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { success, profile } = await signInUser(email, password);
       
       if (success && profile) {
-        // -------- new redirect logic --------
+        console.log("Sign in successful, profile:", profile);
+        
+        // For teachers, check subscription status before redirect
         if (profile.role === "teacher") {
+          // Always redirect to teacher dashboard initially
+          // The RoleRoute component will handle subscription checks
           navigate("/teacher", { replace: true });
         } else if (profile.role === "student") {
           navigate("/student", { replace: true });
         } else {
           navigate("/", { replace: true });
         }
-        // ------------------------------------
       }
     } finally {
       setIsLoading(false);
