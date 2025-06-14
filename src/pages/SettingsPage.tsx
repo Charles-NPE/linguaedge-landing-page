@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmailPreferences, updateEmailPreferences } from "@/hooks/useEmailPreferences";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
+import { BackToDashboard } from "@/components/common/BackToDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const SettingsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { theme, setTheme } = useTheme();
   const { data: emailPrefs, isLoading: emailPrefsLoading } = useEmailPreferences(user?.id);
 
@@ -114,6 +115,7 @@ const SettingsPage: React.FC = () => {
   return (
     <DashboardLayout title="Settings">
       <div className="max-w-2xl mx-auto space-y-6">
+        <BackToDashboard />
         
         {/* Notifications Settings */}
         <Card>
