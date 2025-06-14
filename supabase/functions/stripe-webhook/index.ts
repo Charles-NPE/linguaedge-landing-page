@@ -32,21 +32,21 @@ const logWebhook = (type: string, details?: any) => {
   console.log(`[STRIPE] ${type}${detailsStr}`);
 };
 
-// Helper function to determine subscription tier from price_id
-const getSubscriptionTier = (priceId: string): string => {
+// Helper function to determine subscription tier and student limit from price_id
+const getSubscriptionDetails = (priceId: string): { tier: string; studentLimit: number } => {
   const starterPriceId = Deno.env.get("STARTER_PRICE_ID") ?? STARTER_PRICE_ID;
   const academyPriceId = Deno.env.get("ACADEMY_PRICE_ID") ?? ACADEMY_PRICE_ID;
   
-  logWebhook("Determining tier", { priceId, starterPriceId, academyPriceId });
+  logWebhook("Determining subscription details", { priceId, starterPriceId, academyPriceId });
   
   if (priceId === academyPriceId) {
-    return 'academy';
+    return { tier: 'academy', studentLimit: 60 };
   } else if (priceId === starterPriceId) {
-    return 'starter';
+    return { tier: 'starter', studentLimit: 20 };
   }
   
   // Default to starter for unknown price IDs
-  return 'starter';
+  return { tier: 'starter', studentLimit: 20 };
 };
 
 serve(async (req) => {
@@ -211,8 +211,9 @@ serve(async (req) => {
           { auth: { persistSession: false } }
         );
         
-        // 2️⃣ recuperar subscriptionTier y customer info
+        // 2️⃣ recuperar subscriptionTier, studentLimit y customer info
         let subscriptionTier = 'starter';
+        let studentLimit = 20;
         let customerId: string | null = null;
         let stripeStatus = 'active';
         
@@ -223,20 +224,23 @@ serve(async (req) => {
           
           if (subscription.items.data.length > 0) {
             const priceId = subscription.items.data[0].price.id;
-            subscriptionTier = getSubscriptionTier(priceId);
-            logWebhook("Subscription tier determined", { priceId, subscriptionTier });
+            const details = getSubscriptionDetails(priceId);
+            subscriptionTier = details.tier;
+            studentLimit = details.studentLimit;
+            logWebhook("Subscription details determined", { priceId, subscriptionTier, studentLimit });
           }
         } catch (error) {
           logWebhook("Error retrieving subscription details", { error: error.message });
         }
         
-        // 3️⃣ Update profile with subscription info (WITHOUT student_limit)
+        // 3️⃣ Update profile with subscription info INCLUDING student_limit
         const { error: updateError } = await supabaseAdmin
           .from("profiles")
           .update({ 
             stripe_customer_id: customerId,
             stripe_status: stripeStatus,
-            subscription_tier: subscriptionTier
+            subscription_tier: subscriptionTier,
+            student_limit: studentLimit
           })
           .eq("id", metadata.supabase_uid);
           
@@ -246,6 +250,7 @@ serve(async (req) => {
           logWebhook("Profile updated successfully", { 
             userId: metadata.supabase_uid,
             subscriptionTier,
+            studentLimit,
             stripeStatus
           });
 
