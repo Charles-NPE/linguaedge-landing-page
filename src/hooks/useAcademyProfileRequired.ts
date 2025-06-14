@@ -24,10 +24,11 @@ export const useAcademyProfileRequired = () => {
       setIsCheckingProfile(true);
       
       try {
+        // Query by primary key (id) instead of user_id to get the latest profile
         const { data: academyProfile, error } = await supabase
           .from('academy_profiles')
           .select('academy_name, admin_name')
-          .eq('user_id', user.id)
+          .eq('id', user.id)  // Changed from user_id to id (primary key)
           .maybeSingle();
 
         if (error) {
