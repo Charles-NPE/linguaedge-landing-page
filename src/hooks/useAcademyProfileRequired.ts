@@ -36,16 +36,20 @@ export const useAcademyProfileRequired = () => {
           !academyProfile.academy_name?.trim() || 
           !academyProfile.admin_name?.trim();
 
-        if (isProfileIncomplete) {
-          // Show notification first
-          setShowNotification(true);
-          
-          // Auto-redirect if completely empty (no record at all)
-          if (!academyProfile) {
-            setTimeout(() => {
-              navigate('/profile');
-            }, 3000); // Give time to see the notification
-          }
+        console.log("Academy profile check:", {
+          hasProfile: !!academyProfile,
+          academyName: academyProfile?.academy_name,
+          adminName: academyProfile?.admin_name,
+          isIncomplete: isProfileIncomplete
+        });
+
+        setShowNotification(isProfileIncomplete);
+        
+        // Auto-redirect only if completely empty (no record at all)
+        if (!academyProfile) {
+          setTimeout(() => {
+            navigate('/profile');
+          }, 3000);
         }
       } catch (error) {
         console.error("Error checking academy profile:", error);
@@ -61,8 +65,8 @@ export const useAcademyProfileRequired = () => {
   useEffect(() => {
     if (showNotification) {
       toast({
-        title: "Complete su perfil de academia",
-        description: "Para continuar usando LinguaEdgeAI, complete la información de su academia en el perfil.",
+        title: "Complete your academy profile",
+        description: "To continue using LinguaEdgeAI, please complete your academy information in the profile.",
         variant: "destructive",
         duration: 5000,
       });
