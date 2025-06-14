@@ -1,5 +1,6 @@
+
 import React from "react";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
+import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useRequireProfileComplete } from "@/hooks/useRequireProfileComplete";
 import { ProfileIncompleteModal } from "@/components/modals/ProfileIncompleteModal";
@@ -18,8 +19,7 @@ const TeacherDashboard = () => {
   } = useAcademyProfileRequired();
 
   return (
-    <DashboardLayout>
-      <h1 className="text-3xl font-bold mb-4">Teacher Dashboard</h1>
+    <DashboardLayout title="Teacher Dashboard">
       <p>
         Welcome, {profile?.full_name || "Teacher"}! Here's an overview of your
         classes and assignments.
