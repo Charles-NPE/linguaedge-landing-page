@@ -28,10 +28,10 @@ const TeacherClassesPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Get teacher stats including student counts
+  // Get teacher stats including student counts and limits
   const { data: teacherStats, isLoading: statsLoading, refetch: refetchStats } = useTeacherStats();
   
-  // Get student limit derived from subscription tier
+  // Get student limit (now directly from database via teacherStats)
   const { studentLimit, isLoading: limitLoading } = useStripeStudentLimit();
 
   console.log("[TeacherClassesPage] Teacher stats:", teacherStats);
@@ -136,7 +136,7 @@ const TeacherClassesPage = () => {
     }
   };
 
-  // Use the student limit from our hook and derive subscription tier from stats
+  // Use the student limit from database and derive subscription tier from stats
   const totalStudents = teacherStats?.totalStudents || 0;
   const planLimit = studentLimit;
   const subscriptionTier = teacherStats?.subscription_tier || 'starter';

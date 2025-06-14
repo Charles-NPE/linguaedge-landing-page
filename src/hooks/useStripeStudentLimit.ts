@@ -8,13 +8,12 @@ export const useStripeStudentLimit = () => {
 
   useEffect(() => {
     if (!isLoading && teacherStats) {
-      console.log("[useStripeStudentLimit] Deriving limit from subscription tier:", teacherStats.subscription_tier);
+      console.log("[useStripeStudentLimit] Using student_limit from database:", teacherStats.student_limit);
       
-      // Derive student limit from subscription tier
-      const limit = teacherStats.subscription_tier === 'academy' ? 60 : 20;
-      setStudentLimit(limit);
+      // Use the student_limit directly from the database
+      setStudentLimit(teacherStats.student_limit);
       
-      console.log("[useStripeStudentLimit] Applied student limit:", limit);
+      console.log("[useStripeStudentLimit] Applied student limit:", teacherStats.student_limit);
     }
   }, [teacherStats, isLoading]);
 

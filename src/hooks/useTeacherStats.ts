@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface TeacherStats {
   totalStudents: number;
+  student_limit: number;
   subscription_tier: string;
 }
 
@@ -33,6 +34,7 @@ export const useTeacherStats = () => {
       // Ensure we have the expected fields with fallbacks
       const validatedStats: TeacherStats = {
         totalStudents: rawData.totalStudents || 0,
+        student_limit: rawData.student_limit || 20,
         subscription_tier: rawData.subscription_tier || 'starter'
       };
       
