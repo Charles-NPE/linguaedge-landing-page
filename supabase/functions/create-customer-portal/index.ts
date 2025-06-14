@@ -42,25 +42,46 @@ serve(async (req) => {
     const { data: userData, error: userErr } = await supabaseClient.auth.getUser(jwt);
     if (userErr) throw new Error(`Auth error: ${userErr.message}`);
     const uid = userData.user?.id;
-    if (!uid) throw new Error("Could not extract user id");
-    logStep("User OK", { uid });
+    const email = userData.user?.email;
+    if (!uid || !email) throw new Error("Could not extract user id or email");
+    logStep("User OK", { uid, email });
 
     // ----- Customer lookup -----
+    const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
+    
+    // First try to get customer ID from profile
     const { data: profile, error: profErr } = await supabaseClient
       .from("profiles")
       .select("stripe_customer_id")
       .eq("id", uid)
       .single();
 
-    if (profErr) throw new Error(`Profile fetch error: ${profErr.message}`);
-    if (!profile?.stripe_customer_id)
-      throw new Error("stripe_customer_id is NULL for this user");
-
-    const customerId = profile.stripe_customer_id;
-    logStep("Customer id found", { customerId });
+    let customerId;
+    
+    if (profile?.stripe_customer_id) {
+      customerId = profile.stripe_customer_id;
+      logStep("Customer id found in profile", { customerId });
+    } else {
+      // If no customer ID in profile, search by email
+      logStep("No customer ID in profile, searching by email");
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      
+      if (customers.data.length === 0) {
+        throw new Error("No Stripe customer found. Please complete the subscription process first.");
+      }
+      
+      customerId = customers.data[0].id;
+      logStep("Customer found by email", { customerId });
+      
+      // Update profile with customer ID for future use
+      await supabaseClient
+        .from("profiles")
+        .update({ stripe_customer_id: customerId })
+        .eq("id", uid);
+      logStep("Updated profile with customer ID");
+    }
 
     // ----- Portal session -----
-    const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
     const returnUrl = Deno.env.get("STRIPE_PORTAL_RETURN_URL") ||
       `${req.headers.get("origin") || "https://linguaedge-landing-page.lovable.app"}/teacher`;
     
