@@ -127,6 +127,10 @@ export const routes = createBrowserRouter([
             path: "/student/progress",
             element: <StudentProgress />,
           },
+          {
+            path: "/student/classes/:id",
+            element: <ClassDetail />,
+          },
         ],
       },
       {

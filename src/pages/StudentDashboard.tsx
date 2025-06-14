@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
@@ -118,7 +119,7 @@ const StudentDashboard: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Button className="w-full mt-2" onClick={() => navigate(`/teacher/classes/${cls.id}`)}>
+                    <Button className="w-full mt-2" onClick={() => navigate(`/student/classes/${cls.id}`)}>
                       <BookOpen className="mr-2 h-4 w-4" />
                       Open Class
                     </Button>
