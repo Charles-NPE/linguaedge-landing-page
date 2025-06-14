@@ -1,63 +1,37 @@
-
 import React from "react";
-import { Link } from "react-router-dom";
-import { Users, ClipboardEdit, FileText, BarChart2 } from "lucide-react";
-import DashboardLayout from "@/components/dashboards/DashboardLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
+import { useRequireProfileComplete } from "@/hooks/useRequireProfileComplete";
+import { ProfileIncompleteModal } from "@/components/modals/ProfileIncompleteModal";
+import { useAcademyProfileRequired } from "@/hooks/useAcademyProfileRequired";
+import { AcademyProfileRequiredModal } from "@/components/modals/AcademyProfileRequiredModal";
 
-const cards = [
-  { 
-    icon: Users, 
-    title: "Manage Classes", 
-    href: "/teacher/classes",
-    desc: "Create and organize classes, add students, and track progress." 
-  },
-  { 
-    icon: ClipboardEdit, 
-    title: "Assign Essays", 
-    href: "/teacher/assign",
-    desc: "Create new writing assignments for your students." 
-  },
-  { 
-    icon: FileText, 
-    title: "My Essays", 
-    href: "/teacher/essays",
-    desc: "View all assignments with delivery stats and reminders." 
-  },
-  { 
-    icon: BarChart2, 
-    title: "View Analytics", 
-    href: "/teacher/analytics",
-    desc: "Track student progress and identify areas for improvement." 
-  },
-];
-
-const TeacherDashboard: React.FC = () => {
-  const { user } = useAuth();
+const TeacherDashboard = () => {
+  const { profile } = useAuth();
+  const { showModal, dismiss } = useRequireProfileComplete();
   
-  const teacherName = user?.email?.split('@')[0] || 'Teacher';
+  // Add academy profile check
+  const { 
+    isCheckingProfile, 
+    showNotification, 
+    dismissNotification 
+  } = useAcademyProfileRequired();
 
   return (
-    <DashboardLayout title="Teacher Dashboard">
-      <h2 className="mb-6 text-lg font-medium text-slate-900 dark:text-slate-100">
-        Welcome back, {teacherName}
-      </h2>
-
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map(({ icon: Icon, title, href, desc }) => (
-          <Link
-            key={title}
-            to={href}
-            className="group rounded-xl border bg-card p-6 shadow-sm transition
-                       hover:shadow-md focus-visible:outline-none focus-visible:ring-2
-                       hover:ring-2 hover:ring-primary/60 dark:hover:ring-primary/40"
-          >
-            <Icon className="mb-4 h-8 w-8 text-primary group-hover:scale-105 transition-transform" />
-            <h3 className="text-base font-semibold mb-1">{title}</h3>
-            <p className="text-sm text-muted-foreground">{desc}</p>
-          </Link>
-        ))}
-      </div>
+    <DashboardLayout>
+      <h1 className="text-3xl font-bold mb-4">Teacher Dashboard</h1>
+      <p>
+        Welcome, {profile?.full_name || "Teacher"}! Here's an overview of your
+        classes and assignments.
+      </p>
+      
+      <ProfileIncompleteModal open={showModal} />
+      
+      {/* Add the modal at the end */}
+      <AcademyProfileRequiredModal 
+        open={showNotification} 
+        onClose={dismissNotification} 
+      />
     </DashboardLayout>
   );
 };
