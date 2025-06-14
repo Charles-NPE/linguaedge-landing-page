@@ -8,7 +8,7 @@ import { useAcademyProfileRequired } from "@/hooks/useAcademyProfileRequired";
 import { AcademyProfileRequiredModal } from "@/components/modals/AcademyProfileRequiredModal";
 import FeatureCard from "@/components/dashboards/FeatureCard";
 import { Link } from "react-router-dom";
-import { Users, BookOpen, BarChart3, Settings, FileText, PlusCircle } from "lucide-react";
+import { Users, BarChart3, FileText, PlusCircle } from "lucide-react";
 
 const TeacherDashboard = () => {
   const { profile } = useAuth();
@@ -61,22 +61,6 @@ const TeacherDashboard = () => {
             title="Analytics" 
             description="View detailed analytics and insights about student performance." 
             icon={BarChart3} 
-          />
-        </Link>
-        
-        <Link to="/profile" className="block">
-          <FeatureCard 
-            title="Academy Profile" 
-            description="Manage your academy information and settings." 
-            icon={Settings} 
-          />
-        </Link>
-        
-        <Link to="/teacher/classes" className="block">
-          <FeatureCard 
-            title="Student Progress" 
-            description="Monitor individual student progress and identify areas for improvement." 
-            icon={BookOpen} 
           />
         </Link>
       </div>
