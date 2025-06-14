@@ -1,4 +1,5 @@
 
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -19,9 +20,9 @@ REQUIRED_SECRETS.forEach((k) => {
 });
 // =============================================
 
-// Price IDs from environment variables
-const STARTER_PRICE_ID = "price_1RKzjAGULVEx6ff4xe51d6YT";
-const ACADEMY_PRICE_ID = "price_1RKzrHGULVEx6ff4JmxatsFu";
+// TODO: Remove these fallback constants once environment variables are confirmed working
+const STARTER_PRICE_ID_FALLBACK = "price_1RKzjAGULVEx6ff4xe51d6YT";
+const ACADEMY_PRICE_ID_FALLBACK = "price_1RKzrHGULVEx6ff4JmxatsFu";
 
 // Initialize Stripe with the secret key from environment variables
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2023-10-16" });
@@ -32,21 +33,21 @@ const logWebhook = (type: string, details?: any) => {
   console.log(`[STRIPE] ${type}${detailsStr}`);
 };
 
-// Helper function to determine subscription tier and student limit from price_id
-const getSubscriptionDetails = (priceId: string): { tier: string; studentLimit: number } => {
-  const starterPriceId = Deno.env.get("STARTER_PRICE_ID") ?? STARTER_PRICE_ID;
-  const academyPriceId = Deno.env.get("ACADEMY_PRICE_ID") ?? ACADEMY_PRICE_ID;
+// Helper function to determine subscription tier from price_id (student_limit is now calculated automatically)
+const getSubscriptionTier = (priceId: string): string => {
+  const starterPriceId = Deno.env.get("STARTER_PRICE_ID") ?? STARTER_PRICE_ID_FALLBACK;
+  const academyPriceId = Deno.env.get("ACADEMY_PRICE_ID") ?? ACADEMY_PRICE_ID_FALLBACK;
   
-  logWebhook("Determining subscription details", { priceId, starterPriceId, academyPriceId });
+  logWebhook("Determining subscription tier", { priceId, starterPriceId, academyPriceId });
   
   if (priceId === academyPriceId) {
-    return { tier: 'academy', studentLimit: 60 };
+    return 'academy';
   } else if (priceId === starterPriceId) {
-    return { tier: 'starter', studentLimit: 20 };
+    return 'starter';
   }
   
   // Default to starter for unknown price IDs
-  return { tier: 'starter', studentLimit: 20 };
+  return 'starter';
 };
 
 serve(async (req) => {
@@ -211,9 +212,8 @@ serve(async (req) => {
           { auth: { persistSession: false } }
         );
         
-        // 2️⃣ recuperar subscriptionTier, studentLimit y customer info
+        // 2️⃣ recuperar subscriptionTier y customer info
         let subscriptionTier = 'starter';
-        let studentLimit = 20;
         let customerId: string | null = null;
         let stripeStatus = 'active';
         
@@ -224,23 +224,20 @@ serve(async (req) => {
           
           if (subscription.items.data.length > 0) {
             const priceId = subscription.items.data[0].price.id;
-            const details = getSubscriptionDetails(priceId);
-            subscriptionTier = details.tier;
-            studentLimit = details.studentLimit;
-            logWebhook("Subscription details determined", { priceId, subscriptionTier, studentLimit });
+            subscriptionTier = getSubscriptionTier(priceId);
+            logWebhook("Subscription tier determined", { priceId, subscriptionTier });
           }
         } catch (error) {
           logWebhook("Error retrieving subscription details", { error: error.message });
         }
         
-        // 3️⃣ Update profile with subscription info INCLUDING student_limit
+        // 3️⃣ Update profile with subscription info (student_limit is calculated automatically by generated column)
         const { error: updateError } = await supabaseAdmin
           .from("profiles")
           .update({ 
             stripe_customer_id: customerId,
             stripe_status: stripeStatus,
-            subscription_tier: subscriptionTier,
-            student_limit: studentLimit
+            subscription_tier: subscriptionTier  // Generated column will recalculate student_limit automatically
           })
           .eq("id", metadata.supabase_uid);
           
@@ -250,7 +247,6 @@ serve(async (req) => {
           logWebhook("Profile updated successfully", { 
             userId: metadata.supabase_uid,
             subscriptionTier,
-            studentLimit,
             stripeStatus
           });
 
@@ -319,3 +315,4 @@ serve(async (req) => {
   // Always return 200 OK to Stripe to avoid retries
   return new Response("OK", { status: 200 });
 });
+
