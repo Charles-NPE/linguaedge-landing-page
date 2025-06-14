@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
@@ -21,7 +20,7 @@ interface ClassInfo {
 }
 
 const StudentDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,13 +78,21 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
+  // Get display name from profile or fallback to email
+  const getDisplayName = () => {
+    if (profile?.full_name && profile.full_name.trim()) {
+      return profile.full_name;
+    }
+    return user?.email?.split('@')[0] || 'Student';
+  };
+
   return (
     <DashboardLayout title="Student Dashboard">
       <ProfileIncompleteModal open={showModal} />
       
       <div className="mb-8">
         <h2 className="text-lg text-slate-900 dark:text-white">
-          Welcome back, {user?.email?.split('@')[0] || 'Student'}
+          Welcome back, {getDisplayName()}
         </h2>
       </div>
 
