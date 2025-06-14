@@ -14,11 +14,11 @@ const ProfilePage = () => {
   return (
     <div>
       {isTeacher && (
-        <Alert className="mb-6 border-amber-200 bg-amber-50">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800">
-            <strong>Información requerida:</strong> Los campos "Nombre de la Academia" y "Nombre del Administrador" 
-            son obligatorios para continuar usando LinguaEdgeAI.
+        <Alert className="mb-6 border-primary/20 bg-primary/5">
+          <AlertTriangle className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-slate-800 dark:text-slate-200">
+            <strong>Required Information:</strong> The "Academy Name" and "Admin Name" 
+            fields are required to continue using LinguaEdgeAI.
           </AlertDescription>
         </Alert>
       )}

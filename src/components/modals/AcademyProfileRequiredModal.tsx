@@ -24,18 +24,18 @@ export const AcademyProfileRequiredModal: React.FC<AcademyProfileRequiredModalPr
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <div className="flex flex-col items-center space-y-4 text-center">
-          <AlertTriangle className="w-12 h-12 text-amber-500" />
-          <h2 className="text-xl font-semibold">Perfil de Academia Requerido</h2>
+          <AlertTriangle className="w-12 h-12 text-primary" />
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Academy Profile Required</h2>
           <p className="text-muted-foreground">
-            Para continuar usando LinguaEdgeAI, debe completar la información de su academia. 
-            Los campos "Nombre de la Academia" y "Nombre del Administrador" son obligatorios.
+            To continue using LinguaEdgeAI, please complete your academy information. 
+            The "Academy Name" and "Admin Name" fields are required.
           </p>
           <div className="flex gap-2 w-full">
             <Button variant="outline" onClick={onClose} className="flex-1">
-              Más tarde
+              Later
             </Button>
-            <Button onClick={handleCompleteProfile} className="flex-1">
-              Completar perfil
+            <Button onClick={handleCompleteProfile} className="flex-1 bg-primary hover:bg-primary/90">
+              Complete profile
             </Button>
           </div>
         </div>
