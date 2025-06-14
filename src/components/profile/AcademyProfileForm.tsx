@@ -173,7 +173,7 @@ const AcademyProfileForm = () => {
         logoUrl = await uploadLogo();
       }
 
-      // Prepare data for upsert - ensure we always have an ID
+      // Prepare data for upsert - use proper upsert with conflict resolution
       const upsertData = {
         user_id: user.id,
         academy_name: values.academyName,
@@ -187,36 +187,31 @@ const AcademyProfileForm = () => {
         updated_at: new Date().toISOString()
       };
 
-      let result;
-      
-      if (profileId) {
-        // Update existing profile
-        result = await supabase
-          .from('academy_profiles')
-          .update(upsertData)
-          .eq('id', profileId);
-      } else {
-        // Insert new profile - let the database generate the ID
-        result = await supabase
-          .from('academy_profiles')
-          .insert(upsertData)
-          .select()
-          .single();
-          
-        // Update profileId state with the newly created ID
-        if (result.data) {
-          setProfileId(result.data.id);
-        }
-      }
+      // Use upsert with proper conflict resolution
+      const { data, error } = await supabase
+        .from('academy_profiles')
+        .upsert(upsertData, {
+          onConflict: 'user_id',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single();
 
-      if (result.error) {
+      if (error) {
         toast({
           title: "Update failed",
-          description: `Error: ${result.error.message}`,
+          description: `Error: ${error.message}`,
           variant: "destructive"
         });
-        console.error("Supabase error:", result.error);
+        console.error("Supabase error:", error);
         return;
+      }
+
+      // Update local state with the profile data
+      if (data) {
+        setProfileId(data.id);
+        setCreatedAt(data.created_at);
+        setUpdatedAt(data.updated_at);
       }
 
       toast({
@@ -224,8 +219,6 @@ const AcademyProfileForm = () => {
         description: "Your academy profile has been updated successfully."
       });
 
-      // Refresh updated_at timestamp
-      setUpdatedAt(new Date().toISOString());
     } catch (error) {
       console.error("Error saving profile:", error);
       toast({
