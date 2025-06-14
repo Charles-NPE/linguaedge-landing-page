@@ -1,3 +1,4 @@
+
 // @ts-nocheck
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -173,8 +174,9 @@ const AcademyProfileForm = () => {
         logoUrl = await uploadLogo();
       }
 
-      // Prepare data for upsert - use proper upsert with conflict resolution
+      // Prepare data for upsert - include the user's ID as the primary key
       const upsertData = {
+        id: user.id, // Use user's ID to satisfy foreign key constraint
         user_id: user.id,
         academy_name: values.academyName,
         admin_name: values.adminName,
@@ -187,11 +189,11 @@ const AcademyProfileForm = () => {
         updated_at: new Date().toISOString()
       };
 
-      // Use upsert with proper conflict resolution
+      // Use upsert with id as the conflict key since id is the primary key
       const { data, error } = await supabase
         .from('academy_profiles')
         .upsert(upsertData, {
-          onConflict: 'user_id',
+          onConflict: 'id',
           ignoreDuplicates: false
         })
         .select()
