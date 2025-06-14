@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -30,7 +31,7 @@ const TeacherClassesPage = () => {
   // Get teacher stats including student counts
   const { data: teacherStats, isLoading: statsLoading, refetch: refetchStats } = useTeacherStats();
   
-  // Get student limit from the corrected function
+  // Get student limit derived from subscription tier
   const { studentLimit, isLoading: limitLoading } = useStripeStudentLimit();
 
   console.log("[TeacherClassesPage] Teacher stats:", teacherStats);
@@ -84,11 +85,11 @@ const TeacherClassesPage = () => {
       console.log("[TeacherClassesPage] Checking limits before creating class:", {
         totalStudents,
         studentLimit,
-        subscriptionTier: profile?.subscription_tier
+        subscriptionTier: teacherStats?.subscription_tier
       });
       
       if (totalStudents >= studentLimit) {
-        const upgradeMessage = profile?.subscription_tier === 'starter' 
+        const upgradeMessage = teacherStats?.subscription_tier === 'starter' 
           ? `Upgrade to Academy to enroll more students. Current limit: ${studentLimit} students.`
           : `You've reached your student limit of ${studentLimit} students.`;
         
@@ -135,10 +136,10 @@ const TeacherClassesPage = () => {
     }
   };
 
-  // Use the student limit from our hook
+  // Use the student limit from our hook and derive subscription tier from stats
   const totalStudents = teacherStats?.totalStudents || 0;
   const planLimit = studentLimit;
-  const subscriptionTier = profile?.subscription_tier || 'starter';
+  const subscriptionTier = teacherStats?.subscription_tier || 'starter';
   const isAtLimit = totalStudents >= planLimit;
   const progressPercentage = planLimit > 0 ? (totalStudents / planLimit) * 100 : 0;
 
@@ -163,7 +164,7 @@ const TeacherClassesPage = () => {
                   {totalStudents} / {planLimit}
                 </span>
                 <span className="text-xs text-muted-foreground capitalize">
-                  ({subscriptionTier})
+                  ({subscriptionTier === 'academy' ? 'Academy' : 'Starter'})
                 </span>
                 {(statsLoading || limitLoading) && (
                   <span className="text-xs text-muted-foreground">Loading...</span>
@@ -274,6 +275,39 @@ const TeacherClassesPage = () => {
       />
     </DashboardLayout>
   );
+
+  async function fetchClasses() {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name, code, class_students(count)')
+        .eq('teacher_id', user.id);
+        
+      if (error) throw error;
+      
+      // Transform the data to match our interface
+      const transformedClasses = data?.map(cls => ({
+        ...cls,
+        class_students: {
+          count: cls.class_students?.[0]?.count || 0
+        }
+      }));
+      
+      setClasses(transformedClasses as ClassWithStudents[]);
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load classes. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
 };
 
 export default TeacherClassesPage;
