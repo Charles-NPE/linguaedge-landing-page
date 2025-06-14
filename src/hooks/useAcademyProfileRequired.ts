@@ -15,7 +15,10 @@ export const useAcademyProfileRequired = () => {
   useEffect(() => {
     const checkAcademyProfile = async () => {
       // Only check for teachers
-      if (!user?.id || profile?.role !== 'teacher') return;
+      if (!user?.id || profile?.role !== 'teacher') {
+        setShowNotification(false);
+        return;
+      }
       
       setIsCheckingProfile(true);
       
@@ -28,6 +31,7 @@ export const useAcademyProfileRequired = () => {
 
         if (error) {
           console.error("Error checking academy profile:", error);
+          setShowNotification(false);
           return;
         }
 
@@ -43,6 +47,7 @@ export const useAcademyProfileRequired = () => {
           isIncomplete: isProfileIncomplete
         });
 
+        // Only show notification if profile is actually incomplete
         setShowNotification(isProfileIncomplete);
         
         // Auto-redirect only if completely empty (no record at all)
@@ -53,6 +58,7 @@ export const useAcademyProfileRequired = () => {
         }
       } catch (error) {
         console.error("Error checking academy profile:", error);
+        setShowNotification(false);
       } finally {
         setIsCheckingProfile(false);
       }
