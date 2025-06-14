@@ -30,7 +30,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           default_language?: string | null
-          id: string
+          id?: string
           logo_url?: string | null
           phone?: string | null
           timezone?: string | null
